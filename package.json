@@ -27,8 +27,8 @@
     "lodash": "^3.10.0",
     "pausable": "^1.0.0",
     "phpcommon": "~1.1",
-    "phptoast": "^2.0.0",
-    "phptojs": "^1.1.0"
+    "phptoast": "~2.0",
+    "phptojs": "~1.1"
   },
   "devDependencies": {
     "chai": "^2.3.0",
