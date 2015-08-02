@@ -25,7 +25,7 @@ describe('PHP "return" statement integration', function () {
             return phpRuntime;
         });
 
-        module().then(function (result) {
+        module().execute().then(function (result) {
             expect(result.getNative()).to.equal(4);
             done();
         }, done).catch(done);

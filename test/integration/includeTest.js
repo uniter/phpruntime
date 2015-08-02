@@ -31,7 +31,7 @@ describe('PHP "include" statement integration', function () {
                 }
             };
 
-        module(options).then(function (result) {
+        module(options).execute().then(function (result) {
             expect(result.getNative()).to.equal(22);
             done();
         }, done).catch(done);
