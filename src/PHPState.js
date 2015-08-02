@@ -76,6 +76,7 @@ function PHPState(stdin, stdout, stderr, pausable) {
     this.callStack = callStack;
     this.classAutoloader = classAutoloader;
     this.pausable = pausable;
+    this.stderr = stderr;
     this.stdin = stdin;
     this.stdout = stdout;
     this.valueFactory = valueFactory;
