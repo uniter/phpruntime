@@ -11,14 +11,36 @@
 
 var _ = require('lodash');
 
-function PHPEnvironment(state) {
+function Environment(state, parser, options) {
+    this.options = options;
+    this.parser = parser;
     this.state = state;
 }
 
-_.extend(PHPEnvironment.prototype, {
-    getGlobalScope: function () {
-        return this.state.getGlobalScope();
+_.extend(Environment.prototype, {
+    getOptions: function () {
+        return this.options;
+    },
+
+    getParser: function () {
+        return this.parser;
+    },
+
+    getState: function () {
+        return this.state;
+    },
+
+    getStderr: function () {
+        return this.state.getStderr();
+    },
+
+    getStdin: function () {
+        return this.state.getStdin();
+    },
+
+    getStdout: function () {
+        return this.state.getStdout();
     }
 });
 
-module.exports = PHPEnvironment;
+module.exports = Environment;

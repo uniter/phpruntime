@@ -16,39 +16,32 @@ var _ = require('lodash'),
     List = require('./List'),
     NamespaceScope = require('./NamespaceScope'),
     ObjectValue = require('./Value/Object'),
-    PHPState = require('./PHPState'),
     Promise = require('bluebird'),
     Scope = require('./Scope');
 
 function Engine(
     runtime,
+    environment,
     phpCommon,
     stdin,
     stdout,
     stderr,
     options,
-    state,
-    tools,
-    phpParser,
-    context,
     wrapper,
     pausable,
     phpToAST,
     phpToJS
 ) {
-    this.context = context;
+    this.environment = environment;
     this.options = options;
     this.pausable = pausable;
     this.phpCommon = phpCommon;
-    this.phpParser = phpParser;
     this.phpToAST = phpToAST;
     this.phpToJS = phpToJS;
     this.runtime = runtime;
-    this.state = state;
     this.stderr = stderr;
     this.stdin = stdin;
     this.stdout = stdout;
-    this.tools = tools;
     this.wrapper = wrapper;
 }
 
@@ -56,26 +49,26 @@ _.extend(Engine.prototype, {
     execute: function () {
         var callStack,
             engine = this,
-            context = engine.context,
+            context = {},
+            environment = engine.environment,
             exports = {},
             globalNamespace,
             globalScope,
             options = engine.options,
             pausable = engine.pausable,
             phpCommon = engine.phpCommon,
-            phpParser = engine.phpParser,
-            phpToAST = engine.phpToAST,
+            phpParser,
             phpToJS = engine.phpToJS,
             PHPError = phpCommon.PHPError,
             PHPException,
             PHPFatalError = phpCommon.PHPFatalError,
             referenceFactory,
             runtime = engine.runtime,
-            state = engine.state,
+            state,
             stderr = engine.stderr,
             stdin = engine.stdin,
             stdout = engine.stdout,
-            tools = engine.tools,
+            tools,
             valueFactory,
             wrapper = engine.wrapper;
 
@@ -131,7 +124,7 @@ _.extend(Engine.prototype, {
 
                     subModule = runtime.compile(subWrapper);
 
-                    subModule(options, state, tools, phpParser, context).execute().then(
+                    subModule(options, environment).execute().then(
                         completeWith,
                         function (error) {
                             throw error;
@@ -143,7 +136,7 @@ _.extend(Engine.prototype, {
 
                 // Handle wrapper function being returned from loader for module
                 if (_.isFunction(module)) {
-                    completeWith(module(options, state, tools, phpParser, context));
+                    completeWith(module(options, environment));
                     return;
                 }
 
@@ -176,91 +169,81 @@ _.extend(Engine.prototype, {
             pause.now();
         }
 
-        if (!state) {
-            // No state given to load: initialize the environment
-            state = new PHPState(stdin, stdout, stderr, pausable, options);
-            if (phpToAST) {
-                phpParser = phpToAST.create(state.getStderr());
-            }
-
-            globalScope = state.getGlobalScope();
-            referenceFactory = state.getReferenceFactory();
-            valueFactory = state.getValueFactory();
-
-            tools = {
-                createClosure: function (func, scope) {
-                    func.scopeWhenCreated = scope;
-
-                    return tools.valueFactory.createObject(
-                        func,
-                        globalNamespace.getClass('Closure')
-                    );
-                },
-                createInstance: function (namespaceScope, classNameValue, args) {
-                    var className = classNameValue.getNative(),
-                        classObject = namespaceScope.getClass(className);
-
-                    return classObject.instantiate(args);
-                },
-                createKeyValuePair: function (key, value) {
-                    return new KeyValuePair(key, value);
-                },
-                createList: function (elements) {
-                    return new List(elements);
-                },
-                createNamespaceScope: function (namespace) {
-                    return new NamespaceScope(globalNamespace, namespace);
-                },
-                getPath: function () {
-                    return valueFactory.createString(context.path);
-                },
-                getPathDirectory: function () {
-                    return valueFactory.createString(state.getPath().replace(/\/[^\/]+$/, ''));
-                },
-                globalScope: globalScope,
-                implyArray: function (variable) {
-                    // Undefined variables and variables containing null may be implicitly converted to arrays
-                    if (!variable.isDefined() || variable.getValue().getType() === 'null') {
-                        variable.setValue(valueFactory.createArray([]));
-                    }
-
-                    return variable.getValue();
-                },
-                implyObject: function (variable) {
-                    return variable.getValue();
-                },
-                include: include,
-                popCall: function () {
-                    callStack.pop();
-                },
-                pushCall: function (thisObject, currentClass) {
-                    var call;
-
-                    if (!valueFactory.isValue(thisObject)) {
-                        thisObject = null;
-                    }
-
-                    call = new Call(new Scope(callStack, valueFactory, thisObject, currentClass));
-
-                    callStack.push(call);
-
-                    return call;
-                },
-                referenceFactory: referenceFactory,
-                requireOnce: include,
-                require: include,
-                throwNoActiveClassScope: function () {
-                    throw new PHPFatalError(PHPFatalError.SELF_WHEN_NO_ACTIVE_CLASS);
-                },
-                valueFactory: valueFactory
-            };
-        }
-
+        phpParser = environment.getParser();
+        state = environment.getState();
+        valueFactory = state.getValueFactory();
         globalNamespace = state.getGlobalNamespace();
         callStack = state.getCallStack();
         globalScope = state.getGlobalScope();
-        options = state.getOptions();
         PHPException = state.getPHPExceptionClass();
+
+        tools = {
+            createClosure: function (func, scope) {
+                func.scopeWhenCreated = scope;
+
+                return tools.valueFactory.createObject(
+                    func,
+                    globalNamespace.getClass('Closure')
+                );
+            },
+            createInstance: function (namespaceScope, classNameValue, args) {
+                var className = classNameValue.getNative(),
+                    classObject = namespaceScope.getClass(className);
+
+                return classObject.instantiate(args);
+            },
+            createKeyValuePair: function (key, value) {
+                return new KeyValuePair(key, value);
+            },
+            createList: function (elements) {
+                return new List(elements);
+            },
+            createNamespaceScope: function (namespace) {
+                return new NamespaceScope(globalNamespace, namespace);
+            },
+            getPath: function () {
+                return valueFactory.createString(context.path);
+            },
+            getPathDirectory: function () {
+                return valueFactory.createString(state.getPath().replace(/\/[^\/]+$/, ''));
+            },
+            globalScope: globalScope,
+            implyArray: function (variable) {
+                // Undefined variables and variables containing null may be implicitly converted to arrays
+                if (!variable.isDefined() || variable.getValue().getType() === 'null') {
+                    variable.setValue(valueFactory.createArray([]));
+                }
+
+                return variable.getValue();
+            },
+            implyObject: function (variable) {
+                return variable.getValue();
+            },
+            include: include,
+            popCall: function () {
+                callStack.pop();
+            },
+            pushCall: function (thisObject, currentClass) {
+                var call;
+
+                if (!valueFactory.isValue(thisObject)) {
+                    thisObject = null;
+                }
+
+                call = new Call(new Scope(callStack, valueFactory, thisObject, currentClass));
+
+                callStack.push(call);
+
+                return call;
+            },
+            referenceFactory: referenceFactory,
+            requireOnce: include,
+            require: include,
+            throwNoActiveClassScope: function () {
+                throw new PHPFatalError(PHPFatalError.SELF_WHEN_NO_ACTIVE_CLASS);
+            },
+            valueFactory: valueFactory
+        };
 
         // Push the 'main' global scope call onto the stack
         callStack.push(new Call(globalScope));

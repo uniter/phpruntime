@@ -13,9 +13,9 @@ var pausable = require('pausable').create(),
     phpCommon = require('phpcommon'),
     phpToAST = require('phptoast'),
     phpToJS = require('phptojs'),
+    Engine = require('./src/Engine'),
+    Environment = require('./src/Environment'),
     Runtime = require('./src/Runtime'),
-    runtime = new Runtime(phpCommon);
+    runtime = new Runtime(Environment, Engine, phpCommon, pausable, phpToAST, phpToJS);
 
-module.exports = function (wrapper) {
-    return runtime.compile(wrapper, pausable, phpToAST, phpToJS);
-};
+module.exports = runtime;

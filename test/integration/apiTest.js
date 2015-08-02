@@ -10,10 +10,11 @@
 'use strict';
 
 var expect = require('chai').expect,
-    phpRuntime = require('../..');
+    phpRuntime = require('../..'),
+    Runtime = require('../../src/Runtime');
 
 describe('Public API', function () {
-    it('should export a function', function () {
-        expect(phpRuntime).to.be.a('function');
+    it('should export an instance of Runtime', function () {
+        expect(phpRuntime).to.be.an.instanceOf(Runtime);
     });
 });

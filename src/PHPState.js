@@ -58,7 +58,7 @@ var _ = require('lodash'),
         });
     };
 
-function PHPState(stdin, stdout, stderr, pausable, options) {
+function PHPState(stdin, stdout, stderr, pausable) {
     var callStack = new CallStack(stderr),
         valueFactory = new ValueFactory(callStack),
         classAutoloader = new ClassAutoloader(valueFactory),
@@ -71,7 +71,6 @@ function PHPState(stdin, stdout, stderr, pausable, options) {
     this.globalNamespace = globalNamespace;
     this.globalScope = new Scope(callStack, valueFactory, null, null);
     this.iniState = new INIState();
-    this.options = options;
     this.path = null;
     this.referenceFactory = new ReferenceFactory(valueFactory);
     this.callStack = callStack;
@@ -96,10 +95,6 @@ _.extend(PHPState.prototype, {
 
     getGlobalScope: function () {
         return this.globalScope;
-    },
-
-    getOptions: function () {
-        return this.options;
     },
 
     getPath: function () {

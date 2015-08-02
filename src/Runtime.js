@@ -10,50 +10,68 @@
 'use strict';
 
 var _ = require('lodash'),
-    Engine = require('./Engine'),
+    PHPState = require('./PHPState'),
     Stream = require('./Stream');
 
-function Runtime(phpCommon) {
+function Runtime(Environment, Engine, phpCommon, pausable, phpToAST, phpToJS) {
+    this.Engine = Engine;
+    this.Environment = Environment;
+    this.pausable = pausable;
     this.phpCommon = phpCommon;
+    this.phpToAST = phpToAST;
+    this.phpToJS = phpToJS;
 }
 
 _.extend(Runtime.prototype, {
-    compile: function (wrapper, pausable, phpToAST, phpToJS) {
+    compile: function (wrapper) {
         var runtime = this,
-            phpCommon = runtime.phpCommon;
+            pausable = runtime.pausable,
+            phpCommon = runtime.phpCommon,
+            phpToAST = runtime.phpToAST,
+            phpToJS = runtime.phpToJS;
 
-        return function (options, state, tools, phpParser, context) {
+        return function (options, environment) {
             var stderr,
                 stdin,
                 stdout;
 
-            if (state) {
-                stdin = state.getStdin();
-                stdout = state.getStdout();
-                stderr = state.getStderr();
+            if (environment) {
+                stdin = environment.getStdin();
+                stdout = environment.getStdout();
+                stderr = environment.getStderr();
+                options = _.extend({}, environment.getOptions(), options);
             } else {
                 stdin = new Stream();
                 stdout = new Stream();
                 stderr = new Stream();
+                environment = runtime.createEnvironment(options);
             }
 
-            return new Engine(
+            return new runtime.Engine(
                 runtime,
+                environment,
                 phpCommon,
                 stdin,
                 stdout,
                 stderr,
                 options,
-                state,
-                tools,
-                phpParser,
-                context,
                 wrapper,
                 pausable,
                 phpToAST,
                 phpToJS
             );
         };
+    },
+
+    createEnvironment: function (options) {
+        var runtime = this,
+            stdin = new Stream(),
+            stdout = new Stream(),
+            stderr = new Stream(),
+            parser = runtime.phpToAST.create(stderr),
+            state = new PHPState(stdin, stdout, stderr, runtime.pausable);
+
+        return new runtime.Environment(state, parser, options);
     }
 });
 

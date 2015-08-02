@@ -16,7 +16,7 @@ describe('PHP "include" statement integration', function () {
     it('should correctly handle an include where the loader returns a PHP code string', function (done) {
         var module = new Function(
             'require',
-            'return require(\'phpruntime\')(function (stdin, stdout, stderr, tools, namespace) {' +
+            'return require(\'phpruntime\').compile(function (stdin, stdout, stderr, tools, namespace) {' +
             'var namespaceScope = tools.createNamespaceScope(namespace), namespaceResult, scope = tools.globalScope, currentClass = null;' +
             'scope.getVariable("num").setValue(tools.include(tools.valueFactory.createString("abc.php").getNative()));' +
             'return scope.getVariable("num").getValue();' +

@@ -16,7 +16,7 @@ describe('PHP "print" expression integration', function () {
     it('should correctly handle a print of "hello"', function (done) {
         var module = new Function(
                 'require',
-                'return require(\'phpruntime\')(function (stdin, stdout, stderr, tools, namespace) {' +
+                'return require(\'phpruntime\').compile(function (stdin, stdout, stderr, tools, namespace) {' +
                 'var namespaceScope = tools.createNamespaceScope(namespace), namespaceResult, scope = tools.globalScope, currentClass = null;' +
                 '(stdout.write(namespaceScope.getConstant("hello").coerceToString().getNative()), ' +
                 'tools.valueFactory.createInteger(1));' +
