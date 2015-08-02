@@ -18,6 +18,10 @@ function Environment(state, parser, options) {
 }
 
 _.extend(Environment.prototype, {
+    expose: function (object, name) {
+        this.state.getGlobalScope().expose(object, name);
+    },
+
     getOptions: function () {
         return this.options;
     },

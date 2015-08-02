@@ -321,6 +321,10 @@ _.extend(Engine.prototype, {
         });
     },
 
+    expose: function (object, name) {
+        this.environment.expose(object, name);
+    },
+
     getStderr: function () {
         return this.stderr;
     },
