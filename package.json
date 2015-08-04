@@ -26,9 +26,9 @@
     "bluebird": "^2.9.34",
     "lodash": "^3.10.0",
     "pausable": "^1.0.0",
-    "phpcommon": "~1.1",
-    "phptoast": "~2.0",
-    "phptojs": "~1.1"
+    "phpcommon": "~1.2",
+    "phptoast": "~2.1",
+    "phptojs": "~1.2"
   },
   "devDependencies": {
     "chai": "^2.3.0",
