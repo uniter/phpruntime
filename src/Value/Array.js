@@ -64,14 +64,20 @@ _.extend(ArrayValue.prototype, {
     },
 
     addToArray: function (leftValue) {
-        var rightValue = this,
+        var element,
+            key,
+            rightValue = this,
             resultArray = leftValue.clone();
 
-        _.forOwn(rightValue.keysToElements, function (element, key) {
-            if (!hasOwn.call(resultArray.keysToElements, key)) {
-                resultArray.getElementByKey(element.getKey()).setValue(element.getValue());
+        for (key in rightValue.keysToElements) {
+            if (hasOwn.call(rightValue.keysToElements, key)) {
+                element = rightValue.keysToElements[key];
+
+                if (!hasOwn.call(resultArray.keysToElements, key)) {
+                    resultArray.getElementByKey(element.getKey()).setValue(element.getValue());
+                }
             }
-        });
+        }
 
         return resultArray;
     },
@@ -251,20 +257,26 @@ _.extend(ArrayValue.prototype, {
     },
 
     isEqualToArray: function (rightValue) {
-        var equal = true,
+        var element,
+            equal = true,
             leftValue = this,
+            nativeKey,
             factory = leftValue.factory;
 
         if (rightValue.value.length !== leftValue.value.length) {
             return factory.createBoolean(false);
         }
 
-        _.forOwn(rightValue.keysToElements, function (element, nativeKey) {
-            if (!hasOwn.call(leftValue.keysToElements, nativeKey) || element.getValue().isNotEqualTo(leftValue.keysToElements[nativeKey].getValue()).getNative()) {
-                equal = false;
-                return false;
+        for (nativeKey in rightValue.keysToElements) {
+            if (hasOwn.call(rightValue.keysToElements, nativeKey)) {
+                element = rightValue.keysToElements[nativeKey];
+
+                if (!hasOwn.call(leftValue.keysToElements, nativeKey) || element.getValue().isNotEqualTo(leftValue.keysToElements[nativeKey].getValue()).getNative()) {
+                    equal = false;
+                    break;
+                }
             }
-        });
+        }
 
         return factory.createBoolean(equal);
     },

@@ -11,6 +11,7 @@
 
 var _ = require('lodash'),
     INCLUDE_OPTION = 'include',
+    PATH = 'path',
     Call = require('./Call'),
     KeyValuePair = require('./KeyValuePair'),
     List = require('./List'),
@@ -33,7 +34,12 @@ function Engine(
     phpToJS
 ) {
     this.environment = environment;
-    this.options = options;
+    this.options = _.extend(
+        {
+            'path': null
+        },
+        options || {}
+    );
     this.pausable = pausable;
     this.phpCommon = phpCommon;
     this.phpToAST = phpToAST;
@@ -49,16 +55,18 @@ _.extend(Engine.prototype, {
     execute: function () {
         var callStack,
             engine = this,
-            context = {},
             environment = engine.environment,
             exports = {},
             globalNamespace,
             globalScope,
             options = engine.options,
+            path = options[PATH],
+            isMainProgram = path === null,
             pausable = engine.pausable,
             phpCommon = engine.phpCommon,
             phpParser,
             phpToJS = engine.phpToJS,
+            Exception = phpCommon.Exception,
             PHPError = phpCommon.PHPError,
             PHPException,
             PHPFatalError = phpCommon.PHPFatalError,
@@ -76,7 +84,10 @@ _.extend(Engine.prototype, {
             var done = false,
                 promise,
                 pause = null,
-                result;
+                result,
+                subOptions = _.extend({}, options, {
+                    'path': path
+                });
 
             function completeWith(moduleResult) {
                 if (pause) {
@@ -86,14 +97,14 @@ _.extend(Engine.prototype, {
                 }
             }
 
-            if (!options[INCLUDE_OPTION]) {
-                throw new Error(
+            if (!subOptions[INCLUDE_OPTION]) {
+                throw new Exception(
                     'include(' + path + ') :: No "include" transport is available for loading the module.'
                 );
             }
 
             promise = new Promise(function (resolve, reject) {
-                options[INCLUDE_OPTION](path, {
+                subOptions[INCLUDE_OPTION](path, {
                     reject: reject,
                     resolve: resolve
                 });
@@ -108,26 +119,38 @@ _.extend(Engine.prototype, {
                 // Handle PHP code string being returned from loader for module
                 if (_.isString(module)) {
                     if (!phpParser) {
-                        throw new Error('include(' + path + ') :: PHP parser is not available');
+                        throw new Exception('include(' + path + ') :: PHP parser is not available');
                     }
 
                     if (!phpToJS) {
-                        throw new Error('include(' + path + ') :: PHPToJS is not available');
+                        throw new Exception('include(' + path + ') :: PHPToJS is not available');
                     }
 
+                    // Tell the parser the path to the current file
+                    // so it can be included in error messages
+                    phpParser.getState().setPath(path);
+
                     /*jshint evil: true */
-                    subWrapper = new Function(
-                        'return ' +
-                        phpToJS.transpile(phpParser.parse(module), {'bare': true}) +
-                        ';'
-                    )();
+                    try {
+                        subWrapper = new Function(
+                            'return ' +
+                            phpToJS.transpile(
+                                phpParser.parse(module),
+                                {'bare': true}
+                            ) +
+                            ';'
+                        )();
+                    } catch (error) {
+                        pause.throw(error);
+                        return;
+                    }
 
                     subModule = runtime.compile(subWrapper);
 
-                    subModule(options, environment).execute().then(
+                    subModule(subOptions, environment).execute().then(
                         completeWith,
                         function (error) {
-                            throw error;
+                            pause.throw(error);
                         }
                     );
 
@@ -136,11 +159,11 @@ _.extend(Engine.prototype, {
 
                 // Handle wrapper function being returned from loader for module
                 if (_.isFunction(module)) {
-                    completeWith(module(options, environment));
+                    completeWith(module(subOptions, environment));
                     return;
                 }
 
-                throw new Error('include(' + path + ') :: Module is in a weird format');
+                throw new Exception('include(' + path + ') :: Module is in a weird format');
             }, function () {
                 done = true;
 
@@ -162,15 +185,20 @@ _.extend(Engine.prototype, {
 
             if (!pausable) {
                 // Pausable is not available, so we cannot yield while the module is loaded
-                throw new Error('include(' + path + ') :: Async support not enabled');
+                throw new Exception('include(' + path + ') :: Async support not enabled');
             }
 
             pause = pausable.createPause();
             pause.now();
         }
 
+        function getNormalizedPath() {
+            return path === null ? '(program)' : path;
+        }
+
         phpParser = environment.getParser();
         state = environment.getState();
+        referenceFactory = state.getReferenceFactory();
         valueFactory = state.getValueFactory();
         globalNamespace = state.getGlobalNamespace();
         callStack = state.getCallStack();
@@ -202,10 +230,10 @@ _.extend(Engine.prototype, {
                 return new NamespaceScope(globalNamespace, namespace);
             },
             getPath: function () {
-                return valueFactory.createString(context.path);
+                return valueFactory.createString(getNormalizedPath());
             },
             getPathDirectory: function () {
-                return valueFactory.createString(state.getPath().replace(/\/[^\/]+$/, ''));
+                return valueFactory.createString(getNormalizedPath().replace(/\/[^\/]+$/, ''));
             },
             globalScope: globalScope,
             implyArray: function (variable) {
@@ -262,7 +290,7 @@ _.extend(Engine.prototype, {
                         var error = value.getNative();
 
                         if (!(error instanceof PHPException)) {
-                            throw new Error('Weird value class thrown: ' + value.getClassName());
+                            throw new Exception('Weird value class thrown: ' + value.getClassName());
                         }
 
                         error = new PHPFatalError(
@@ -272,7 +300,7 @@ _.extend(Engine.prototype, {
                             }
                         );
 
-                        if (context.mainProgram) {
+                        if (isMainProgram) {
                             stderr.write(error.message);
                         }
 
@@ -283,7 +311,7 @@ _.extend(Engine.prototype, {
                 }
 
                 if (error instanceof PHPError) {
-                    if (context.mainProgram) {
+                    if (isMainProgram) {
                         stderr.write(error.message);
                     }
 
@@ -317,7 +345,11 @@ _.extend(Engine.prototype, {
             }
 
             // Otherwise load the module synchronously
-            handleResult(wrapper(stdin, stdout, stderr, tools, globalNamespace));
+            try {
+                handleResult(wrapper(stdin, stdout, stderr, tools, globalNamespace));
+            } catch (error) {
+                handleError(error);
+            }
         });
     },
 

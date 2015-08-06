@@ -71,7 +71,6 @@ function PHPState(stdin, stdout, stderr, pausable) {
     this.globalNamespace = globalNamespace;
     this.globalScope = new Scope(callStack, valueFactory, null, null);
     this.iniState = new INIState();
-    this.path = null;
     this.referenceFactory = new ReferenceFactory(valueFactory);
     this.callStack = callStack;
     this.classAutoloader = classAutoloader;
@@ -98,22 +97,12 @@ _.extend(PHPState.prototype, {
         return this.globalScope;
     },
 
-    getPath: function () {
-        var path = this.path;
-
-        return path === null ? '(program)' : path;
-    },
-
     getPHPExceptionClass: function () {
         return this.PHPException;
     },
 
     getReferenceFactory: function () {
         return this.referenceFactory;
-    },
-
-    getPausable: function () {
-        return this.pausable;
     },
 
     getStderr: function () {
@@ -130,14 +119,6 @@ _.extend(PHPState.prototype, {
 
     getValueFactory: function () {
         return this.valueFactory;
-    },
-
-    isMainProgram: function () {
-        return this.path === null;
-    },
-
-    setPath: function (path) {
-        this.path = path;
     }
 });
 
