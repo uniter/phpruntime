@@ -9,20 +9,22 @@
 
 'use strict';
 
-var _ = require('lodash'),
-    util = require('util'),
-    StringValue = require('./String');
+module.exports = require('pausable').executeSync([require], function (require) {
+    var _ = require('lodash'),
+        util = require('util'),
+        StringValue = require('./String');
 
-function BarewordStringValue(factory, callStack, value) {
-    StringValue.call(this, factory, callStack, value);
-}
-
-util.inherits(BarewordStringValue, StringValue);
-
-_.extend(BarewordStringValue.prototype, {
-    call: function (args, namespaceOrNamespaceScope) {
-        return namespaceOrNamespaceScope.getFunction(this.value).apply(null, args);
+    function BarewordStringValue(factory, callStack, value) {
+        StringValue.call(this, factory, callStack, value);
     }
-});
 
-module.exports = BarewordStringValue;
+    util.inherits(BarewordStringValue, StringValue);
+
+    _.extend(BarewordStringValue.prototype, {
+        call: function (args, namespaceOrNamespaceScope) {
+            return namespaceOrNamespaceScope.getFunction(this.value).apply(null, args);
+        }
+    });
+
+    return BarewordStringValue;
+});

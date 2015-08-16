@@ -55,7 +55,9 @@ describe('PHP "include" statement integration', function () {
                 }
             };
 
-        module(options).execute().catch(when(done, function (error) {
+        module(options).execute().then(function (result) {
+            done(new Error('Expected rejection, got resolve: ' + result));
+        }, when(done, function (error) {
             expect(error.message).to.equal('PHP Parse error: syntax error, unexpected $end in abc.php on line 1');
         }));
     });

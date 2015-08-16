@@ -56,7 +56,6 @@ _.extend(Engine.prototype, {
         var callStack,
             engine = this,
             environment = engine.environment,
-            exports = {},
             globalNamespace,
             globalScope,
             options = engine.options,
@@ -82,7 +81,6 @@ _.extend(Engine.prototype, {
 
         function include(path) {
             var done = false,
-                promise,
                 pause = null,
                 result,
                 subOptions = _.extend({}, options, {
@@ -103,18 +101,9 @@ _.extend(Engine.prototype, {
                 );
             }
 
-            promise = new Promise(function (resolve, reject) {
-                subOptions[INCLUDE_OPTION](path, {
-                    reject: reject,
-                    resolve: resolve
-                });
-            });
-
-            promise.then(function (module) {
+            function resolve(module) {
                 var subWrapper,
                     subModule;
-
-                done = true;
 
                 // Handle PHP code string being returned from loader for module
                 if (_.isString(module)) {
@@ -141,8 +130,12 @@ _.extend(Engine.prototype, {
                             ';'
                         )();
                     } catch (error) {
-                        pause.throw(error);
-                        return;
+                        if (pause) {
+                            pause.throw(error);
+                            return;
+                        }
+
+                        throw error;
                     }
 
                     subModule = runtime.compile(subWrapper);
@@ -164,7 +157,9 @@ _.extend(Engine.prototype, {
                 }
 
                 throw new Exception('include(' + path + ') :: Module is in a weird format');
-            }, function () {
+            }
+
+            function reject() {
                 done = true;
 
                 callStack.raiseError(
@@ -177,6 +172,11 @@ _.extend(Engine.prototype, {
                 );
 
                 completeWith(valueFactory.createNull());
+            }
+
+            subOptions[INCLUDE_OPTION](path, {
+                reject: reject,
+                resolve: resolve
             });
 
             if (done) {
@@ -214,12 +214,14 @@ _.extend(Engine.prototype, {
                     globalNamespace.getClass('Closure')
                 );
             },
-            createInstance: function (namespaceScope, classNameValue, args) {
-                var className = classNameValue.getNative(),
-                    classObject = namespaceScope.getClass(className);
+            createInstance: pausable.executeSync([], function () {
+                return function (namespaceScope, classNameValue, args) {
+                    var className = classNameValue.getNative(),
+                        classObject = namespaceScope.getClass(className);
 
-                return classObject.instantiate(args);
-            },
+                    return classObject.instantiate(args);
+                };
+            }),
             createKeyValuePair: function (key, value) {
                 return new KeyValuePair(key, value);
             },
@@ -324,22 +326,19 @@ _.extend(Engine.prototype, {
 
             // Use asynchronous mode if Pausable is available
             if (pausable) {
-                code = 'exports.result = (' +
+                code = 'return (' +
                     wrapper.toString() +
                     '(stdin, stdout, stderr, tools, globalNamespace));';
 
                 pausable.execute(code, {
                     expose: {
-                        exports: exports,
                         stdin: stdin,
                         stdout: stdout,
                         stderr: stderr,
                         tools: tools,
                         globalNamespace: globalNamespace
                     }
-                }).done(function () {
-                    handleResult(exports.result);
-                }).fail(handleError);
+                }).done(handleResult).fail(handleError);
 
                 return;
             }

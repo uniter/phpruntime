@@ -9,7 +9,7 @@
 
 'use strict';
 
-var pausable = require('pausable').create(),
+var pausable = require('pausable'),
     phpCommon = require('phpcommon'),
     phpToAST = require('phptoast'),
     phpToJS = require('phptojs'),
