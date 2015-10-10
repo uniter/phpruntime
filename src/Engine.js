@@ -24,9 +24,6 @@ function Engine(
     runtime,
     environment,
     phpCommon,
-    stdin,
-    stdout,
-    stderr,
     options,
     wrapper,
     pausable,
@@ -45,9 +42,6 @@ function Engine(
     this.phpToAST = phpToAST;
     this.phpToJS = phpToJS;
     this.runtime = runtime;
-    this.stderr = stderr;
-    this.stdin = stdin;
-    this.stdout = stdout;
     this.wrapper = wrapper;
 }
 
@@ -72,9 +66,9 @@ _.extend(Engine.prototype, {
             referenceFactory,
             runtime = engine.runtime,
             state,
-            stderr = engine.stderr,
-            stdin = engine.stdin,
-            stdout = engine.stdout,
+            stderr = engine.getStderr(),
+            stdin = engine.getStdin(),
+            stdout = engine.getStdout(),
             tools,
             valueFactory,
             wrapper = engine.wrapper;
@@ -152,7 +146,13 @@ _.extend(Engine.prototype, {
 
                 // Handle wrapper function being returned from loader for module
                 if (_.isFunction(module)) {
-                    completeWith(module(subOptions, environment));
+                    module(subOptions, environment).execute().then(
+                        completeWith,
+                        function (error) {
+                            pause.throw(error);
+                        }
+                    );
+
                     return;
                 }
 
@@ -357,15 +357,15 @@ _.extend(Engine.prototype, {
     },
 
     getStderr: function () {
-        return this.stderr;
+        return this.environment.getStderr();
     },
 
     getStdin: function () {
-        return this.stdin;
+        return this.environment.getStdin();
     },
 
     getStdout: function () {
-        return this.stdout;
+        return this.environment.getStdout();
     }
 });
 

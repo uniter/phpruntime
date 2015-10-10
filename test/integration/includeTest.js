@@ -10,7 +10,10 @@
 'use strict';
 
 var expect = require('chai').expect,
+    nowdoc = require('nowdoc'),
     phpRuntime = require('../..'),
+    phpToAST = require('phptoast'),
+    phpToJS = require('phptojs'),
     when = require('../when');
 
 describe('PHP "include" statement integration', function () {
@@ -60,5 +63,32 @@ describe('PHP "include" statement integration', function () {
         }, when(done, function (error) {
             expect(error.message).to.equal('PHP Parse error: syntax error, unexpected $end in abc.php on line 1');
         }));
+    });
+
+    it('should use the same stdout stream for included modules', function (done) {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+print 'before ';
+include 'my_module.php';
+print ' after';
+EOS
+*/;}), //jshint ignore:line
+            js = phpToJS.transpile(phpToAST.create().parse(php)),
+            module = new Function(
+                'require',
+                'return ' + js
+            )(function () {
+                return phpRuntime;
+            }),
+            options = {
+                include: function (path, promise) {
+                    promise.resolve('<?php print 21 + 2;');
+                }
+            },
+            engine = module(options);
+
+        engine.execute().then(when(done, function () {
+            expect(engine.getStdout().readAll()).to.equal('before 23 after');
+        }), done);
     });
 });

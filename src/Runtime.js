@@ -31,19 +31,9 @@ _.extend(Runtime.prototype, {
             phpToJS = runtime.phpToJS;
 
         return function (options, environment) {
-            var stderr,
-                stdin,
-                stdout;
-
             if (environment) {
-                stdin = environment.getStdin();
-                stdout = environment.getStdout();
-                stderr = environment.getStderr();
                 options = _.extend({}, environment.getOptions(), options);
             } else {
-                stdin = new Stream();
-                stdout = new Stream();
-                stderr = new Stream();
                 environment = runtime.createEnvironment(options);
             }
 
@@ -51,9 +41,6 @@ _.extend(Runtime.prototype, {
                 runtime,
                 environment,
                 phpCommon,
-                stdin,
-                stdout,
-                stderr,
                 options,
                 wrapper,
                 pausable,
