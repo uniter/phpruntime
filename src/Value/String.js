@@ -12,6 +12,7 @@
 module.exports = require('pausable').executeSync([require], function (require) {
     var _ = require('lodash'),
         util = require('util'),
+        NullReference = require('../Reference/Null'),
         Value = require('../Value');
 
     function StringValue(factory, callStack, value) {
@@ -86,6 +87,22 @@ module.exports = require('pausable').executeSync([require], function (require) {
                 classObject = namespaceScope.getClass(value.value);
 
             return classObject.getConstantByName(name);
+        },
+
+        getElementByKey: function (key) {
+            var keyValue,
+                value = this;
+
+            key = key.coerceToKey(value.callStack);
+
+            if (!key) {
+                // Could not be coerced to a key: error will already have been handled, just return NULL
+                return new NullReference(value.factory);
+            }
+
+            keyValue = key.getNative();
+
+            return value.factory.createString(value.value.charAt(keyValue));
         },
 
         getLength: function () {
