@@ -60,7 +60,7 @@ var _ = require('lodash'),
 
 function PHPState(stdin, stdout, stderr, pausable) {
     var callStack = new CallStack(stderr),
-        valueFactory = new ValueFactory(callStack),
+        valueFactory = new ValueFactory(pausable, callStack),
         classAutoloader = new ClassAutoloader(valueFactory),
         globalNamespace = new Namespace(callStack, valueFactory, classAutoloader, null, '');
 

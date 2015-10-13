@@ -46,6 +46,10 @@ function Engine(
 }
 
 _.extend(Engine.prototype, {
+    createPause: function () {
+        return this.pausable.createPause();
+    },
+
     execute: function () {
         var callStack,
             engine = this,

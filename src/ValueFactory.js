@@ -17,13 +17,15 @@ var _ = require('lodash'),
     IntegerValue = require('./Value/Integer'),
     NullValue = require('./Value/Null'),
     ObjectValue = require('./Value/Object'),
+    PHPObject = require('./PHPObject'),
     StringValue = require('./Value/String'),
     Value = require('./Value');
 
-function ValueFactory(callStack) {
+function ValueFactory(pausable, callStack) {
     this.nextObjectID = 1;
     this.callStack = callStack;
     this.globalNamespace = null;
+    this.pausable = pausable;
 }
 
 _.extend(ValueFactory.prototype, {
@@ -94,6 +96,11 @@ _.extend(ValueFactory.prototype, {
 
         // Object ID tracking is incomplete: ID should be freed when all references are lost
         return new ObjectValue(factory, factory.callStack, value, classObject, factory.nextObjectID++);
+    },
+    createPHPObject: function (object) {
+        var factory = this;
+
+        return new PHPObject(factory.pausable, factory, object);
     },
     createString: function (value) {
         var factory = this;
