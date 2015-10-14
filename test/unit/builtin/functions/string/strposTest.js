@@ -1,0 +1,79 @@
+/*
+ * PHPRuntime - PHP environment runtime components
+ * Copyright (c) Dan Phillimore (asmblah)
+ * https://github.com/uniter/phpruntime/
+ *
+ * Released under the MIT license
+ * https://github.com/uniter/phpruntime/raw/master/MIT-LICENSE.txt
+ */
+
+'use strict';
+
+var expect = require('chai').expect,
+    sinon = require('sinon'),
+    stringFunctionFactory = require('../../../../../src/builtin/functions/string'),
+    BooleanValue = require('../../../../../src/Value/Boolean'),
+    CallStack = require('../../../../../src/CallStack'),
+    IntegerValue = require('../../../../../src/Value/Integer'),
+    ValueFactory = require('../../../../../src/ValueFactory'),
+    Variable = require('../../../../../src/Variable');
+
+describe('PHP "strpos" builtin function', function () {
+    beforeEach(function () {
+        this.callStack = sinon.createStubInstance(CallStack);
+        this.valueFactory = sinon.createStubInstance(ValueFactory);
+        this.valueFactory.createBoolean.restore();
+        sinon.stub(this.valueFactory, 'createBoolean', function (native) {
+            var value = sinon.createStubInstance(BooleanValue);
+            value.getNative.returns(native);
+            return value;
+        });
+        this.valueFactory.createInteger.restore();
+        sinon.stub(this.valueFactory, 'createInteger', function (native) {
+            var value = sinon.createStubInstance(IntegerValue);
+            value.getNative.returns(native);
+            return value;
+        });
+        this.internals = {
+            callStack: this.callStack,
+            valueFactory: this.valueFactory
+        };
+        this.stringFunctions = stringFunctionFactory(this.internals);
+        this.strpos = this.stringFunctions.strpos;
+
+        this.haystackReference = sinon.createStubInstance(Variable);
+        this.needleReference = sinon.createStubInstance(Variable);
+        this.offsetReference = sinon.createStubInstance(Variable);
+
+        this.callStrpos = function () {
+            return this.strpos(this.haystackReference, this.needleReference, this.offsetReference);
+        }.bind(this);
+    });
+
+    it('should return 6 when looking for "world" in "hello world out there!" with no offset', function () {
+        this.haystackReference.getNative.returns('hello world, out there world!');
+        this.needleReference.getNative.returns('world');
+        this.offsetReference = null;
+
+        expect(this.callStrpos()).to.be.an.instanceOf(IntegerValue);
+        expect(this.callStrpos().getNative()).to.equal(6);
+    });
+
+    it('should return 21 when looking for "you" in "hello you, where are you?" with offset 10', function () {
+        this.haystackReference.getNative.returns('hello you, where are you?');
+        this.needleReference.getNative.returns('you');
+        this.offsetReference.getNative.returns(10);
+
+        expect(this.callStrpos()).to.be.an.instanceOf(IntegerValue);
+        expect(this.callStrpos().getNative()).to.equal(21);
+    });
+
+    it('should return boolean false when the needle is not found in the haystack', function () {
+        this.haystackReference.getNative.returns('This is a string.');
+        this.needleReference.getNative.returns('random');
+        this.offsetReference = null;
+
+        expect(this.callStrpos()).to.be.an.instanceOf(BooleanValue);
+        expect(this.callStrpos().getNative()).to.be.false;
+    });
+});

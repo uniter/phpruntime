@@ -117,6 +117,26 @@ module.exports = function (internals) {
             return valueFactory.createString(subject);
         },
 
+        'strpos': function (haystackReference, needleReference, offsetReference) {
+            var haystack = haystackReference.getNative(),
+                needle = needleReference.getNative(),
+                offset = offsetReference ? offsetReference.getNative() : 0,
+                position;
+
+            // Negative offsets indicate no. of chars at end of haystack to scan
+            if (offset < 0) {
+                offset = haystack.length + offset;
+            }
+
+            position = haystack.substr(offset).indexOf(needle);
+
+            if (position === -1) {
+                return valueFactory.createBoolean(false);
+            }
+
+            return valueFactory.createInteger(offset + position);
+        },
+
         'strrpos': function (haystackReference, needleReference, offsetReference) {
             var haystack = haystackReference.getValue().getNative(),
                 needle = needleReference.getValue().getNative(),
