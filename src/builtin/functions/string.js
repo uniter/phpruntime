@@ -11,8 +11,7 @@
 
 var _ = require('lodash'),
     phpCommon = require('phpcommon'),
-    PHPError = phpCommon.PHPError,
-    Variable = require('../../Variable');
+    PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
@@ -20,8 +19,7 @@ module.exports = function (internals) {
 
     return {
         'strlen': function (stringReference) {
-            var isReference = (stringReference instanceof Variable),
-                stringValue = isReference ? stringReference.getValue() : stringReference;
+            var stringValue = stringReference.getValue();
 
             if (stringValue.getType() === 'array' || stringValue.getType() === 'object') {
                 callStack.raiseError(PHPError.E_WARNING, 'strlen() expects parameter 1 to be string, ' + stringValue.getType() + ' given');
@@ -38,8 +36,7 @@ module.exports = function (internals) {
             countReference
         ) {
             function getNative(reference) {
-                var isReference = (reference instanceof Variable),
-                    value = isReference ? reference.getValue() : reference;
+                var value = reference.getValue();
 
                 return value.getNative();
             }

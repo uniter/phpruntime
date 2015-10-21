@@ -12,11 +12,11 @@
 var expect = require('chai').expect,
     sinon = require('sinon'),
     stringFunctionFactory = require('../../../../../src/builtin/functions/string'),
-    BooleanValue = require('../../../../../src/Value/Boolean'),
-    CallStack = require('../../../../../src/CallStack'),
-    IntegerValue = require('../../../../../src/Value/Integer'),
-    ValueFactory = require('../../../../../src/ValueFactory'),
-    Variable = require('../../../../../src/Variable');
+    BooleanValue = require('phpcore/src/Value/Boolean'),
+    CallStack = require('phpcore/src/CallStack'),
+    IntegerValue = require('phpcore/src/Value/Integer'),
+    ValueFactory = require('phpcore/src/ValueFactory'),
+    Variable = require('phpcore/src/Variable');
 
 describe('PHP "strpos" builtin function', function () {
     beforeEach(function () {

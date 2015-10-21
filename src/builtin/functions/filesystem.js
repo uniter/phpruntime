@@ -9,8 +9,7 @@
 
 'use strict';
 
-var INCLUDE_PATH_INI = 'include_path',
-    Variable = require('../../Variable');
+var INCLUDE_PATH_INI = 'include_path';
 
 module.exports = function (internals) {
     var iniState = internals.iniState,
@@ -18,8 +17,7 @@ module.exports = function (internals) {
 
     return {
         'dirname': function (pathReference) {
-            var isReference = (pathReference instanceof Variable),
-                pathValue = isReference ? pathReference.getValue() : pathReference,
+            var pathValue = pathReference.getValue(),
                 path = pathValue.getNative();
 
             if (path && path.indexOf('/') === -1) {

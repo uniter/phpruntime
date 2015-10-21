@@ -14,22 +14,11 @@ var arrayFunctions = require('./functions/array'),
     filesystemConstants = require('./constants/filesystem'),
     filesystemFunctions = require('./functions/filesystem'),
     functionHandlingFunctions = require('./functions/functionHandling'),
-    splFunctions = require('./functions/spl'),
-    stdClass = require('./classes/stdClass'),
     stringFunctions = require('./functions/string'),
     timeFunctions = require('./functions/time'),
-    variableHandlingFunctions = require('./functions/variableHandling'),
-    Closure = require('./classes/Closure'),
-    Exception = require('./classes/Exception'),
-    JSObject = require('./classes/JSObject');
+    variableHandlingFunctions = require('./functions/variableHandling');
 
 module.exports = {
-    classes: {
-        'stdClass': stdClass,
-        'Closure': Closure,
-        'Exception': Exception,
-        'JSObject': JSObject
-    },
     constantGroups: [
         filesystemConstants
     ],
@@ -38,7 +27,6 @@ module.exports = {
         constantFunctions,
         filesystemFunctions,
         functionHandlingFunctions,
-        splFunctions,
         stringFunctions,
         timeFunctions,
         variableHandlingFunctions

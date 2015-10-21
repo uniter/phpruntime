@@ -12,8 +12,7 @@
 var _ = require('lodash'),
     phpCommon = require('phpcommon'),
     IMPLODE = 'implode',
-    PHPError = phpCommon.PHPError,
-    Variable = require('../../Variable');
+    PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
@@ -22,23 +21,21 @@ module.exports = function (internals) {
 
     methods = {
         'array_push': function (arrayReference) {
-            var isReference = (arrayReference instanceof Variable),
-                arrayValue = isReference ? arrayReference.getValue() : arrayReference,
+            var arrayValue = arrayReference.getValue(),
                 i,
                 reference,
                 value;
 
             for (i = 1; i < arguments.length; i++) {
                 reference = arguments[i];
-                value = (reference instanceof Variable) ? reference.getValue() : reference;
+                value = reference.getValue();
                 arrayValue.push(value);
             }
 
             return valueFactory.createInteger(arrayValue.getLength());
         },
         'current': function (arrayReference) {
-            var isReference = (arrayReference instanceof Variable),
-                arrayValue = isReference ? arrayReference.getValue() : arrayReference;
+            var arrayValue = arrayReference.getValue();
 
             if (arrayValue.getPointer() >= arrayValue.getLength()) {
                 return valueFactory.createBoolean(false);
@@ -71,8 +68,7 @@ module.exports = function (internals) {
             return methods[IMPLODE](glueReference, piecesReference);
         },
         'next': function (arrayReference) {
-            var isReference = (arrayReference instanceof Variable),
-                arrayValue = isReference ? arrayReference.getValue() : arrayReference;
+            var arrayValue = arrayReference.getValue();
 
             if (arrayValue.getType() !== 'array') {
                 callStack.raiseError(PHPError.E_WARNING, 'next() expects parameter 1 to be array, ' + arrayValue.getType() + ' given');

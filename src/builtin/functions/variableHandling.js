@@ -11,8 +11,7 @@
 
 var _ = require('lodash'),
     phpCommon = require('phpcommon'),
-    PHPError = phpCommon.PHPError,
-    Variable = require('../../Variable');
+    PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
@@ -21,8 +20,7 @@ module.exports = function (internals) {
     return {
         // NB: This output matches that of PHP with XDebug disabled
         'var_dump': function (valueReference) {
-            var isReference,
-                value,
+            var value,
                 objects = [];
 
             if (!valueReference) {
@@ -30,8 +28,7 @@ module.exports = function (internals) {
                 return;
             }
 
-            isReference = (valueReference instanceof Variable);
-            value = isReference ? valueReference.getValue() : valueReference;
+            value = valueReference.getValue();
 
             function dump(value, depth, isReference) {
                 var currentIndentation = new Array(depth).join('  '),

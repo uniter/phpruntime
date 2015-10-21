@@ -10,8 +10,7 @@
 'use strict';
 
 var phpCommon = require('phpcommon'),
-    PHPError = phpCommon.PHPError,
-    Variable = require('../../Variable');
+    PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
@@ -19,8 +18,7 @@ module.exports = function (internals) {
 
     return {
         'usleep': function (microsecondsReference) {
-            var isReference = (microsecondsReference instanceof Variable),
-                microsecondsValue = isReference ? microsecondsReference.getValue() : microsecondsReference,
+            var microsecondsValue = microsecondsReference.getValue(),
                 pause;
 
             if (microsecondsValue.getType() !== 'integer' && microsecondsValue.getType() !== 'float') {
