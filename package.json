@@ -25,7 +25,6 @@
   "dependencies": {
     "bluebird": "^2.9.34",
     "lodash": "^3.10.0",
-    "pausable": "~2.0",
     "phpcommon": "~1.2",
     "phpcore": "~1",
     "phptoast": "~2.1",
