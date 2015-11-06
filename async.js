@@ -9,4 +9,9 @@
 
 'use strict';
 
-module.exports = require('./async');
+var builtins = require('./src/builtin/builtins'),
+    runtime = require('phpcore/async');
+
+runtime.install(builtins);
+
+module.exports = runtime;
