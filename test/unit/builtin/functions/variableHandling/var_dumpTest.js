@@ -112,4 +112,50 @@ EOS
 */;}) //jshint ignore:line
         );
     });
+
+    it('should handle array elements with references to variables containing strings', function () {
+        var firstElement = sinon.createStubInstance(ElementReference),
+            secondElement = sinon.createStubInstance(ElementReference),
+            firstKey = sinon.createStubInstance(Value),
+            secondKey = sinon.createStubInstance(Value),
+            firstValue = sinon.createStubInstance(Value),
+            secondValue = sinon.createStubInstance(Value);
+        this.valueReference.getLength.returns(2);
+        this.valueReference.getNative.restore();
+        sinon.stub(this.valueReference, 'getNative', function () {
+            // Array.getNative() always returns a new JS array object
+            return [];
+        });
+        this.valueReference.getType.returns('array');
+        this.valueReference.getKeys = sinon.stub().returns([firstKey, secondKey]);
+        this.valueReference.getElementByKey.withArgs(sinon.match.same(firstKey)).returns(firstElement);
+        this.valueReference.getElementByKey.withArgs(sinon.match.same(secondKey)).returns(secondElement);
+        firstElement.getValue.returns(firstValue);
+        firstElement.isReference.returns(false);
+        firstValue.getType.returns('string');
+        firstValue.getNative.returns('my first string');
+
+        secondElement.getValue.returns(secondValue);
+        secondElement.isReference.returns(true);
+        secondValue.getType.returns('string');
+        secondValue.getNative.returns('my second string');
+
+        firstKey.getNative.returns('first');
+        secondKey.getNative.returns('second');
+
+        this.callVardump();
+
+        expect(this.stdoutContents).to.equal(
+            nowdoc(function () {/*<<<EOS
+array(2) {
+  ["first"]=>
+  string(15) "my first string"
+  ["second"]=>
+  &string(16) "my second string"
+}
+
+EOS
+*/;}) //jshint ignore:line
+        );
+    });
 });

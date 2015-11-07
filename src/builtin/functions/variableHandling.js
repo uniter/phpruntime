@@ -50,8 +50,7 @@ module.exports = function (internals) {
                     return representation + '\n';
                 }
 
-                switch (value.getType()) {
-                case 'array':
+                if (value.getType() === 'array') {
                     if (arrays.indexOf(value.getValue()) > -1) {
                         representation += '*RECURSION*';
                         return representation + '\n';
@@ -78,20 +77,7 @@ module.exports = function (internals) {
                     });
 
                     representation += currentIndentation + '}';
-                    break;
-                case 'boolean':
-                    representation += 'bool(' + (value.getNative() ? 'true' : 'false') + ')';
-                    break;
-                case 'float':
-                    representation += 'float(' + value.getNative() + ')';
-                    break;
-                case 'integer':
-                    representation += 'int(' + value.getNative() + ')';
-                    break;
-                case 'null':
-                    representation += 'NULL';
-                    break;
-                case 'object':
+                } else if (value.getType() === 'object') {
                     if (objects.indexOf(value.getNative()) > -1) {
                         representation += '*RECURSION*';
                         return representation + '\n';
@@ -121,17 +107,35 @@ module.exports = function (internals) {
                     });
 
                     representation += currentIndentation + '}';
-                    break;
-                case 'string':
-                    nativeValue = value.getNative();
-                    nativeLength = nativeValue.length;
-
-                    if (nativeLength > MAX_STRING_LENGTH) {
-                        nativeValue = nativeValue.substr(0, MAX_STRING_LENGTH) + '...';
+                } else {
+                    if (isReference) {
+                        representation += '&';
                     }
 
-                    representation += 'string(' + nativeLength + ') "' + nativeValue + '"';
-                    break;
+                    switch (value.getType()) {
+                    case 'boolean':
+                        representation += 'bool(' + (value.getNative() ? 'true' : 'false') + ')';
+                        break;
+                    case 'float':
+                        representation += 'float(' + value.getNative() + ')';
+                        break;
+                    case 'integer':
+                        representation += 'int(' + value.getNative() + ')';
+                        break;
+                    case 'null':
+                        representation += 'NULL';
+                        break;
+                    case 'string':
+                        nativeValue = value.getNative();
+                        nativeLength = nativeValue.length;
+
+                        if (nativeLength > MAX_STRING_LENGTH) {
+                            nativeValue = nativeValue.substr(0, MAX_STRING_LENGTH) + '...';
+                        }
+
+                        representation += 'string(' + nativeLength + ') "' + nativeValue + '"';
+                        break;
+                    }
                 }
 
                 return representation + '\n';
