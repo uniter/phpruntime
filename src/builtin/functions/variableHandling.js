@@ -44,7 +44,12 @@ module.exports = function (internals) {
 
                 dumps++;
 
-                if (depth > MAX_RECURSION_DEPTH || dumps > MAX_DUMPS || objects.indexOf(value.getNative()) > -1) {
+                if (
+                    depth > MAX_RECURSION_DEPTH ||
+                    dumps > MAX_DUMPS ||
+                    objects.indexOf(value) > -1 ||
+                    objects.indexOf(value.getNative()) > -1
+                ) {
                     representation += '*RECURSION*';
                     return representation + '\n';
                 }
@@ -57,6 +62,8 @@ module.exports = function (internals) {
                 switch (value.getType()) {
                 case 'array':
                     representation += 'array(' + value.getLength() + ') {\n';
+
+                    objects.push(value);
 
                     _.each(value.getKeys(), function (key) {
                         var element = value.getElementByKey(key);
