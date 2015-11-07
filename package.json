@@ -1,5 +1,5 @@
 {
-  "version": "2.7.4",
+  "version": "3.0.0",
   "name": "phpruntime",
   "description": "Runtime library for PHP environments",
   "keywords": [
