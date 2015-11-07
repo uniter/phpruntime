@@ -23,10 +23,9 @@
     "test": "npm run jshint && npm run mocha"
   },
   "dependencies": {
-    "bluebird": "^2.9.34",
     "microdash": "~1",
     "phpcommon": "~1.3",
-    "phpcore": "~1",
+    "phpcore": "~2",
     "phptoast": "~2.2",
     "phptojs": "~1.4"
   },
