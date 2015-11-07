@@ -23,7 +23,8 @@ module.exports = function (internals) {
     return {
         // NB: This output matches that of PHP with XDebug disabled
         'var_dump': function (valueReference) {
-            var dumps = 0,
+            var arrays = [],
+                dumps = 0,
                 value,
                 objects = [];
 
@@ -44,30 +45,36 @@ module.exports = function (internals) {
 
                 dumps++;
 
-                if (
-                    depth > MAX_RECURSION_DEPTH ||
-                    dumps > MAX_DUMPS ||
-                    objects.indexOf(value) > -1 ||
-                    objects.indexOf(value.getNative()) > -1
-                ) {
+                if (depth > MAX_RECURSION_DEPTH || dumps > MAX_DUMPS) {
                     representation += '*RECURSION*';
                     return representation + '\n';
                 }
 
-                if (isReference) {
-                    objects.push(value.getNative());
-                    representation += '&';
-                }
-
                 switch (value.getType()) {
                 case 'array':
+                    if (arrays.indexOf(value.getValue()) > -1) {
+                        representation += '*RECURSION*';
+                        return representation + '\n';
+                    }
+
+                    if (isReference) {
+                        arrays.push(value.getValue());
+                        representation += '&';
+                    }
+
                     representation += 'array(' + value.getLength() + ') {\n';
 
-                    objects.push(value);
-
                     _.each(value.getKeys(), function (key) {
-                        var element = value.getElementByKey(key);
-                        representation += nextIndentation + '[' + JSON.stringify(key.getNative()) + ']=>\n' + dump(element.getValue(), depth + 1, element.isReference());
+                        var element = value.getElementByKey(key),
+                            elementRepresentation;
+
+                        elementRepresentation = dump(element.getValue(), depth + 1, element.isReference());
+
+                        representation += nextIndentation +
+                            '[' +
+                            JSON.stringify(key.getNative()) +
+                            ']=>\n' +
+                            elementRepresentation;
                     });
 
                     representation += currentIndentation + '}';
@@ -85,6 +92,15 @@ module.exports = function (internals) {
                     representation += 'NULL';
                     break;
                 case 'object':
+                    if (objects.indexOf(value.getNative()) > -1) {
+                        representation += '*RECURSION*';
+                        return representation + '\n';
+                    }
+
+                    if (isReference) {
+                        representation += '&';
+                    }
+
                     names = value.getInstancePropertyNames();
 
                     representation += 'object(' + value.getClassName() + ')#' + value.getID() + ' (' + names.length + ') {\n';

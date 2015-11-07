@@ -100,7 +100,12 @@ array(2) {
   ["first"]=>
   string(15) "my first string"
   ["myself"]=>
-  *RECURSION*
+  &array(2) {
+    ["first"]=>
+    string(15) "my first string"
+    ["myself"]=>
+    *RECURSION*
+  }
 }
 
 EOS
