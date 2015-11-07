@@ -11,6 +11,9 @@
 
 var _ = require('microdash'),
     phpCommon = require('phpcommon'),
+    MAX_DUMPS = 20000,
+    MAX_RECURSION_DEPTH = 5,
+    MAX_STRING_LENGTH = 2048,
     PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {
@@ -20,7 +23,8 @@ module.exports = function (internals) {
     return {
         // NB: This output matches that of PHP with XDebug disabled
         'var_dump': function (valueReference) {
-            var value,
+            var dumps = 0,
+                value,
                 objects = [];
 
             if (!valueReference) {
@@ -33,17 +37,20 @@ module.exports = function (internals) {
             function dump(value, depth, isReference) {
                 var currentIndentation = new Array(depth).join('  '),
                     names,
+                    nativeLength,
                     nativeValue,
                     nextIndentation = new Array(depth + 1).join('  '),
                     representation = currentIndentation;
 
-                if (objects.indexOf(value) > -1) {
+                dumps++;
+
+                if (depth > MAX_RECURSION_DEPTH || dumps > MAX_DUMPS || objects.indexOf(value.getNative()) > -1) {
                     representation += '*RECURSION*';
                     return representation + '\n';
                 }
 
                 if (isReference) {
-                    objects.push(value);
+                    objects.push(value.getNative());
                     representation += '&';
                 }
 
@@ -75,7 +82,7 @@ module.exports = function (internals) {
 
                     representation += 'object(' + value.getClassName() + ')#' + value.getID() + ' (' + names.length + ') {\n';
 
-                    objects.push(value);
+                    objects.push(value.getNative());
 
                     _.each(names, function (nameValue) {
                         var property = value.getInstancePropertyByName(nameValue);
@@ -94,7 +101,13 @@ module.exports = function (internals) {
                     break;
                 case 'string':
                     nativeValue = value.getNative();
-                    representation += 'string(' + nativeValue.length + ') "' + nativeValue + '"';
+                    nativeLength = nativeValue.length;
+
+                    if (nativeLength > MAX_STRING_LENGTH) {
+                        nativeValue = nativeValue.substr(0, MAX_STRING_LENGTH) + '...';
+                    }
+
+                    representation += 'string(' + nativeLength + ') "' + nativeValue + '"';
                     break;
                 }
 
