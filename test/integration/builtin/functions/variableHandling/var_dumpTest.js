@@ -45,11 +45,11 @@ object(JSObject)#1 (2) {
   ["theModule"]=>
   object(JSObject)#2 (7) {
     ["id"]=>
-    string(121) "${myModulePath}"
+    string(${myModulePathLength}) "${myModulePath}"
     ["exports"]=>
     *RECURSION*
 EOS
-*/;}, {myModulePath: myModulePath}) //jshint ignore:line
+*/;}, {myModulePath: myModulePath, myModulePathLength: myModulePath.length}) //jshint ignore:line
         );
     });
 });
