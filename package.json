@@ -26,8 +26,8 @@
     "microdash": "~1",
     "phpcommon": "~1.3",
     "phpcore": "~3",
-    "phptoast": "~2.2",
-    "phptojs": "~1.4"
+    "phptoast": "~2",
+    "phptojs": "~2"
   },
   "devDependencies": {
     "chai": "^2.3.0",
