@@ -30,6 +30,10 @@ module.exports = function (internals) {
             return valueFactory.createBoolean(valueReference.getValue().getType() === 'boolean');
         },
 
+        'is_float': function (valueReference) {
+            return valueFactory.createBoolean(valueReference.getValue().getType() === 'float');
+        },
+
         // NB: This output matches that of PHP with XDebug disabled
         'var_dump': function (valueReference) {
             var arrays = [],
