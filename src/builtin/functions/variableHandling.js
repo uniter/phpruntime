@@ -21,18 +21,27 @@ module.exports = function (internals) {
         stdout = internals.stdout,
         valueFactory = internals.valueFactory;
 
+    function createTypeChecker(name, type) {
+        return function (valueReference) {
+            if (!valueReference) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    name + '() expects exactly 1 parameter, 0 given'
+                );
+
+                return valueFactory.createBoolean(false);
+            }
+
+            return valueFactory.createBoolean(valueReference.getValue().getType() === type);
+        };
+    }
+
     return {
-        'is_array': function (valueReference) {
-            return valueFactory.createBoolean(valueReference.getValue().getType() === 'array');
-        },
+        'is_array': createTypeChecker('is_array', 'array'),
 
-        'is_bool': function (valueReference) {
-            return valueFactory.createBoolean(valueReference.getValue().getType() === 'boolean');
-        },
+        'is_bool': createTypeChecker('is_bool', 'boolean'),
 
-        'is_float': function (valueReference) {
-            return valueFactory.createBoolean(valueReference.getValue().getType() === 'float');
-        },
+        'is_float': createTypeChecker('is_float', 'float'),
 
         // NB: This output matches that of PHP with XDebug disabled
         'var_dump': function (valueReference) {

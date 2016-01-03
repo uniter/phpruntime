@@ -10,12 +10,14 @@
 'use strict';
 
 var expect = require('chai').expect,
+    phpCommon = require('phpcommon'),
     sinon = require('sinon'),
     variableHandlingFunctionFactory = require('../../../../../src/builtin/functions/variableHandling'),
     ArrayValue = require('phpcore/src/Value/Array').sync(),
     BooleanValue = require('phpcore/src/Value/Boolean').sync(),
     CallStack = require('phpcore/src/CallStack'),
     IntegerValue = require('phpcore/src/Value/Integer').sync(),
+    PHPError = phpCommon.PHPError,
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
@@ -83,5 +85,22 @@ describe('PHP "is_array" builtin function', function () {
 
         expect(this.callIsArray()).to.be.an.instanceOf(BooleanValue);
         expect(this.callIsArray().getNative()).to.be.false;
+    });
+
+    it('should return false when not passed any argument', function () {
+        var result = this.is_array();
+
+        expect(result).to.be.an.instanceOf(BooleanValue);
+        expect(result.getNative()).to.be.false;
+    });
+
+    it('should raise a warning when not passed any argument', function () {
+        this.is_array();
+
+        expect(this.callStack.raiseError).to.have.been.calledOnce;
+        expect(this.callStack.raiseError).to.have.been.calledWith(
+            PHPError.E_WARNING,
+            'is_array() expects exactly 1 parameter, 0 given'
+        );
     });
 });

@@ -10,12 +10,14 @@
 'use strict';
 
 var expect = require('chai').expect,
+    phpCommon = require('phpcommon'),
     sinon = require('sinon'),
     variableHandlingFunctionFactory = require('../../../../../src/builtin/functions/variableHandling'),
     BooleanValue = require('phpcore/src/Value/Boolean').sync(),
     CallStack = require('phpcore/src/CallStack'),
     FloatValue = require('phpcore/src/Value/Float').sync(),
     IntegerValue = require('phpcore/src/Value/Integer').sync(),
+    PHPError = phpCommon.PHPError,
     StringValue = require('phpcore/src/Value/String').sync(),
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
@@ -85,5 +87,22 @@ describe('PHP "is_float" builtin function', function () {
 
         expect(this.callIsArray()).to.be.an.instanceOf(BooleanValue);
         expect(this.callIsArray().getNative()).to.be.false;
+    });
+
+    it('should return false when not passed any argument', function () {
+        var result = this.is_float();
+
+        expect(result).to.be.an.instanceOf(BooleanValue);
+        expect(result.getNative()).to.be.false;
+    });
+
+    it('should raise a warning when not passed any argument', function () {
+        this.is_float();
+
+        expect(this.callStack.raiseError).to.have.been.calledOnce;
+        expect(this.callStack.raiseError).to.have.been.calledWith(
+            PHPError.E_WARNING,
+            'is_float() expects exactly 1 parameter, 0 given'
+        );
     });
 });
