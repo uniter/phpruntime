@@ -18,9 +18,14 @@ var _ = require('microdash'),
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
-        stdout = internals.stdout;
+        stdout = internals.stdout,
+        valueFactory = internals.valueFactory;
 
     return {
+        'is_array': function (valueReference) {
+            return valueFactory.createBoolean(valueReference.getValue().getType() === 'array');
+        },
+
         // NB: This output matches that of PHP with XDebug disabled
         'var_dump': function (valueReference) {
             var arrays = [],
