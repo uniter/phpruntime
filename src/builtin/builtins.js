@@ -9,8 +9,10 @@
 
 'use strict';
 
-var arrayFunctions = require('./functions/array'),
+var arrayConstants = require('./constants/array'),
+    arrayFunctions = require('./functions/array'),
     constantFunctions = require('./functions/constant'),
+    Countable = require('./interfaces/Countable'),
     filesystemConstants = require('./constants/filesystem'),
     filesystemFunctions = require('./functions/filesystem'),
     functionHandlingFunctions = require('./functions/functionHandling'),
@@ -19,7 +21,11 @@ var arrayFunctions = require('./functions/array'),
     variableHandlingFunctions = require('./functions/variableHandling');
 
 module.exports = {
+    classes: {
+        'Countable': Countable
+    },
     constantGroups: [
+        arrayConstants,
         filesystemConstants
     ],
     functionGroups: [

@@ -10,18 +10,28 @@
 'use strict';
 
 var expect = require('chai').expect,
-    myModule = require('./myModule.fixture'),
-    myModulePath = require.resolve('./myModule.fixture'),
     nowdoc = require('nowdoc'),
     phpToAST = require('phptoast'),
     phpToJS = require('phptojs'),
     syncPHPRuntime = require('../../../../../sync');
 
-describe('PHP "var_dump" builtin function integration', function () {
-    it('should be able to dump a Node.js module object', function () {
+describe('PHP "count" builtin function integration', function () {
+    it('should be able to count normal arrays and objects that implement the Countable interface', function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
-var_dump($myModule);
+class MyClass implements Countable
+{
+    public function count()
+    {
+        return 1280;
+    }
+}
+
+$myArray = [21, 27, 'hello'];
+$myObject = new MyClass();
+
+var_dump(count($myArray));
+var_dump(count($myObject));
 EOS
 */;}), //jshint ignore:line
             js = phpToJS.transpile(phpToAST.create().parse(php)),
@@ -33,23 +43,14 @@ EOS
             }),
             engine = module();
 
-        engine.expose(myModule, 'myModule');
-
         engine.execute();
 
         expect(engine.getStdout().readAll()).to.contain(
             nowdoc(function () {/*<<<EOS
-object(JSObject)#1 (2) {
-  ["myModule"]=>
-  string(10) "yes, it is"
-  ["theModule"]=>
-  object(JSObject)#3 (7) {
-    ["id"]=>
-    string(${myModulePathLength}) "${myModulePath}"
-    ["exports"]=>
-    *RECURSION*
+int(3)
+int(1280)
 EOS
-*/;}, {myModulePath: myModulePath, myModulePathLength: myModulePath.length}) //jshint ignore:line
+*/;}) //jshint ignore:line
         );
     });
 });

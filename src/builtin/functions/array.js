@@ -11,6 +11,7 @@
 
 var _ = require('microdash'),
     phpCommon = require('phpcommon'),
+    COUNT_NORMAL = 0,
     IMPLODE = 'implode',
     PHPError = phpCommon.PHPError;
 
@@ -33,6 +34,33 @@ module.exports = function (internals) {
             }
 
             return valueFactory.createInteger(arrayValue.getLength());
+        },
+        /**
+         * Counts the specified array or object. May be hooked
+         * by implementing interface Countable
+         *
+         * @see {@link https://secure.php.net/manual/en/function.count.php}
+         *
+         * @param {Variable|Value} arrayReference
+         * @param {Variable|Value} modeReference
+         * @returns {IntegerValue}
+         */
+        'count': function (arrayReference, modeReference) {
+            var array = arrayReference.getValue(),
+                mode = modeReference ? modeReference.getNative() : 0,
+                type = array.getType();
+
+            if (type === 'object' && array.classIs('Countable')) {
+                return array.callMethod('count');
+            }
+
+            if (mode !== COUNT_NORMAL) {
+                throw new Error('Unsupported mode for count(...) :: ' + mode);
+            }
+
+            return valueFactory.createInteger(
+                type === 'array' || type === 'object' ? array.getLength() : 1
+            );
         },
         'current': function (arrayReference) {
             var arrayValue = arrayReference.getValue();
