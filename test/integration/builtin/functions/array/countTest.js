@@ -45,10 +45,11 @@ EOS
 
         engine.execute();
 
-        expect(engine.getStdout().readAll()).to.contain(
+        expect(engine.getStdout().readAll()).to.equal(
             nowdoc(function () {/*<<<EOS
 int(3)
 int(1280)
+
 EOS
 */;}) //jshint ignore:line
         );
