@@ -11,6 +11,7 @@
 
 var arrayConstants = require('./constants/array'),
     arrayFunctions = require('./functions/array'),
+    classFunctions = require('./functions/class'),
     constantFunctions = require('./functions/constant'),
     Countable = require('./interfaces/Countable'),
     filesystemConstants = require('./constants/filesystem'),
@@ -30,6 +31,7 @@ module.exports = {
     ],
     functionGroups: [
         arrayFunctions,
+        classFunctions,
         constantFunctions,
         filesystemFunctions,
         functionHandlingFunctions,
