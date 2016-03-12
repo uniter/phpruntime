@@ -39,15 +39,17 @@ EOS
 
         expect(engine.getStdout().readAll()).to.contain(
             nowdoc(function () {/*<<<EOS
-object(JSObject)#1 (2) {
+array(2) {
   ["myModule"]=>
   string(10) "yes, it is"
   ["theModule"]=>
-  object(JSObject)#3 (7) {
+  object(JSObject)#1 (7) {
     ["id"]=>
     string(${myModulePathLength}) "${myModulePath}"
     ["exports"]=>
-    *RECURSION*
+    array(2) {
+      ["myModule"]=>
+      string(10) "yes, it is"
 EOS
 */;}, {myModulePath: myModulePath, myModulePathLength: myModulePath.length}) //jshint ignore:line
         );
