@@ -10,6 +10,7 @@
 'use strict';
 
 var _ = require('microdash'),
+    hasOwn = {}.hasOwnProperty,
     phpCommon = require('phpcommon'),
     MAX_DUMPS = 20000,
     MAX_RECURSION_DEPTH = 5,
@@ -48,7 +49,7 @@ module.exports = function (internals) {
             var arrays = [],
                 dumps = 0,
                 value,
-                objects = [];
+                objectIDHash = {};
 
             if (!valueReference) {
                 callStack.raiseError(PHPError.E_WARNING, 'var_dump() expects at least 1 parameter, 0 given');
@@ -100,7 +101,7 @@ module.exports = function (internals) {
 
                     representation += currentIndentation + '}';
                 } else if (value.getType() === 'object') {
-                    if (objects.indexOf(value.getNative()) > -1) {
+                    if (hasOwn.call(objectIDHash, value.getID())) {
                         representation += '*RECURSION*';
                         return representation + '\n';
                     }
@@ -113,7 +114,7 @@ module.exports = function (internals) {
 
                     representation += 'object(' + value.getClassName() + ')#' + value.getID() + ' (' + names.length + ') {\n';
 
-                    objects.push(value.getNative());
+                    objectIDHash[value.getID()] = true;
 
                     _.each(names, function (nameValue) {
                         var property = value.getInstancePropertyByName(nameValue);
