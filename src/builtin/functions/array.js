@@ -10,6 +10,7 @@
 'use strict';
 
 var _ = require('microdash'),
+    hasOwn = {}.hasOwnProperty,
     phpCommon = require('phpcommon'),
     COUNT_NORMAL = 0,
     IMPLODE = 'implode',
@@ -29,7 +30,9 @@ module.exports = function (internals) {
          * @returns {IntegerValue}
          */
         'array_merge': function () {
-            var mergedElements = [],
+            var nativeKeyToElementMap = {},
+                mergedElements,
+                nativeKeys = [],
                 nextIndex = 0,
                 returnNull = false;
 
@@ -54,17 +57,33 @@ module.exports = function (internals) {
                 }
 
                 _.each(arrayValue.getKeys(), function (key) {
-                    var mergedKey = key.isNumeric() ?
-                            valueFactory.createInteger(nextIndex++) :
-                        key;
+                    var mergedKey,
+                        nativeKey;
 
-                    mergedElements.push(arrayValue.getElementPairByKey(key, mergedKey));
+                    if (key.isNumeric()) {
+                        nativeKey = nextIndex++;
+                        mergedKey = valueFactory.createInteger(nativeKey);
+                        nativeKeys.push(nativeKey);
+                    } else {
+                        nativeKey = key.getNative();
+                        mergedKey = key;
+
+                        if (!hasOwn.call(nativeKeyToElementMap, nativeKey)) {
+                            nativeKeys.push(nativeKey);
+                        }
+                    }
+
+                    nativeKeyToElementMap[nativeKey] = arrayValue.getElementPairByKey(key, mergedKey);
                 });
             });
 
             if (returnNull) {
                 return valueFactory.createNull();
             }
+
+            mergedElements = _.map(nativeKeys, function (nativeKey) {
+                return nativeKeyToElementMap[nativeKey];
+            });
 
             return valueFactory.createArray(mergedElements);
         },

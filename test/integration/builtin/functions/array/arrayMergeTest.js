@@ -48,7 +48,7 @@ EOS
         var php = nowdoc(function () {/*<<<EOS
 <?php
 $firstArray = ['first' => 20, 'second' => 25];
-$secondArray = ['third' => 10, 'fourth' => 11];
+$secondArray = ['first' => 27, 'third' => 10, 'fourth' => 11];
 
 $result = array_merge($firstArray, $secondArray);
 
@@ -65,7 +65,7 @@ EOS
             engine = module();
 
         expect(engine.execute().getNative()).to.deep.equal({
-            'first': 20,
+            'first': 27,  // Overridden by `first` element in second array
             'second': 25,
             'third': 10,
             'fourth': 11

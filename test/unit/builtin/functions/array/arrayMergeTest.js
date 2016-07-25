@@ -20,6 +20,7 @@ var _ = require('microdash'),
     KeyValuePair = require('phpcore/src/KeyValuePair'),
     NullValue = require('phpcore/src/Value/Null').sync(),
     PHPError = require('phpcommon').PHPError,
+    StringValue = require('phpcore/src/Value/String').sync(),
     ValueFactory = require('phpcore/src/ValueFactory').sync();
 
 describe('PHP "array_merge" builtin function', function () {
@@ -34,7 +35,29 @@ describe('PHP "array_merge" builtin function', function () {
                 var pair = sinon.createStubInstance(KeyValuePair);
 
                 pair.getKey.returns(overrideKey || key);
-                pair.getValue.returns(elements[key.getNative()]);
+                pair.getValue.restore();
+                sinon.stub(pair, 'getValue', function () {
+                    var value = null;
+
+                    _.each(elements, function (existingValue, existingKey) {
+                        if (existingValue instanceof KeyValuePair) {
+                            existingKey = existingValue.getKey();
+                            existingValue = existingValue.getValue();
+                        } else {
+                            existingKey = this.valueFactory.createInteger(existingKey);
+                        }
+
+                        if (existingKey.getNative() === key.getNative()) {
+                            value = existingValue;
+                        }
+                    }.bind(this));
+
+                    if (!value) {
+                        throw new Error('Element "' + key.getNative() + '" is not defined');
+                    }
+
+                    return value;
+                }.bind(this));
 
                 return pair;
             }.bind(this));
@@ -43,12 +66,34 @@ describe('PHP "array_merge" builtin function', function () {
                 var keys = [];
 
                 _.each(elements, function (value, key) {
-                    keys.push(this.valueFactory.createInteger(key));
+                    if (value instanceof KeyValuePair) {
+                        key = value.getKey();
+                    } else {
+                        key = this.valueFactory.createInteger(key);
+                    }
+
+                    keys.push(key);
                 }.bind(this));
 
                 return keys;
             }.bind(this));
-            value.getNative.returns(elements);
+            value.getNative.restore();
+            sinon.stub(value, 'getNative', function () {
+                var nativeArray = {};
+
+                _.each(elements, function (value, key) {
+                    if (value instanceof KeyValuePair) {
+                        key = value.getKey();
+                        value = value.getValue();
+                    } else {
+                        key = this.valueFactory.createInteger(key);
+                    }
+
+                    nativeArray[key.getNative()] = value.getNative();
+                }.bind(this));
+
+                return nativeArray;
+            }.bind(this));
             value.getType.returns('array');
             value.getValue.returns(value);
             return value;
@@ -80,6 +125,24 @@ describe('PHP "array_merge" builtin function', function () {
             value.isNumeric.returns(false);
             return value;
         });
+        this.valueFactory.createString.restore();
+        sinon.stub(this.valueFactory, 'createString', function (native) {
+            var value = sinon.createStubInstance(StringValue);
+            value.getNative.returns(native);
+            value.getType.returns('string');
+            value.getValue.returns(value);
+            value.isNumeric.restore();
+            sinon.stub(value, 'isNumeric', function () {
+                return isFinite(native) && !isNaN(native);
+            });
+            return value;
+        });
+        this.createKeyValuePair = function (key, value) {
+            var keyValuePair = sinon.createStubInstance(KeyValuePair);
+            keyValuePair.getKey.returns(key);
+            keyValuePair.getValue.returns(value);
+            return keyValuePair;
+        };
         this.internals = {
             callStack: this.callStack,
             valueFactory: this.valueFactory
@@ -105,24 +168,57 @@ describe('PHP "array_merge" builtin function', function () {
         result = this.callArrayMerge();
 
         expect(result).to.be.an.instanceOf(ArrayValue);
-        expect(result.getNative()).to.have.length(4);
-        expect(result.getNative()[0]).to.be.an.instanceOf(KeyValuePair);
-        expect(result.getNative()[0].getKey()).to.be.an.instanceOf(IntegerValue);
-        expect(result.getNative()[0].getKey().getNative()).to.equal(0);
-        expect(result.getNative()[0].getValue()).to.be.an.instanceOf(IntegerValue);
-        expect(result.getNative()[0].getValue().getNative()).to.equal(1);
-        expect(result.getNative()[1].getKey()).to.be.an.instanceOf(IntegerValue);
-        expect(result.getNative()[1].getKey().getNative()).to.equal(1);
-        expect(result.getNative()[1].getValue()).to.be.an.instanceOf(IntegerValue);
-        expect(result.getNative()[1].getValue().getNative()).to.equal(4);
-        expect(result.getNative()[2].getKey()).to.be.an.instanceOf(IntegerValue);
-        expect(result.getNative()[2].getKey().getNative()).to.equal(2);
-        expect(result.getNative()[2].getValue()).to.be.an.instanceOf(IntegerValue);
-        expect(result.getNative()[2].getValue().getNative()).to.equal(7);
-        expect(result.getNative()[3].getKey()).to.be.an.instanceOf(IntegerValue);
-        expect(result.getNative()[3].getKey().getNative()).to.equal(3);
-        expect(result.getNative()[3].getValue()).to.be.an.instanceOf(IntegerValue);
-        expect(result.getNative()[3].getValue().getNative()).to.equal(21);
+        expect(result.getKeys()).to.have.length(4);
+        expect(result.getKeys()[0]).to.be.an.instanceOf(IntegerValue);
+        expect(result.getKeys()[0].getNative()).to.equal(0);
+        expect(result.getKeys()[1]).to.be.an.instanceOf(IntegerValue);
+        expect(result.getKeys()[1].getNative()).to.equal(1);
+        expect(result.getKeys()[2]).to.be.an.instanceOf(IntegerValue);
+        expect(result.getKeys()[2].getNative()).to.equal(2);
+        expect(result.getKeys()[3]).to.be.an.instanceOf(IntegerValue);
+        expect(result.getKeys()[3].getNative()).to.equal(3);
+        expect(result.getNative()).to.deep.equal({
+            '0': 1,
+            '1': 4,
+            '2': 7,
+            '3': 21
+        });
+    });
+
+    it('should return an array with the merged elements when two associative arrays are provided', function () {
+        var array1Key1 = this.valueFactory.createString('first'),
+            array1Element1 = this.valueFactory.createInteger(1),
+            array1Key2 = this.valueFactory.createString('second'),
+            array1Element2 = this.valueFactory.createInteger(4),
+            array2Key1 = this.valueFactory.createString('third'),
+            array2Element1 = this.valueFactory.createInteger(7),
+            array2Key2 = this.valueFactory.createString('first'), // Overrides first array's
+            array2Element2 = this.valueFactory.createInteger(21),
+            result;
+        this.args[0] = this.valueFactory.createArray([
+            this.createKeyValuePair(array1Key1, array1Element1),
+            this.createKeyValuePair(array1Key2, array1Element2)
+        ]);
+        this.args[1] = this.valueFactory.createArray([
+            this.createKeyValuePair(array2Key1, array2Element1),
+            this.createKeyValuePair(array2Key2, array2Element2)
+        ]);
+
+        result = this.callArrayMerge();
+
+        expect(result).to.be.an.instanceOf(ArrayValue);
+        expect(result.getKeys()).to.have.length(3);
+        expect(result.getKeys()[0]).to.be.an.instanceOf(StringValue);
+        expect(result.getKeys()[0].getNative()).to.equal('first');
+        expect(result.getKeys()[1]).to.be.an.instanceOf(StringValue);
+        expect(result.getKeys()[1].getNative()).to.equal('second');
+        expect(result.getKeys()[2]).to.be.an.instanceOf(StringValue);
+        expect(result.getKeys()[2].getNative()).to.equal('third');
+        expect(result.getNative()).to.deep.equal({
+            'first': 21,
+            'second': 4,
+            'third': 7
+        });
     });
 
     describe('when no arguments are provided', function () {
