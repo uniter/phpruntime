@@ -21,6 +21,53 @@ module.exports = function (internals) {
         valueFactory = internals.valueFactory;
 
     methods = {
+        /**
+         * Merges one or more arrays together, returning a new array with the result
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-merge.php}
+         *
+         * @returns {IntegerValue}
+         */
+        'array_merge': function () {
+            var mergedElements = [],
+                nextIndex = 0,
+                returnNull = false;
+
+            if (arguments.length === 0) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'array_merge() expects at least 1 parameter, 0 given'
+                );
+                return valueFactory.createNull();
+            }
+
+            _.each(arguments, function (arrayReference, argumentIndex) {
+                var arrayValue = arrayReference.getValue();
+
+                if (arrayValue.getType() !== 'array') {
+                    callStack.raiseError(
+                        PHPError.E_WARNING,
+                        'array_merge(): Argument #' + (argumentIndex + 1) + ' is not an array'
+                    );
+                    returnNull = true;
+                    return false;
+                }
+
+                _.each(arrayValue.getKeys(), function (key) {
+                    var mergedKey = key.isNumeric() ?
+                            valueFactory.createInteger(nextIndex++) :
+                        key;
+
+                    mergedElements.push(arrayValue.getElementPairByKey(key, mergedKey));
+                });
+            });
+
+            if (returnNull) {
+                return valueFactory.createNull();
+            }
+
+            return valueFactory.createArray(mergedElements);
+        },
         'array_push': function (arrayReference) {
             var arrayValue = arrayReference.getValue(),
                 i,
