@@ -165,7 +165,12 @@ module.exports = function (internals) {
             var arrayValue = arrayReference.getValue();
 
             if (arrayValue.getType() !== 'array') {
-                callStack.raiseError(PHPError.E_WARNING, 'next() expects parameter 1 to be array, ' + arrayValue.getType() + ' given');
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'next() expects parameter 1 to be array, ' +
+                    arrayValue.getType() +
+                    ' given'
+                );
                 return valueFactory.createNull();
             }
 
