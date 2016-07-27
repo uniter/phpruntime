@@ -14,6 +14,7 @@ var _ = require('microdash'),
     phpCommon = require('phpcommon'),
     COUNT_NORMAL = 0,
     IMPLODE = 'implode',
+    SORT_REGULAR = 0,
     PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {
@@ -160,6 +161,56 @@ module.exports = function (internals) {
         },
         'join': function (glueReference, piecesReference) {
             return methods[IMPLODE](glueReference, piecesReference);
+        },
+        /**
+         * Sorts an array in-place, by key, in reverse order
+         *
+         * @see {@link https://secure.php.net/manual/en/function.krsort.php}
+         *
+         * @param {Variable|Value} arrayReference
+         * @param {Variable|Value|undefined} sortFlagsReference
+         * @returns {IntegerValue}
+         */
+        'krsort': function (arrayReference, sortFlagsReference) {
+            var arrayValue,
+                sortFlags;
+
+            if (!arrayReference) {
+                callStack.raiseError(PHPError.E_WARNING, 'krsort() expects at least 1 parameter, 0 given');
+                return valueFactory.createBoolean(false);
+            }
+
+            arrayValue = arrayReference.getValue();
+            sortFlags = sortFlagsReference ? sortFlagsReference.getValue().getNative() : SORT_REGULAR;
+
+            if (arrayValue.getType() !== 'array') {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'krsort() expects parameter 1 to be array, ' +
+                    arrayValue.getType() +
+                    ' given'
+                );
+                return valueFactory.createBoolean(false);
+            }
+
+            if (sortFlags !== SORT_REGULAR) {
+                throw new Error(
+                    'krsort() :: Only SORT_REGULAR (' +
+                    SORT_REGULAR +
+                    ') is supported, ' +
+                    sortFlags +
+                    ' given'
+                );
+            }
+
+            arrayValue.sort(function (elementA, elementB) {
+                var nativeKeyA = elementA.getKey().getNative(),
+                    nativeKeyB = elementB.getKey().getNative();
+
+                return String(nativeKeyB).localeCompare(nativeKeyA);
+            });
+
+            return valueFactory.createBoolean(true);
         },
         'next': function (arrayReference) {
             var arrayValue = arrayReference.getValue();
