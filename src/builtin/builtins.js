@@ -17,13 +17,15 @@ var arrayConstants = require('./constants/array'),
     filesystemConstants = require('./constants/filesystem'),
     filesystemFunctions = require('./functions/filesystem'),
     functionHandlingFunctions = require('./functions/functionHandling'),
+    InvalidArgumentException = require('./classes/InvalidArgumentException'),
     stringFunctions = require('./functions/string'),
     timeFunctions = require('./functions/time'),
     variableHandlingFunctions = require('./functions/variableHandling');
 
 module.exports = {
     classes: {
-        'Countable': Countable
+        'Countable': Countable,
+        'InvalidArgumentException': InvalidArgumentException
     },
     constantGroups: [
         arrayConstants,
