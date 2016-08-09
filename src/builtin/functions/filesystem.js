@@ -9,11 +9,24 @@
 
 'use strict';
 
-var INCLUDE_PATH_INI = 'include_path';
+var INCLUDE_PATH_INI = 'include_path',
+    PHPError = require('phpcommon').PHPError;
 
 module.exports = function (internals) {
-    var iniState = internals.iniState,
+    var callStack = internals.callStack,
+        iniState = internals.iniState,
+        optionSet = internals.optionSet,
         valueFactory = internals.valueFactory;
+
+    function getFileSystem() {
+        var fileSystem = optionSet.getOption('fileSystem');
+
+        if (!fileSystem) {
+            throw new Error('filesystem :: No `fileSystem` option is configured');
+        }
+
+        return fileSystem;
+    }
 
     return {
         'dirname': function (pathReference) {
@@ -30,8 +43,56 @@ module.exports = function (internals) {
 
             return pathValue;
         },
+        /**
+         * Determines whether a file or directory exists with the given path
+         *
+         * @see {@link https://secure.php.net/manual/en/function.file-exists.php}
+         *
+         * @returns {BooleanValue}
+         */
+        'file_exists': function (pathReference) {
+            var fileSystem,
+                path;
+
+            if (!pathReference) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'file_exists() expects exactly 1 parameter, 0 given'
+                );
+                return valueFactory.createNull();
+            }
+
+            fileSystem = getFileSystem();
+            path = pathReference.getValue().getNative();
+
+            return valueFactory.createBoolean(fileSystem.isFile(path) || fileSystem.isDirectory(path));
+        },
         'get_include_path': function () {
             return valueFactory.createString(iniState.get(INCLUDE_PATH_INI));
+        },
+        /**
+         * Determines whether a file (not a directory) exists with the given path
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-file.php}
+         *
+         * @returns {BooleanValue}
+         */
+        'is_file': function (pathReference) {
+            var fileSystem,
+                path;
+
+            if (!pathReference) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'is_file() expects exactly 1 parameter, 0 given'
+                );
+                return valueFactory.createNull();
+            }
+
+            fileSystem = getFileSystem();
+            path = pathReference.getValue().getNative();
+
+            return valueFactory.createBoolean(fileSystem.isFile(path));
         },
         'set_include_path': function (newIncludePathReference) {
             var oldIncludePath = iniState.get(INCLUDE_PATH_INI);
