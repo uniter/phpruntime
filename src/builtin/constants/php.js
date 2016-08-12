@@ -10,7 +10,7 @@
 'use strict';
 
 var MAJOR_VERSION = 5,
-    MINOR_VERSION = 6,
+    MINOR_VERSION = 4,
     RELEASE_VERSION = 0;
 
 module.exports = function () {

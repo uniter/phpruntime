@@ -34,7 +34,7 @@ EOS
             engine = module();
 
         expect(engine.execute().getNative()).to.deep.equal([
-            50600 // PHP_VERSION_ID
+            50400 // PHP_VERSION_ID
         ]);
     });
 });
