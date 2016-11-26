@@ -11,6 +11,7 @@
 
 var arrayConstants = require('./constants/array'),
     arrayFunctions = require('./functions/array'),
+    baseConversionMathFunctions = require('./functions/math/baseConversion'),
     classFunctions = require('./functions/class'),
     constantFunctions = require('./functions/misc/constant'),
     Countable = require('./interfaces/Countable'),
@@ -36,6 +37,7 @@ module.exports = {
     ],
     functionGroups: [
         arrayFunctions,
+        baseConversionMathFunctions,
         classFunctions,
         constantFunctions,
         filesystemFunctions,
