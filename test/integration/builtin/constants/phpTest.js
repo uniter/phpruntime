@@ -20,6 +20,9 @@ describe('PHP runtime constants integration', function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 return [
+    PHP_OS,
+    PHP_SAPI,
+    PHP_VERSION,
     PHP_VERSION_ID
 ];
 EOS
@@ -34,7 +37,10 @@ EOS
             engine = module();
 
         expect(engine.execute().getNative()).to.deep.equal([
-            50400 // PHP_VERSION_ID
+            'Uniter',  // PHP_OS
+            'cli',     // PHP_SAPI
+            '5.4.0',   // PHP_VERSION
+            50400      // PHP_VERSION_ID
         ]);
     });
 });

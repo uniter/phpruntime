@@ -9,12 +9,21 @@
 
 'use strict';
 
-var MAJOR_VERSION = 5,
-    MINOR_VERSION = 4,
-    RELEASE_VERSION = 0;
+var systemConstants = require('../../../constants');
 
 module.exports = function () {
+    // NB: Some of the most basic constants (eg. PHP_EOL) are defined by the PHPCore library
+
     return {
-        'PHP_VERSION_ID': MAJOR_VERSION * 10000 + MINOR_VERSION * 100 + RELEASE_VERSION
+        'PHP_OS': 'Uniter',
+        'PHP_SAPI': systemConstants.sapi,
+        'PHP_VERSION':
+            systemConstants.phpVersion.major + '.' +
+            systemConstants.phpVersion.minor + '.' +
+            systemConstants.phpVersion.release,
+        'PHP_VERSION_ID':
+            systemConstants.phpVersion.major * 10000 +
+            systemConstants.phpVersion.minor * 100 +
+            systemConstants.phpVersion.release
     };
 };
