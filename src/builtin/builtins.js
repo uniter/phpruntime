@@ -20,6 +20,7 @@ var arrayConstants = require('./constants/array'),
     InvalidArgumentException = require('./classes/InvalidArgumentException'),
     phpConstants = require('./constants/php'),
     stringFunctions = require('./functions/string'),
+    timeDateAndTimeFunctions = require('./functions/dateAndTime/time'),
     timeFunctions = require('./functions/time'),
     variableHandlingFunctions = require('./functions/variableHandling');
 
@@ -40,6 +41,7 @@ module.exports = {
         filesystemFunctions,
         functionHandlingFunctions,
         stringFunctions,
+        timeDateAndTimeFunctions,
         timeFunctions,
         variableHandlingFunctions
     ]
