@@ -15,8 +15,8 @@ var expect = require('chai').expect,
     phpToJS = require('phptojs'),
     syncPHPRuntime = require('../../../../../sync');
 
-describe('PHP builtin class function integration', function () {
-    it('should support the builtin class functions', function () {
+describe('PHP "class_exists" builtin function integration', function () {
+    it('should support testing classes both with and without a namespace prefix', function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 namespace My\Namespace
