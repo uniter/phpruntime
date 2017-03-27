@@ -13,7 +13,7 @@ var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
     phpToAST = require('phptoast'),
     phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../../sync');
+    syncPHPRuntime = require('../../../../sync');
 
 describe('PHP "InvalidArgumentException" builtin class integration', function () {
     it('should extend the Exception base class', function () {
