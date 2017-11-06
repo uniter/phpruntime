@@ -19,6 +19,7 @@ var arrayConstants = require('./constants/array'),
     filesystemFunctions = require('./functions/filesystem'),
     functionHandlingFunctions = require('./functions/functionHandling'),
     InvalidArgumentException = require('./classes/InvalidArgumentException'),
+    pcreConstants = require('./constants/pcre'),
     phpConstants = require('./constants/php'),
     stringFunctions = require('./functions/string'),
     timeDateAndTimeFunctions = require('./functions/dateAndTime/time'),
@@ -33,6 +34,7 @@ module.exports = {
     constantGroups: [
         arrayConstants,
         filesystemConstants,
+        pcreConstants,
         phpConstants
     ],
     functionGroups: [
