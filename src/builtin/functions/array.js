@@ -24,6 +24,25 @@ module.exports = function (internals) {
 
     methods = {
         /**
+         * Determines whether the given key or index exists in the array
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-key-exists.php}
+         *
+         * @param {Variable|Value} keyReference
+         * @param {Variable|ArrayValue} arrayReference
+         * @returns {BooleanValue}
+         */
+        'array_key_exists': function (keyReference, arrayReference) {
+            var arrayValue,
+                keyValue;
+
+            keyValue = keyReference.getValue();
+            arrayValue = arrayReference.getValue();
+
+            return valueFactory.createBoolean(arrayValue.getElementByKey(keyValue).isDefined());
+        },
+
+        /**
          * Merges one or more arrays together, returning a new array with the result
          *
          * @see {@link https://secure.php.net/manual/en/function.array-merge.php}
