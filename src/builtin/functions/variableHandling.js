@@ -38,6 +38,28 @@ module.exports = function (internals) {
     }
 
     return {
+        /**
+         * Fetches the type of a variable or value
+         *
+         * @see {@link https://secure.php.net/manual/en/function.gettype.php}
+         *
+         * @param {Variable|Value} valueReference The variable or value to fetch the type of
+         * @returns {StringValue}
+         */
+        'gettype': function (valueReference) {
+            var value = valueReference.getValue(),
+                type = value.getType();
+
+            if (type === 'float') {
+                // For historical reasons "double" is returned rather than "float"
+                type = 'double';
+            } else if (type === 'null') {
+                type = 'NULL';
+            }
+
+            return valueFactory.createString(type);
+        },
+
         'is_array': createTypeChecker('is_array', 'array'),
 
         'is_bool': createTypeChecker('is_bool', 'boolean'),

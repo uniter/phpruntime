@@ -9,8 +9,12 @@
 
 'use strict';
 
+var phpCommon = require('phpcommon'),
+    PHPError = phpCommon.PHPError;
+
 module.exports = function (internals) {
-    var classAutoloader = internals.classAutoloader,
+    var callStack = internals.callStack,
+        classAutoloader = internals.classAutoloader,
         globalNamespace = internals.globalNamespace,
         valueFactory = internals.valueFactory;
 
@@ -22,7 +26,7 @@ module.exports = function (internals) {
          *
          * @param {Variable|Value} classNameReference      The name of the class to check for
          * @param {Variable|Value} callAutoloaderReference True to invoke the autoloader, false otherwise
-         * @returns {*}
+         * @returns {BooleanValue}
          */
         'class_exists': function (classNameReference, callAutoloaderReference) {
             var className = classNameReference.getNative(),
@@ -34,6 +38,75 @@ module.exports = function (internals) {
             }
 
             return valueFactory.createBoolean(globalNamespace.hasClass(className));
+        },
+
+        /**
+         * Fetches the name of either the current class or the class of a specified object
+         *
+         * @see {@link https://secure.php.net/manual/en/function.get-class.php}
+         *
+         * @param {Variable|Value} objectReference
+         * @returns {StringValue|BooleanValue}
+         */
+        'get_class': function (objectReference) {
+            var currentClass;
+
+            if (!objectReference) {
+                currentClass = callStack.getCallerScope().getCurrentClass();
+
+                if (!currentClass) {
+                    callStack.raiseError(
+                        PHPError.E_WARNING,
+                        'get_class() called without object from outside a class'
+                    );
+
+                    return valueFactory.createBoolean(false);
+                }
+
+                return valueFactory.createString(currentClass.getName());
+            }
+
+            return valueFactory.createString(objectReference.getValue().getClassName());
+        },
+
+        /**
+         * Checks if the object is of this class or has this class as one of its parents
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-a.php}
+         *
+         * @param {Variable|Value} objectReference
+         * @param {Variable|Value} classNameReference
+         * @param {Variable|Value} allowStringReference
+         * @returns {BooleanValue}
+         */
+        'is_a': function (objectReference, classNameReference, allowStringReference) {
+            var allowString,
+                className,
+                classNameValue,
+                objectValue;
+
+            objectValue = objectReference.getValue();
+            classNameValue = classNameReference.getValue();
+
+            className = classNameValue.getNative();
+            allowString = allowStringReference ? allowStringReference.getNative() : false;
+
+            if (objectValue.getType() === 'object') {
+                return valueFactory.createBoolean(objectValue.classIs(className));
+            }
+
+            if (objectValue.getType() === 'string') {
+                if (!allowString) {
+                    // First arg is not allowed to be a string - just return false (no warning/notice)
+                    return valueFactory.createBoolean(false);
+                }
+
+                return valueFactory.createBoolean(
+                    globalNamespace.getClass(objectValue.getNative()).is(className)
+                );
+            }
+
+            throw new Error('FIXME: Wrong object arg type given - do what? ...');
         }
     };
 };

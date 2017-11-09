@@ -9,7 +9,8 @@
 
 'use strict';
 
-var phpCommon = require('phpcommon'),
+var _ = require('microdash'),
+    phpCommon = require('phpcommon'),
     PHPError = phpCommon.PHPError;
 
 /**
@@ -137,6 +138,66 @@ module.exports = function (internals) {
             }
 
             return valueFactory.createInteger(matched ? 1 : 0);
+        },
+
+        'preg_replace': function (patternReference, replacementReference, subjectReference /*, limitReference, countReference*/) {
+            var patterns = [],
+                patternMatch,
+                patternValue,
+                replacements = [],
+                replacementValue,
+                singleReplacement,
+                subject,
+                subjectValue;
+
+            // TODO: Handle required args etc.
+
+            patternValue = patternReference.getValue();
+            replacementValue = replacementReference.getValue();
+
+            if (patternValue.getType() === 'array') {
+                _.each(patternValue.getValues(), function (patternValue) {
+                    patterns.push(patternValue.getNative());
+                });
+            } else if (patternValue.getType() === 'string') {
+                patterns.push(patternValue.getNative());
+            } else {
+                throw new Error('Invalid type');
+            }
+
+            if (replacementValue.getType() === 'array') {
+                _.each(replacementValue.getValues(), function (replacementValue) {
+                    replacements.push(replacementValue.getNative());
+                });
+                singleReplacement = false;
+            } else if (replacementValue.getType() === 'string') {
+                replacements.push(replacementValue.getNative());
+                singleReplacement = true;
+            } else {
+                throw new Error('Invalid type');
+            }
+
+            subjectValue = subjectReference.getValue();
+            subject = subjectValue.getNative();
+
+            _.each(patterns, function (pattern, index) {
+                var regex,
+                    replacement = singleReplacement ?
+                        replacements[0] :
+                        (index < replacements.length ? replacements[index] : '');
+
+                patternMatch = pattern.match(/^([\s\S])([\s\S]*)\1([gi]*)$/);
+
+                if (!patternMatch) {
+                    throw new Error('Invalid regex "' + pattern + '"');
+                }
+
+                regex = new RegExp(patternMatch[2], patternMatch[3]);
+
+                subject = subject.replace(regex, replacement);
+            });
+
+            return valueFactory.createString(subject);
         }
     };
 };
