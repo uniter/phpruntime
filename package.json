@@ -1,5 +1,5 @@
 {
-  "version": "5.8.0",
+  "version": "5.8.0-experimental.1",
   "name": "phpruntime",
   "description": "Runtime library for PHP environments",
   "keywords": [
