@@ -11,6 +11,7 @@
 
 module.exports = function () {
     return {
-        'DIRECTORY_SEPARATOR': '/'
+        'DIRECTORY_SEPARATOR': '/',
+        'PATH_SEPARATOR': ':' // Be Unix-y and use colon rather than semi-colon (Windows)
     };
 };

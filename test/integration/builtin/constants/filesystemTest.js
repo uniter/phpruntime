@@ -20,7 +20,8 @@ describe('PHP filesystem constants integration', function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 return [
-    DIRECTORY_SEPARATOR
+    DIRECTORY_SEPARATOR,
+    PATH_SEPARATOR
 ];
 EOS
 */;}), //jshint ignore:line
@@ -34,7 +35,8 @@ EOS
             engine = module();
 
         expect(engine.execute().getNative()).to.deep.equal([
-            '/' // DIRECTORY_SEPARATOR
+            '/', // DIRECTORY_SEPARATOR
+            ':'  // PATH_SEPARATOR
         ]);
     });
 });
