@@ -18,6 +18,31 @@ module.exports = function (internals) {
         valueFactory = internals.valueFactory;
 
     return {
+        'explode': function (delimiterReference, stringReference, limitReference) {
+            var delimiter,
+                elements,
+                limit,
+                string;
+
+            delimiter = delimiterReference.getValue().getNative();
+            limit = limitReference ? limitReference.getValue().getNative() : null;
+            string = stringReference.getValue().getNative();
+
+            elements = string.split(delimiter);
+
+            if (limit === 0) {
+                limit = 1;
+            }
+
+            if (limit < 0) {
+                elements = elements.slice(0, elements.length + limit);
+            } else if (limit !== null) {
+                elements = elements.slice(0, limit - 1).concat(elements.slice(limit - 1).join(delimiter));
+            }
+
+            return valueFactory.createArray(elements);
+        },
+
         'strlen': function (stringReference) {
             var stringValue = stringReference.getValue();
 
@@ -134,6 +159,19 @@ module.exports = function (internals) {
             return valueFactory.createInteger(offset + position);
         },
 
+        'strrchr': function (haystackReference, needleReference) {
+            var haystack = haystackReference.getNative(),
+                needle = needleReference.getNative().charAt(0),
+                position = haystack.lastIndexOf(needle);
+
+            if (position === -1) {
+                // Return FALSE if needle is not found in haystack
+                return valueFactory.createBoolean(false);
+            }
+
+            return valueFactory.createString(haystack.substr(position));
+        },
+
         'strrpos': function (haystackReference, needleReference, offsetReference) {
             var haystack = haystackReference.getValue().getNative(),
                 needle = needleReference.getValue().getNative(),
@@ -152,6 +190,18 @@ module.exports = function (internals) {
             }
 
             return valueFactory.createInteger(offset + position);
+        },
+
+        'strtolower': function (stringReference) {
+            var string = stringReference.getNative();
+
+            return valueFactory.createString(string.toLowerCase());
+        },
+
+        'strtoupper': function (stringReference) {
+            var string = stringReference.getNative();
+
+            return valueFactory.createString(string.toUpperCase());
         },
 
         'strtr': function (stringReference) {

@@ -43,6 +43,51 @@ module.exports = function (internals) {
         },
 
         /**
+         * Fetch all keys (or a subset of the keys) in an array
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-keys.php}
+         *
+         * @param {Variable|ArrayValue} arrayReference
+         * @param {Variable|Value} searchValueReference
+         * @param {Variable|BooleanValue} strictMatchReference
+         * @returns {ArrayValue}
+         */
+        'array_keys': function (arrayReference, searchValueReference, strictMatchReference) {
+            var arrayValue;
+
+            if (searchValueReference || strictMatchReference) {
+                throw new Error('array_keys() :: Search functionality is not yet supported');
+            }
+
+            arrayValue = arrayReference.getValue();
+
+            return valueFactory.createArray(arrayValue.getKeys());
+        },
+
+        /**
+         * Maps one or more arrays to a new array
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-map.php}
+         *
+         * @param {Variable|Value} callbackReference
+         * @param {Variable|ArrayValue} firstArrayReference
+         * @returns {ArrayValue}
+         */
+        'array_map': function (callbackReference, firstArrayReference) {
+            var callbackValue = callbackReference.getValue(),
+                firstArrayValue = firstArrayReference.getValue(),
+                result = [];
+
+            _.each(firstArrayValue.getValueReferences(), function (elementValue) {
+                var mappedElementValue = callbackValue.call([elementValue]);
+
+                result.push(mappedElementValue);
+            });
+
+            return valueFactory.createArray(result);
+        },
+
+        /**
          * Merges one or more arrays together, returning a new array with the result
          *
          * @see {@link https://secure.php.net/manual/en/function.array-merge.php}
@@ -121,6 +166,71 @@ module.exports = function (internals) {
 
             return valueFactory.createInteger(arrayValue.getLength());
         },
+
+        /**
+         * Shifts an element off the beginning of an array
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-shift.php}
+         *
+         * @param {Variable|ArrayValue} arrayReference
+         * @returns {ArrayValue}
+         */
+        'array_shift': function (arrayReference) {
+            var arrayValue = arrayReference.getValue();
+
+            return arrayValue.shift();
+        },
+
+        'array_unique': function (arrayReference, sortFlagsReference) {
+            var arrayValue,
+                resultPairs = [],
+                usedValues = {};
+
+            // TODO: Handle missing `arrayReference` arg etc.
+
+            if (sortFlagsReference) {
+                throw new Error('array_unique() :: Sort flags are not yet supported');
+            }
+
+            arrayValue = arrayReference.getValue();
+
+            // Work on a clone, so we don't mutate the original array
+            arrayValue = arrayValue.clone();
+
+            // First sort the elements alphabetically by value (default/SORT_STRING behaviour)
+            arrayValue.sort(function (elementA, elementB) {
+                var nativeValueA = elementA.getValue().coerceToString().getNative(),
+                    nativeValueB = elementB.getValue().coerceToString().getNative();
+
+                return String(nativeValueB).localeCompare(nativeValueA);
+            });
+
+            _.each(arrayValue.getKeys(), function (keyValue) {
+                var elementPair = arrayValue.getElementPairByKey(keyValue),
+                    nativeValue = elementPair.getValue().coerceToString().getNative();
+
+                if (hasOwn.call(usedValues, nativeValue)) {
+                    return;
+                }
+
+                usedValues[nativeValue] = true;
+
+                resultPairs.push(elementPair);
+            });
+
+            return valueFactory.createArray(resultPairs);
+        },
+
+        'array_values': function (arrayReference) {
+            var arrayValue;
+
+            // TODO: Handle missing `arrayReference` arg etc.
+
+            arrayValue = arrayReference.getValue();
+
+            return valueFactory.createArray(arrayValue.getValues());
+        },
+
         /**
          * Counts the specified array or object. May be hooked
          * by implementing interface Countable
@@ -157,6 +267,31 @@ module.exports = function (internals) {
 
             return arrayValue.getCurrentElement().getValue();
         },
+
+        /**
+         * Set the internal pointer of an array to its last element,
+         * returning the value of that last element.
+         * False will be returned for an empty array
+         *
+         * @see {@link https://secure.php.net/manual/en/function.end.php}
+         *
+         * @param {Variable|Value} arrayReference
+         * @returns {Value}
+         */
+        'end': function (arrayReference) {
+            var arrayValue = arrayReference.getValue(),
+                keys = arrayValue.getKeys();
+
+            if (keys.length === 0) {
+                return valueFactory.createBoolean(false);
+            }
+
+            // Advance the array's internal pointer to the last element
+            arrayValue.setPointer(keys.length - 1);
+
+            return arrayValue.getElementByKey(keys[keys.length - 1]).getValue();
+        },
+
         'implode': function (glueReference, piecesReference) {
             var glueValue = glueReference.getValue(),
                 piecesValue = piecesReference.getValue(),
@@ -178,6 +313,30 @@ module.exports = function (internals) {
 
             return valueFactory.createString(values.join(glueValue.getNative()));
         },
+
+        'in_array': function (needleReference, haystackReference, strictMatchReference) {
+            var contains = false,
+                haystackValue,
+                needleValue,
+                strictMatch;
+
+            haystackValue = haystackReference.getValue();
+            needleValue = needleReference.getValue();
+            strictMatch = strictMatchReference ? strictMatchReference.getNative() : false;
+
+            _.each(haystackValue.getValues(), function (elementValue) {
+                if (
+                    (strictMatch && elementValue.isIdenticalTo(needleValue).getNative()) ||
+                    (!strictMatch && elementValue.isEqualTo(needleValue).getNative())
+                ) {
+                    contains = true;
+                    return false;
+                }
+            });
+
+            return valueFactory.createBoolean(contains);
+        },
+
         'join': function (glueReference, piecesReference) {
             return methods[IMPLODE](glueReference, piecesReference);
         },
