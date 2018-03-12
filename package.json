@@ -25,7 +25,7 @@
   "dependencies": {
     "microdash": "~1",
     "phpcommon": "~1",
-    "phpcore": "^5.2.1"
+    "phpcore": "^5.2.2"
   },
   "devDependencies": {
     "chai": "^2.3.0",
@@ -33,7 +33,7 @@
     "jshint": "~2.8",
     "mocha": "^2.3.3",
     "nowdoc": "^1.0.0",
-    "phptoast": "^5.2.1",
+    "phptoast": "^5.2.3",
     "phptojs": "^5.2.0",
     "sinon": "~1.15",
     "sinon-chai": "^2.7.0"
