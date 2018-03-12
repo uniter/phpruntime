@@ -11,9 +11,7 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../sync');
+    tools = require('../../tools');
 
 describe('PHP "InvalidArgumentException" builtin class integration', function () {
     it('should extend the Exception base class', function () {
@@ -24,15 +22,23 @@ $exception = new InvalidArgumentException('Oops');
 return $exception instanceof Exception;
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.syncTranspile(null, php),
             engine = module();
 
         expect(engine.execute().getNative()).to.be.true;
+    });
+
+    it('should set the message on the Exception', function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+$exception = new InvalidArgumentException('Oops');
+
+return $exception->getMessage();
+EOS
+*/;}), //jshint ignore:line
+            module = tools.syncTranspile(null, php),
+            engine = module();
+
+        expect(engine.execute().getNative()).to.equal('Oops');
     });
 });
