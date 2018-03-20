@@ -230,8 +230,7 @@ module.exports = function (internals) {
          * @returns {ArrayValue}
          */
         'array_values': function (arrayReference) {
-            var arrayValue,
-                indexedArrayValue;
+            var arrayValue;
 
             if (!arrayReference) {
                 callStack.raiseError(PHPError.E_WARNING, 'array_values() expects exactly 1 parameter, 0 given');
