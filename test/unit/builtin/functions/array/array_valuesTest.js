@@ -20,7 +20,7 @@ var expect = require('chai').expect,
     IntegerValue = require('phpcore/src/Value/Integer').sync(),
     KeyValuePair = require('phpcore/src/KeyValuePair');
 
-describe('PHP "array_values" basic-level builtin function', function () {
+describe('PHP "array_values" builtin function', function () {
     beforeEach(function () {
         this.callStack = sinon.createStubInstance(CallStack);
         this.valueFactory = new ValueFactory();
