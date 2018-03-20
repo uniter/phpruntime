@@ -221,10 +221,21 @@ module.exports = function (internals) {
             return valueFactory.createArray(resultPairs);
         },
 
+        /**
+         * Returns all the values from the array and indexes the array numerically.
+         *
+         * @see {@link http://php.net/manual/en/function.array-values.php}
+         *
+         * @param {Variable|Value} arrayReference
+         * @returns {ArrayValue}
+         */
         'array_values': function (arrayReference) {
             var arrayValue;
 
-            // TODO: Handle missing `arrayReference` arg etc.
+            if (!arrayReference) {
+                callStack.raiseError(PHPError.E_WARNING, 'array_values() expects exactly 1 parameter, 0 given');
+                return valueFactory.createNull();
+            }
 
             arrayValue = arrayReference.getValue();
 
