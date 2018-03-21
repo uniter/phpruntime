@@ -279,12 +279,14 @@ module.exports = function (internals) {
          * @returns {Value}
          */
         'current': function (arrayReference) {
-            var arrayValue = arrayReference.getValue();
+            var arrayValue;
 
             if (!arrayReference) {
                 callStack.raiseError(PHPError.E_WARNING, 'current() expects exactly 1 parameter, 0 given');
                 return valueFactory.createNull();
             }
+
+            arrayValue = arrayReference.getValue();
 
             if (arrayValue.getPointer() >= arrayValue.getLength()) {
                 return valueFactory.createBoolean(false);
