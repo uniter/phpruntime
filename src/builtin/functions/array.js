@@ -152,11 +152,27 @@ module.exports = function (internals) {
 
             return valueFactory.createArray(mergedElements);
         },
+
+        /**
+         * Push one or more elements onto the end of array
+         *
+         * @see {@link http://php.net/manual/en/function.array-push.php}
+         *
+         * @param arrayReference
+         * @returns {*}
+         */
         'array_push': function (arrayReference) {
-            var arrayValue = arrayReference.getValue(),
+            var arrayValue,
                 i,
                 reference,
                 value;
+
+            if (!arrayReference) {
+                callStack.raiseError(PHPError.E_WARNING, 'array_push() expects at least 2 parameters, 0 given');
+                return valueFactory.createNull();
+            }
+
+            arrayValue = arrayReference.getValue();
 
             for (i = 1; i < arguments.length; i++) {
                 reference = arguments[i];
