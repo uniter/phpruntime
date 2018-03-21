@@ -159,7 +159,7 @@ module.exports = function (internals) {
          * @see {@link http://php.net/manual/en/function.array-push.php}
          *
          * @param {Variable|Value} arrayReference
-         * @returns {Value}
+         * @returns {IntegerValue}
          */
         'array_push': function (arrayReference) {
             var arrayValue,
