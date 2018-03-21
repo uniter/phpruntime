@@ -269,8 +269,22 @@ module.exports = function (internals) {
                 type === 'array' || type === 'object' ? array.getLength() : 1
             );
         },
+
+        /**
+         * Return the current element in an array.
+         *
+         * @see {@link http://php.net/manual/en/function.current.php}
+         *
+         * @param {Variable|Value} arrayReference
+         * @returns {Value}
+         */
         'current': function (arrayReference) {
             var arrayValue = arrayReference.getValue();
+
+            if (!arrayReference) {
+                callStack.raiseError(PHPError.E_WARNING, 'current() expects exactly 1 parameter, 0 given');
+                return valueFactory.createNull();
+            }
 
             if (arrayValue.getPointer() >= arrayValue.getLength()) {
                 return valueFactory.createBoolean(false);
