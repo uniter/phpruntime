@@ -28,12 +28,16 @@ var arrayConstants = require('./constants/array'),
     pcreConstants = require('./constants/pcre'),
     phpConstants = require('./constants/php'),
     phpOptionsAndInfoFunctions = require('./functions/optionsAndInfo/php'),
+    stringBindings = require('./bindings/string'),
     stringFunctions = require('./functions/string'),
     timeDateAndTimeFunctions = require('./functions/dateAndTime/time'),
     timeFunctions = require('./functions/time'),
     variableHandlingFunctions = require('./functions/variableHandling');
 
 module.exports = {
+    bindingGroups: [
+        stringBindings
+    ],
     classes: {
         'Countable': Countable,
         'InvalidArgumentException': InvalidArgumentException
