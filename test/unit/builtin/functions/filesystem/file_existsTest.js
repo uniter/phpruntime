@@ -14,35 +14,15 @@ var expect = require('chai').expect,
     filesystemFunctionFactory = require('../../../../../src/builtin/functions/filesystem'),
     BooleanValue = require('phpcore/src/Value/Boolean').sync(),
     CallStack = require('phpcore/src/CallStack'),
-    IntegerValue = require('phpcore/src/Value/Integer').sync(),
     OptionSet = require('phpcore/src/OptionSet'),
     PHPError = require('phpcommon').PHPError,
-    StringValue = require('phpcore/src/Value/String').sync(),
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
 describe('PHP "file_exists" builtin function', function () {
     beforeEach(function () {
         this.callStack = sinon.createStubInstance(CallStack);
-        this.valueFactory = sinon.createStubInstance(ValueFactory);
-        this.valueFactory.createBoolean.restore();
-        sinon.stub(this.valueFactory, 'createBoolean', function (native) {
-            var value = sinon.createStubInstance(BooleanValue);
-            value.getNative.returns(native);
-            return value;
-        });
-        this.valueFactory.createInteger.restore();
-        sinon.stub(this.valueFactory, 'createInteger', function (native) {
-            var value = sinon.createStubInstance(IntegerValue);
-            value.getNative.returns(native);
-            return value;
-        });
-        this.valueFactory.createString.restore();
-        sinon.stub(this.valueFactory, 'createString', function (native) {
-            var value = sinon.createStubInstance(StringValue);
-            value.getNative.returns(native);
-            return value;
-        });
+        this.valueFactory = new ValueFactory();
         this.optionSet = sinon.createStubInstance(OptionSet);
         this.fileSystem = {
             isDirectory: sinon.stub(),

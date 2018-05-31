@@ -21,21 +21,11 @@ var expect = require('chai').expect,
 describe('PHP "strpos" builtin function', function () {
     beforeEach(function () {
         this.callStack = sinon.createStubInstance(CallStack);
-        this.valueFactory = sinon.createStubInstance(ValueFactory);
-        this.valueFactory.createBoolean.restore();
-        sinon.stub(this.valueFactory, 'createBoolean', function (native) {
-            var value = sinon.createStubInstance(BooleanValue);
-            value.getNative.returns(native);
-            return value;
-        });
-        this.valueFactory.createInteger.restore();
-        sinon.stub(this.valueFactory, 'createInteger', function (native) {
-            var value = sinon.createStubInstance(IntegerValue);
-            value.getNative.returns(native);
-            return value;
-        });
+        this.getBinding = sinon.stub();
+        this.valueFactory = new ValueFactory();
         this.internals = {
             callStack: this.callStack,
+            getBinding: this.getBinding,
             valueFactory: this.valueFactory
         };
         this.stringFunctions = stringFunctionFactory(this.internals);

@@ -74,8 +74,7 @@ describe('PHP "var_dump" builtin function', function () {
             myselfKey = sinon.createStubInstance(Value),
             firstValue = sinon.createStubInstance(Value);
         this.valueReference.getLength.returns(2);
-        this.valueReference.getNative.restore();
-        sinon.stub(this.valueReference, 'getNative', function () {
+        this.valueReference.getNative.callsFake(function () {
             // Array.getNative() always returns a new JS array object
             return [];
         });
@@ -121,8 +120,7 @@ EOS
             firstValue = sinon.createStubInstance(Value),
             secondValue = sinon.createStubInstance(Value);
         this.valueReference.getLength.returns(2);
-        this.valueReference.getNative.restore();
-        sinon.stub(this.valueReference, 'getNative', function () {
+        this.valueReference.getNative.callsFake(function () {
             // Array.getNative() always returns a new JS array object
             return [];
         });
