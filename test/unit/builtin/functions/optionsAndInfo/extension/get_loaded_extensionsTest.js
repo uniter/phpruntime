@@ -21,14 +21,7 @@ describe('PHP "get_loaded_extensions" builtin function', function () {
     beforeEach(function () {
         this.callStack = sinon.createStubInstance(CallStack);
         this.globalNamespace = sinon.createStubInstance(Namespace);
-        this.valueFactory = sinon.createStubInstance(ValueFactory);
-        this.valueFactory.createArray.restore();
-        sinon.stub(this.valueFactory, 'createArray', function (native) {
-            var value = sinon.createStubInstance(ArrayValue);
-            value.getLength.returns(native.length);
-            value.getNative.returns(native);
-            return value;
-        });
+        this.valueFactory = new ValueFactory();
         this.internals = {
             callStack: this.callStack,
             globalNamespace: this.globalNamespace,

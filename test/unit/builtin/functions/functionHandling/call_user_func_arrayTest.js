@@ -13,11 +13,9 @@ var expect = require('chai').expect,
     sinon = require('sinon'),
     functionHandlingFunctionFactory = require('../../../../../src/builtin/functions/functionHandling'),
     ArrayValue = require('phpcore/src/Value/Array').sync(),
-    BooleanValue = require('phpcore/src/Value/Boolean').sync(),
     CallStack = require('phpcore/src/CallStack'),
     IntegerValue = require('phpcore/src/Value/Integer').sync(),
     Namespace = require('phpcore/src/Namespace').sync(),
-    NullValue = require('phpcore/src/Value/Null').sync(),
     ObjectValue = require('phpcore/src/Value/Object').sync(),
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
@@ -25,19 +23,7 @@ var expect = require('chai').expect,
 describe('PHP "call_user_func_array" builtin function', function () {
     beforeEach(function () {
         this.callStack = sinon.createStubInstance(CallStack);
-        this.valueFactory = sinon.createStubInstance(ValueFactory);
-        this.valueFactory.createBoolean.restore();
-        sinon.stub(this.valueFactory, 'createBoolean', function (native) {
-            var value = sinon.createStubInstance(BooleanValue);
-            value.getNative.returns(native);
-            return value;
-        });
-        this.valueFactory.createNull.restore();
-        sinon.stub(this.valueFactory, 'createNull', function () {
-            var value = sinon.createStubInstance(NullValue);
-            value.getNative.returns(null);
-            return value;
-        });
+        this.valueFactory = new ValueFactory();
         this.globalNamespace = sinon.createStubInstance(Namespace);
         this.internals = {
             callStack: this.callStack,
