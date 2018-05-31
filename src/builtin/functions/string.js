@@ -11,10 +11,12 @@
 
 var _ = require('microdash'),
     phpCommon = require('phpcommon'),
+    MissingFormatArgumentException = require('../bindings/string/Exception/MissingFormatArgumentException'),
     PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
+        formatter = internals.getBinding('stringFormatter'),
         valueFactory = internals.valueFactory;
 
     return {
@@ -52,6 +54,32 @@ module.exports = function (internals) {
             }
 
             return valueFactory.createInteger(stringValue.getLength());
+        },
+
+        /**
+         * Builds and returns a formatted string
+         *
+         * @see {@link https://secure.php.net/manual/en/function.sprintf.php}
+         *
+         * @param {Reference|Value|Variable} templateReference  The template format string
+         * @returns {StringValue|BooleanValue} The built string on success, or false on failure
+         */
+        'sprintf': function (templateReference) {
+            var args = [].slice.call(arguments, 1);
+
+            try {
+                return valueFactory.createString(
+                    formatter.format(templateReference.getNative(), args)
+                );
+            } catch (error) {
+                if (error instanceof MissingFormatArgumentException) {
+                    callStack.raiseError(PHPError.E_WARNING, 'sprintf(): Too few arguments');
+
+                    return valueFactory.createBoolean(false);
+                }
+
+                throw error;
+            }
         },
 
         'str_replace': function (
