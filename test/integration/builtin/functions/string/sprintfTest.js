@@ -20,8 +20,9 @@ describe('PHP "sprintf" builtin function integration', function () {
 
 $result = [];
 
+$substitute = 'contain';
 $result[] = sprintf('I contain no conversion %% specifications');
-$result[] = sprintf('I %s string conversion specifications %s', 'contain', 'inside');
+$result[] = sprintf('I %s string conversion specifications %s', $substitute, 'inside');
 $result[] = sprintf('A padded number: %\'~5d and a string: %s in here', 21, '(hello!)');
 
 return $result;
