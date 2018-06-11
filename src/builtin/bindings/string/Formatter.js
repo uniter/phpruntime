@@ -29,11 +29,13 @@ _.extend(Formatter.prototype, {
      * Builds and returns the provided format string populated with the given arguments
      *
      * @param {string} formatString
-     * @param {Value[]} argValues
+     * @param {Reference[]|Value[]|Variable[]} argReferences
      * @returns {string}
      */
-    format: function (formatString, argValues) {
-        var argNatives = argValues.map(function (argValue) {
+    format: function (formatString, argReferences) {
+        var argNatives = argReferences.map(function (argReference) {
+            var argValue = argReference.getValue();
+
             if (argValue.getType() === 'object' || argValue.getType() === 'array') {
                 argValue = argValue.coerceToString();
             }
