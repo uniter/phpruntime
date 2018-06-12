@@ -81,6 +81,32 @@ module.exports = function (internals) {
 
             return callbackValue.call(argumentValues, globalNamespace);
         },
+
+        /**
+         * Fetches an array containing all arguments passed to the function.
+         * If called from outside a function, FALSE will be returned.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.func-get-args.php}
+         *
+         * @returns {ArrayValue|BooleanValue}
+         */
+        'func_get_args': function () {
+            var callerCall = callStack.getCaller();
+
+            if (callerCall === null) {
+                // We're not in a function scope - no args to get
+
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'func_get_args(): Called from the global scope - no function context'
+                );
+
+                return valueFactory.createNull();
+            }
+
+            return valueFactory.createArray(callerCall.getFunctionArgs());
+        },
+
         /**
          * Determines whether the specified function exists,
          * returning true if so and false otherwise
