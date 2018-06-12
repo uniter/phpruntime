@@ -154,6 +154,22 @@ module.exports = function (internals) {
         },
 
         /**
+         * Pops the last element off the end of an array and returns it
+         *
+         * - Also resets the internal array pointer
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-pop.php}
+         *
+         * @param {Value|Variable|Reference} arrayReference
+         * @return {Value}
+         */
+        'array_pop': function (arrayReference) {
+            var arrayValue = arrayReference.getValue();
+
+            return arrayValue.pop();
+        },
+
+        /**
          * Push one or more elements onto the end of array
          *
          * @see {@link http://php.net/manual/en/function.array-push.php}
