@@ -19,7 +19,7 @@ var _ = require('microdash'),
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
-        stdout = internals.stdout,
+        output = internals.output,
         valueFactory = internals.valueFactory;
 
     function createTypeChecker(name, type) {
@@ -186,7 +186,7 @@ module.exports = function (internals) {
                 return representation + '\n';
             }
 
-            stdout.write(dump(value, 1));
+            output.write(dump(value, 1));
         }
     };
 };
