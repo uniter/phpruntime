@@ -152,6 +152,23 @@ module.exports = function (internals) {
 
             return valueFactory.createArray(mergedElements);
         },
+
+        /**
+         * Pops the last element off the end of an array and returns it
+         *
+         * - Also resets the internal array pointer
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-pop.php}
+         *
+         * @param {Value|Variable|Reference} arrayReference
+         * @return {Value}
+         */
+        'array_pop': function (arrayReference) {
+            var arrayValue = arrayReference.getValue();
+
+            return arrayValue.pop();
+        },
+
         'array_push': function (arrayReference) {
             var arrayValue = arrayReference.getValue(),
                 i,
