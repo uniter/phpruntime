@@ -66,6 +66,36 @@ module.exports = function (internals) {
 
         'is_float': createTypeChecker('is_float', 'float'),
 
+        /**
+         * Determines whether the type of a variable is an integer
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-int.php}
+         *
+         * @param {Variable|Reference|Value} valueReference The variable or value to check the type of
+         * @returns {BooleanValue}
+         */
+        'is_int': createTypeChecker('is_int', 'integer'),
+
+        /**
+         * Determines whether the type of a variable is an object
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-object.php}
+         *
+         * @param {Variable|Reference|Value} valueReference The variable or value to check the type of
+         * @returns {BooleanValue}
+         */
+        'is_object': createTypeChecker('is_object', 'object'),
+
+        /**
+         * Determines whether the type of a variable is a string
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-string.php}
+         *
+         * @param {Variable|Reference|Value} valueReference The variable or value to check the type of
+         * @returns {BooleanValue}
+         */
+        'is_string': createTypeChecker('is_string', 'string'),
+
         // NB: This output matches that of PHP with XDebug disabled
         'var_dump': function (valueReference) {
             var arrays = [],
