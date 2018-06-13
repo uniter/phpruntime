@@ -170,12 +170,12 @@ module.exports = function (internals) {
         },
 
         /**
-         * Push one or more elements onto the end of array
+         * Pushes one or more elements onto the end of an array
          *
-         * @see {@link http://php.net/manual/en/function.array-push.php}
+         * @see {@link https://secure.php.net/manual/en/function.array-push.php}
          *
-         * @param {Variable|Value} arrayReference
-         * @returns {IntegerValue}
+         * @param {Variable|ArrayValue} arrayReference
+         * @returns {IntegerValue} The new length of the array after pushing
          */
         'array_push': function (arrayReference) {
             var arrayValue,

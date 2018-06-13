@@ -11,15 +11,17 @@
 
 var expect = require('chai').expect,
     arrayExtension = require('../../../../../src/builtin/functions/array'),
+    phpCommon = require('phpcommon'),
     sinon = require('sinon'),
     CallStack = require('phpcore/src/CallStack'),
-    NullValue = require('phpcore/src/Value/Null').sync(),
-    PHPError = require('phpcommon').PHPError,
+    KeyValuePair = require('phpcore/src/KeyValuePair'),
+    PHPError = phpCommon.PHPError,
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
-    IntegerValue = require('phpcore/src/Value/Integer').sync();
+    Variable = require('phpcore/src/Variable').sync();
 
 describe('PHP "array_push" builtin function', function () {
     beforeEach(function () {
+        this.arrayReference = sinon.createStubInstance(Variable);
         this.callStack = sinon.createStubInstance(CallStack);
         this.valueFactory = new ValueFactory();
 
@@ -27,45 +29,166 @@ describe('PHP "array_push" builtin function', function () {
             callStack: this.callStack,
             valueFactory: this.valueFactory
         }).array_push;
-
-        this.args = [];
-        this.callArrayPush = function () {
-            return this.array_push.apply(null, this.args);
-        }.bind(this);
-
-        this.array = this.valueFactory.createArray([
-            this.valueFactory.createInteger(1),
-            this.valueFactory.createInteger(4)
-        ]);
     });
 
-    it('should push values to the end of an array', function () {
-        var array1Element1 = this.valueFactory.createInteger(7),
-            array2Element2 = this.valueFactory.createInteger(12),
-            result;
+    describe('for an indexed array', function () {
+        beforeEach(function () {
+            this.arrayValue = this.valueFactory.createArray([
+                new KeyValuePair(
+                    this.valueFactory.createInteger(0),
+                    this.valueFactory.createString('my first element')
+                ),
+                new KeyValuePair(
+                    this.valueFactory.createInteger(1),
+                    this.valueFactory.createString('my second element')
+                ),
+                new KeyValuePair(
+                    this.valueFactory.createInteger(5),
+                    this.valueFactory.createString('my last element')
+                )
+            ]);
+            this.arrayReference.getValue.returns(this.arrayValue);
+        });
 
-        this.args[0] = this.array;
-        this.args[1] = array1Element1;
-        this.args[2] = array2Element2;
+        it('should push the new elements on just after the highest numbered key (sparse array support)', function () {
+            var newElement1 = this.valueFactory.createString('first new one'),
+                newElementReference1,
+                newElement2 = this.valueFactory.createString('second new one'),
+                newElementReference2;
+            newElementReference1 = sinon.createStubInstance(Variable);
+            newElementReference1.getValue.returns(newElement1);
+            newElementReference2 = sinon.createStubInstance(Variable);
+            newElementReference2.getValue.returns(newElement2);
 
-        result = this.callArrayPush();
+            this.array_push(this.arrayReference, newElementReference1, newElementReference2);
 
-        expect(result).to.be.an.instanceOf(IntegerValue);
-        expect(result.getNative()).to.equal(4);
-        expect(this.array.getValues()).to.have.length.of(4);
-        expect(this.array.getValues()[0]).to.be.an.instanceOf(IntegerValue);
-        expect(this.array.getValues()[0].getNative()).to.equal(1);
-        expect(this.array.getValues()[1]).to.be.an.instanceOf(IntegerValue);
-        expect(this.array.getValues()[1].getNative()).to.equal(4);
-        expect(this.array.getValues()[2]).to.be.an.instanceOf(IntegerValue);
-        expect(this.array.getValues()[2].getNative()).to.equal(7);
-        expect(this.array.getValues()[3]).to.be.an.instanceOf(IntegerValue);
-        expect(this.array.getValues()[3].getNative()).to.equal(12);
+            expect(this.arrayValue.getNative()).to.deep.equal([
+                'my first element',
+                'my second element',
+                undefined,
+                undefined,
+                undefined,
+                'my last element',
+                // New elements - should start counting just after the highest existing index (5)
+                'first new one',
+                'second new one'
+            ]);
+            expect(this.arrayValue.getLength()).to.equal(5);
+        });
+
+        it('should return the new array length', function () {
+            var newElement = this.valueFactory.createString('first new one'),
+                newElementReference,
+                result;
+            newElementReference = sinon.createStubInstance(Variable);
+            newElementReference.getValue.returns(newElement);
+
+            result = this.array_push(this.arrayReference, newElementReference);
+
+            expect(result.getType()).to.equal('integer');
+            expect(result.getNative()).to.equal(4); // Original 3 + the pushed one
+        });
+    });
+
+    describe('for an associative array', function () {
+        beforeEach(function () {
+            this.arrayValue = this.valueFactory.createArray([
+                new KeyValuePair(
+                    this.valueFactory.createString('my_first_key'),
+                    this.valueFactory.createString('my first element')
+                ),
+                new KeyValuePair(
+                    this.valueFactory.createString('my_second_key'),
+                    this.valueFactory.createString('my second element')
+                ),
+                new KeyValuePair(
+                    this.valueFactory.createString('my_last_key'),
+                    this.valueFactory.createString('my last element')
+                )
+            ]);
+            this.arrayReference.getValue.returns(this.arrayValue);
+        });
+
+        it('should index the pushed elements from 0', function () {
+            var newElement1 = this.valueFactory.createString('first new one'),
+                newElementReference1,
+                newElement2 = this.valueFactory.createString('second new one'),
+                newElementReference2;
+            newElementReference1 = sinon.createStubInstance(Variable);
+            newElementReference1.getValue.returns(newElement1);
+            newElementReference2 = sinon.createStubInstance(Variable);
+            newElementReference2.getValue.returns(newElement2);
+
+            this.array_push(this.arrayReference, newElementReference1, newElementReference2);
+
+            expect(this.arrayValue.getNative()).to.deep.equal({
+                'my_first_key': 'my first element',
+                'my_second_key': 'my second element',
+                'my_last_key': 'my last element',
+                // New elements - should start counting from 0
+                0: 'first new one',
+                1: 'second new one'
+            });
+            expect(this.arrayValue.getLength()).to.equal(5);
+        });
+
+        it('should return the new array length', function () {
+            var newElement = this.valueFactory.createString('first new one'),
+                newElementReference,
+                result;
+            newElementReference = sinon.createStubInstance(Variable);
+            newElementReference.getValue.returns(newElement);
+
+            result = this.array_push(this.arrayReference, newElementReference);
+
+            expect(result.getType()).to.equal('integer');
+            expect(result.getNative()).to.equal(4); // Original 3 + the pushed one
+        });
+    });
+
+    describe('for an empty array', function () {
+        beforeEach(function () {
+            this.arrayValue = this.valueFactory.createArray([]);
+            this.arrayReference.getValue.returns(this.arrayValue);
+        });
+
+        it('should index the pushed elements from 0', function () {
+            var newElement1 = this.valueFactory.createString('first new one'),
+                newElementReference1,
+                newElement2 = this.valueFactory.createString('second new one'),
+                newElementReference2;
+            newElementReference1 = sinon.createStubInstance(Variable);
+            newElementReference1.getValue.returns(newElement1);
+            newElementReference2 = sinon.createStubInstance(Variable);
+            newElementReference2.getValue.returns(newElement2);
+
+            this.array_push(this.arrayReference, newElementReference1, newElementReference2);
+
+            expect(this.arrayValue.getNative()).to.deep.equal([
+                // New elements - should start counting from 0
+                'first new one',
+                'second new one'
+            ]);
+            expect(this.arrayValue.getLength()).to.equal(2);
+        });
+
+        it('should return the new array length', function () {
+            var newElement = this.valueFactory.createString('first new one'),
+                newElementReference,
+                result;
+            newElementReference = sinon.createStubInstance(Variable);
+            newElementReference.getValue.returns(newElement);
+
+            result = this.array_push(this.arrayReference, newElementReference);
+
+            expect(result.getType()).to.equal('integer');
+            expect(result.getNative()).to.equal(1); // No original elements, plus the pushed one
+        });
     });
 
     describe('when no arguments are provided', function () {
         it('should raise a warning', function () {
-            this.callArrayPush();
+            this.array_push();
 
             expect(this.callStack.raiseError).to.have.been.calledOnce;
             expect(this.callStack.raiseError).to.have.been.calledWith(
@@ -75,9 +198,9 @@ describe('PHP "array_push" builtin function', function () {
         });
 
         it('should return NULL', function () {
-            var result = this.callArrayPush();
+            var result = this.array_push();
 
-            expect(result).to.be.an.instanceOf(NullValue);
+            expect(result.getType()).to.equal('null');
         });
     });
 });
