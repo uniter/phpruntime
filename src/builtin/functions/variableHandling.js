@@ -96,6 +96,74 @@ module.exports = function (internals) {
          */
         'is_string': createTypeChecker('is_string', 'string'),
 
+        /**
+         * Outputs or returns a valid PHP code string that will evaluate to the given value
+         *
+         * @see {@link https://secure.php.net/manual/en/function.var-export.php}
+         *
+         * @param {Variable|Reference|Value} valueReference The variable or value to export
+         * @param {Variable|Reference|Value} returnReference Whether to return the string rather than output
+         * @returns {NullValue|StringValue} Returns NULL when outputting, the code string when return=true
+         */
+        'var_export': function (valueReference, returnReference) {
+            var exportedCodeString,
+                shouldReturn,
+                value;
+
+            function exportValue(value) {
+                var parts;
+
+                switch (value.getType()) {
+                    case 'array':
+                        parts = [];
+                        value.getKeys().forEach(function (keyValue) {
+                            var elementPair = value.getElementPairByKey(keyValue);
+
+                            parts.push(
+                                '  ' +
+                                exportValue(elementPair.getKey()) +
+                                ' => ' +
+                                exportValue(elementPair.getValue()) +
+                                ',\n'
+                            );
+                        });
+                        return 'array (\n' + parts.join('') + ')';
+                    case 'boolean':
+                    case 'float':
+                    case 'integer':
+                        return '' + value.getNative();
+                    case 'null':
+                        return 'NULL';
+                    case 'object':
+                        if (value.getLength() > 0) {
+                            throw new Error('var_export() :: Non-empty objects not implemented');
+                        }
+
+                        return value.getClassName() + '::__set_state(array(\n))';
+                    case 'string':
+                        return '\'' + value.getNative().replace(/['\\]/g, '\\$&') + '\'';
+                    default:
+                        throw new Error('var_dump() :: Unexpected value type "' + value.getType() + '"');
+                }
+            }
+
+            value = valueReference.getValue();
+
+            // Output the string representation by default, or return it if specified
+            shouldReturn = returnReference ? returnReference.getNative() : false;
+
+            exportedCodeString = exportValue(value);
+
+            if (shouldReturn) {
+                return valueFactory.createString(exportedCodeString);
+            }
+
+            // No trailing newline should be output
+            output.write(exportedCodeString);
+
+            return valueFactory.createNull();
+        },
+
         // NB: This output matches that of PHP with XDebug disabled
         'var_dump': function (valueReference) {
             var arrays = [],
