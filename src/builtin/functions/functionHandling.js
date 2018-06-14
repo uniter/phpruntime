@@ -108,6 +108,30 @@ module.exports = function (internals) {
         },
 
         /**
+         * Fetches the number of arguments passed to the function.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.func-num-args.php}
+         *
+         * @returns {IntegerValue}
+         */
+        'func_num_args': function () {
+            var callerCall = callStack.getCaller();
+
+            if (callerCall === null) {
+                // We're not in a function scope - no args to get
+
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'func_num_args(): Called from the global scope - no function context'
+                );
+
+                return valueFactory.createNull();
+            }
+
+            return valueFactory.createInteger(callerCall.getFunctionArgs().length);
+        },
+
+        /**
          * Determines whether the specified function exists,
          * returning true if so and false otherwise
          *
