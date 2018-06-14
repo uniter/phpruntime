@@ -15,10 +15,8 @@ var expect = require('chai').expect,
     Call = require('phpcore/src/Call'),
     CallStack = require('phpcore/src/CallStack'),
     Namespace = require('phpcore/src/Namespace').sync(),
-    ObjectValue = require('phpcore/src/Value/Object').sync(),
     PHPError = require('phpcommon').PHPError,
-    ValueFactory = require('phpcore/src/ValueFactory').sync(),
-    Variable = require('phpcore/src/Variable').sync();
+    ValueFactory = require('phpcore/src/ValueFactory').sync();
 
 describe('PHP "func_get_args" builtin function', function () {
     beforeEach(function () {
@@ -32,15 +30,9 @@ describe('PHP "func_get_args" builtin function', function () {
         };
         this.functionHandlingFunctions = functionHandlingFunctionFactory(this.internals);
         this.func_get_args = this.functionHandlingFunctions.func_get_args;
-        this.callbackReference = sinon.createStubInstance(Variable);
-        this.callbackValue = sinon.createStubInstance(ObjectValue);
-        this.argumentReferences = [];
-
-        this.callbackReference.getValue.returns(this.callbackValue);
-        this.callbackValue.getCallableName.withArgs(this.globalNamespace).returns('myFunc');
 
         this.callFuncGetArgs = function () {
-            return this.func_get_args.apply(null, [this.callbackReference].concat(this.argumentReferences));
+            return this.func_get_args.apply(null, []);
         }.bind(this);
     });
 
