@@ -24,8 +24,8 @@
   },
   "dependencies": {
     "microdash": "~1",
-    "phpcommon": "~1",
-    "phpcore": "^5.2.2"
+    "phpcommon": "^1.12.0",
+    "phpcore": "^5.5.1"
   },
   "devDependencies": {
     "chai": "^4.1.2",
