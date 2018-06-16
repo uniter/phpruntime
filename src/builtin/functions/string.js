@@ -291,6 +291,39 @@ module.exports = function (internals) {
             substring = string.substr(start, length);
 
             return valueFactory.createString(substring);
+        },
+
+        /**
+         * Counts the number of substring occurrences
+         *
+         * @see {@link https://secure.php.net/manual/en/function.substr-count.php}
+         *
+         * @param {Variable|Value} haystackReference    The string to search inside
+         * @param {Variable|Value} needleReference      The string to search inside
+         * @param {Variable|Value} offsetReference      The position to start searching from
+         * @param {Variable|Value} lengthReference      The no. of chars from the offset to search inside
+         * @returns {IntegerValue}                      The number of occurrences found
+         */
+        'substr_count': function (haystackReference, needleReference, offsetReference, lengthReference) {
+            var haystack = haystackReference.getNative(),
+                needle = needleReference.getNative(),
+                // Negative offsets are natively supported by JS .substr()
+                offset = offsetReference ? offsetReference.getNative() : 0,
+                length, // Undefined length will extract to the end of the string
+                trimmedHaystack;
+
+            if (lengthReference) {
+                length = lengthReference.getNative();
+
+                // Negative lengths count back from the end of the string
+                if (length < 0) {
+                    length = haystack.length - offset + length;
+                }
+            }
+
+            trimmedHaystack = haystack.substr(offset, length);
+
+            return valueFactory.createInteger(trimmedHaystack.split(needle).length - 1);
         }
     };
 };
