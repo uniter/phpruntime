@@ -376,6 +376,43 @@ module.exports = function (internals) {
         'join': function (glueReference, piecesReference) {
             return methods[IMPLODE](glueReference, piecesReference);
         },
+
+        /**
+         * Fetches the key for the element the array's internal pointer is pointing at
+         *
+         * @see {@link https://secure.php.net/manual/en/function.key.php}
+         *
+         * @param {ArrayValue|Reference|Variable|Value} arrayReference
+         * @return {Value}
+         */
+        'key': function (arrayReference) {
+            var arrayValue,
+                currentKey;
+
+            if (!arrayReference) {
+                callStack.raiseError(PHPError.E_WARNING, 'key() expects exactly 1 parameter, 0 given');
+                return valueFactory.createNull();
+            }
+
+            arrayValue = arrayReference.getValue();
+
+            if (arrayValue.getType() !== 'array') {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'key() expects parameter 1 to be array, ' +
+                    arrayValue.getType() +
+                    ' given'
+                );
+                return valueFactory.createNull();
+            }
+
+            currentKey = arrayValue.getKeyByIndex(arrayValue.getPointer());
+
+            return currentKey !== null ?
+                currentKey :
+                valueFactory.createNull();
+        },
+
         /**
          * Sorts an array in-place, by key, in reverse order
          *
