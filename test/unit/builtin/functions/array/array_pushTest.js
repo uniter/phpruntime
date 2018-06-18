@@ -11,9 +11,11 @@
 
 var expect = require('chai').expect,
     arrayExtension = require('../../../../../src/builtin/functions/array'),
+    phpCommon = require('phpcommon'),
     sinon = require('sinon'),
     CallStack = require('phpcore/src/CallStack'),
     KeyValuePair = require('phpcore/src/KeyValuePair'),
+    PHPError = phpCommon.PHPError,
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
@@ -181,6 +183,24 @@ describe('PHP "array_push" builtin function', function () {
 
             expect(result.getType()).to.equal('integer');
             expect(result.getNative()).to.equal(1); // No original elements, plus the pushed one
+        });
+    });
+
+    describe('when no arguments are provided', function () {
+        it('should raise a warning', function () {
+            this.array_push();
+
+            expect(this.callStack.raiseError).to.have.been.calledOnce;
+            expect(this.callStack.raiseError).to.have.been.calledWith(
+                PHPError.E_WARNING,
+                'array_push() expects at least 2 parameters, 0 given'
+            );
+        });
+
+        it('should return NULL', function () {
+            var result = this.array_push();
+
+            expect(result.getType()).to.equal('null');
         });
     });
 });

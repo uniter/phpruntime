@@ -188,10 +188,17 @@ module.exports = function (internals) {
          * @returns {IntegerValue} The new length of the array after pushing
          */
         'array_push': function (arrayReference) {
-            var arrayValue = arrayReference.getValue(),
+            var arrayValue,
                 i,
                 reference,
                 value;
+
+            if (!arrayReference) {
+                callStack.raiseError(PHPError.E_WARNING, 'array_push() expects at least 2 parameters, 0 given');
+                return valueFactory.createNull();
+            }
+
+            arrayValue = arrayReference.getValue();
 
             for (i = 1; i < arguments.length; i++) {
                 reference = arguments[i];
