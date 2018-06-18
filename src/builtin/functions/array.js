@@ -14,11 +14,13 @@ var _ = require('microdash'),
     phpCommon = require('phpcommon'),
     COUNT_NORMAL = 0,
     IMPLODE = 'implode',
+    KeyValuePair = require('phpcore/src/KeyValuePair'),
     SORT_REGULAR = 0,
     PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
+        globalNamespace = internals.globalNamespace,
         methods,
         valueFactory = internals.valueFactory;
 
@@ -78,10 +80,18 @@ module.exports = function (internals) {
                 firstArrayValue = firstArrayReference.getValue(),
                 result = [];
 
-            _.each(firstArrayValue.getValueReferences(), function (elementValue) {
-                var mappedElementValue = callbackValue.call([elementValue]);
+            if (arguments.length > 2) {
+                throw new Error('array_map() :: Multiple input arrays are not yet supported');
+            }
 
-                result.push(mappedElementValue);
+            _.each(firstArrayValue.getKeys(), function (keyValue) {
+                // Pass the global namespace as the namespace scope -
+                // any normal function callback will need to be fully-qualified
+                // TODO: Test what happens with barewords, eg. `array_map(MyClass::staticMethod, [...])`
+                var elementValue = firstArrayValue.getElementByKey(keyValue),
+                    mappedElementValue = callbackValue.call([elementValue], globalNamespace);
+
+                result.push(new KeyValuePair(keyValue, mappedElementValue));
             });
 
             return valueFactory.createArray(result);
