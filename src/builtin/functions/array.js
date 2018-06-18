@@ -14,11 +14,13 @@ var _ = require('microdash'),
     phpCommon = require('phpcommon'),
     COUNT_NORMAL = 0,
     IMPLODE = 'implode',
+    KeyValuePair = require('phpcore/src/KeyValuePair'),
     SORT_REGULAR = 0,
     PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
+        globalNamespace = internals.globalNamespace,
         methods,
         valueFactory = internals.valueFactory;
 
@@ -78,10 +80,18 @@ module.exports = function (internals) {
                 firstArrayValue = firstArrayReference.getValue(),
                 result = [];
 
-            _.each(firstArrayValue.getValueReferences(), function (elementValue) {
-                var mappedElementValue = callbackValue.call([elementValue]);
+            if (arguments.length > 2) {
+                throw new Error('array_map() :: Multiple input arrays are not yet supported');
+            }
 
-                result.push(mappedElementValue);
+            _.each(firstArrayValue.getKeys(), function (keyValue) {
+                // Pass the global namespace as the namespace scope -
+                // any normal function callback will need to be fully-qualified
+                // TODO: Test what happens with barewords, eg. `array_map(MyClass::staticMethod, [...])`
+                var elementValue = firstArrayValue.getElementByKey(keyValue),
+                    mappedElementValue = callbackValue.call([elementValue], globalNamespace);
+
+                result.push(new KeyValuePair(keyValue, mappedElementValue));
             });
 
             return valueFactory.createArray(result);
@@ -154,12 +164,28 @@ module.exports = function (internals) {
         },
 
         /**
-         * Push one or more elements onto the end of array
+         * Pops the last element off the end of an array and returns it
          *
-         * @see {@link http://php.net/manual/en/function.array-push.php}
+         * - Also resets the internal array pointer
          *
-         * @param {Variable|Value} arrayReference
-         * @returns {IntegerValue}
+         * @see {@link https://secure.php.net/manual/en/function.array-pop.php}
+         *
+         * @param {Value|Variable|Reference} arrayReference
+         * @return {Value}
+         */
+        'array_pop': function (arrayReference) {
+            var arrayValue = arrayReference.getValue();
+
+            return arrayValue.pop();
+        },
+
+        /**
+         * Pushes one or more elements onto the end of an array
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-push.php}
+         *
+         * @param {Variable|ArrayValue} arrayReference
+         * @returns {IntegerValue} The new length of the array after pushing
          */
         'array_push': function (arrayReference) {
             var arrayValue,
@@ -367,6 +393,43 @@ module.exports = function (internals) {
         'join': function (glueReference, piecesReference) {
             return methods[IMPLODE](glueReference, piecesReference);
         },
+
+        /**
+         * Fetches the key for the element the array's internal pointer is pointing at
+         *
+         * @see {@link https://secure.php.net/manual/en/function.key.php}
+         *
+         * @param {ArrayValue|Reference|Variable|Value} arrayReference
+         * @return {Value}
+         */
+        'key': function (arrayReference) {
+            var arrayValue,
+                currentKey;
+
+            if (!arrayReference) {
+                callStack.raiseError(PHPError.E_WARNING, 'key() expects exactly 1 parameter, 0 given');
+                return valueFactory.createNull();
+            }
+
+            arrayValue = arrayReference.getValue();
+
+            if (arrayValue.getType() !== 'array') {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'key() expects parameter 1 to be array, ' +
+                    arrayValue.getType() +
+                    ' given'
+                );
+                return valueFactory.createNull();
+            }
+
+            currentKey = arrayValue.getKeyByIndex(arrayValue.getPointer());
+
+            return currentKey !== null ?
+                currentKey :
+                valueFactory.createNull();
+        },
+
         /**
          * Sorts an array in-place, by key, in reverse order
          *

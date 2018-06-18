@@ -17,6 +17,8 @@ var arrayConstants = require('./constants/array'),
     constantFunctions = require('./functions/misc/constant'),
     Countable = require('./interfaces/Countable'),
     environmentFunctions = require('./functions/optionsAndInfo/environment'),
+    errorHandlingConstants = require('./constants/errorHandling'),
+    errorHandlingFunctions = require('./functions/errorHandling'),
     extensionOptionsAndInfoFunctions = require('./functions/optionsAndInfo/extension'),
     filesystemConstants = require('./constants/filesystem'),
     filesystemFunctions = require('./functions/filesystem'),
@@ -26,18 +28,24 @@ var arrayConstants = require('./constants/array'),
     pcreConstants = require('./constants/pcre'),
     phpConstants = require('./constants/php'),
     phpOptionsAndInfoFunctions = require('./functions/optionsAndInfo/php'),
+    splFunctions = require('./functions/spl'),
+    stringBindings = require('./bindings/string'),
     stringFunctions = require('./functions/string'),
     timeDateAndTimeFunctions = require('./functions/dateAndTime/time'),
     timeFunctions = require('./functions/time'),
     variableHandlingFunctions = require('./functions/variableHandling');
 
 module.exports = {
+    bindingGroups: [
+        stringBindings
+    ],
     classes: {
         'Countable': Countable,
         'InvalidArgumentException': InvalidArgumentException
     },
     constantGroups: [
         arrayConstants,
+        errorHandlingConstants,
         filesystemConstants,
         pcreConstants,
         phpConstants
@@ -49,11 +57,13 @@ module.exports = {
         configOptionsAndInfoFunctions,
         constantFunctions,
         environmentFunctions,
+        errorHandlingFunctions,
         extensionOptionsAndInfoFunctions,
         filesystemFunctions,
         functionHandlingFunctions,
         htmlStringFunctions,
         phpOptionsAndInfoFunctions,
+        splFunctions,
         stringFunctions,
         timeDateAndTimeFunctions,
         timeFunctions,

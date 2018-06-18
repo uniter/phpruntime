@@ -16,8 +16,8 @@ var builtins = require('../../src/builtin/builtins'),
     phpToJS = require('phptojs'),
     Engine = require('phpcore/src/Engine'),
     Environment = require('phpcore/src/Environment'),
-    OptionSet = require('phpcore/src/OptionSet'),
-    PHPState = require('phpcore/src/PHPState').sync(),
+    AsyncPHPState = require('phpcore/src/PHPState').async(pausable),
+    SyncPHPState = require('phpcore/src/PHPState').sync(),
     Runtime = require('phpcore/src/Runtime').async(pausable),
     transpile = function (path, php, phpCore, options) {
         var js,
@@ -47,12 +47,9 @@ module.exports = {
         var runtime = new Runtime(
             Environment,
             Engine,
-            OptionSet,
-            PHPState,
+            AsyncPHPState,
             phpCommon,
-            pausable,
-            phpToAST,
-            phpToJS
+            pausable
         );
 
         // Install the standard set of builtins
@@ -66,12 +63,9 @@ module.exports = {
         var runtime = new Runtime(
             Environment,
             Engine,
-            OptionSet,
-            PHPState,
+            SyncPHPState,
             phpCommon,
-            null, // Don't make Pausable available - running synchronously
-            phpToAST,
-            phpToJS
+            null // Don't make Pausable available - running synchronously
         );
 
         // Install the standard set of builtins

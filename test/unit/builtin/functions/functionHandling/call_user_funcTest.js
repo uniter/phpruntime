@@ -13,7 +13,6 @@ var expect = require('chai').expect,
     sinon = require('sinon'),
     functionHandlingFunctionFactory = require('../../../../../src/builtin/functions/functionHandling'),
     CallbackValue = require('../../../../../src/builtin/functions/functionHandling/CallbackValue'),
-    BooleanValue = require('phpcore/src/Value/Boolean').sync(),
     CallStack = require('phpcore/src/CallStack'),
     IntegerValue = require('phpcore/src/Value/Integer').sync(),
     Namespace = require('phpcore/src/Namespace').sync(),
@@ -26,19 +25,7 @@ var expect = require('chai').expect,
 describe('PHP "call_user_func" builtin function', function () {
     beforeEach(function () {
         this.callStack = sinon.createStubInstance(CallStack);
-        this.valueFactory = sinon.createStubInstance(ValueFactory);
-        this.valueFactory.createBoolean.restore();
-        sinon.stub(this.valueFactory, 'createBoolean', function (native) {
-            var value = sinon.createStubInstance(BooleanValue);
-            value.getNative.returns(native);
-            return value;
-        });
-        this.valueFactory.createNull.restore();
-        sinon.stub(this.valueFactory, 'createNull', function () {
-            var value = sinon.createStubInstance(NullValue);
-            value.getNative.returns(null);
-            return value;
-        });
+        this.valueFactory = new ValueFactory();
         this.globalNamespace = sinon.createStubInstance(Namespace);
         this.internals = {
             callStack: this.callStack,
@@ -120,8 +107,7 @@ describe('PHP "call_user_func" builtin function', function () {
         });
 
         it('should raise a warning when attempting to fetch the reference of the first argument', function () {
-            this.callbackValue.call.restore();
-            sinon.stub(this.callbackValue, 'call', function (argumentReferences) {
+            this.callbackValue.call.callsFake(function (argumentReferences) {
                 argumentReferences[0].getReference();
             });
 
@@ -135,8 +121,7 @@ describe('PHP "call_user_func" builtin function', function () {
         });
 
         it('should raise a warning when attempting to fetch the reference of the second argument', function () {
-            this.callbackValue.call.restore();
-            sinon.stub(this.callbackValue, 'call', function (argumentReferences) {
+            this.callbackValue.call.callsFake(function (argumentReferences) {
                 argumentReferences[1].getReference();
             });
 
@@ -150,8 +135,7 @@ describe('PHP "call_user_func" builtin function', function () {
         });
 
         it('should return NULL', function () {
-            this.callbackValue.call.restore();
-            sinon.stub(this.callbackValue, 'call', function (argumentReferences) {
+            this.callbackValue.call.callsFake(function (argumentReferences) {
                 argumentReferences[0].getReference();
             });
 
