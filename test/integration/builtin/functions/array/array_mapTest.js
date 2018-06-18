@@ -11,35 +11,31 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../../sync');
+    tools = require('../../../tools');
 
 describe('PHP "array_map" builtin function integration', function () {
     it('should be able to map one array to another', function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
-$inputArray = [21, 27, 101];
+$result = [];
 
-return array_map(function ($item) {
+$inputArray = [21, 27, 101];
+$result[] = array_map(function ($item) {
     return $item * 2;
 }, $inputArray);
+
+$result[] = array_map('strtoupper', ['first', 'SEcond', 'thIRD']);
+
+return $result;
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.syncTranspile(null, php),
             engine = module();
 
         expect(engine.execute().getNative()).to.deep.equal([
-            42,
-            54,
-            202
+            [42, 54, 202], // Using a closure as the callback
+            ['FIRST', 'SECOND', 'THIRD'] // Using a normal function as the callback
         ]);
     });
 });
