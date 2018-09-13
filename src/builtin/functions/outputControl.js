@@ -10,7 +10,8 @@
 'use strict';
 
 var phpCommon = require('phpcommon'),
-    Exception = phpCommon.Exception;
+    Exception = phpCommon.Exception,
+    PHPError = phpCommon.PHPError;
 
 /**
  * Output control functions
@@ -19,7 +20,8 @@ var phpCommon = require('phpcommon'),
  * @return {object}
  */
 module.exports = function (internals) {
-    var output = internals.output,
+    var callStack = internals.callStack,
+        output = internals.output,
         valueFactory = internals.valueFactory;
 
     return {
@@ -27,9 +29,22 @@ module.exports = function (internals) {
          * Erases the current output buffer without turning it off
          *
          * @see {@link https://secure.php.net/manual/en/function.ob-clean.php}
+         *
+         * @returns {BooleanValue} Returns true on success or false on failure
          */
         'ob_clean': function () {
-            output.cleanCurrentBuffer();
+            try {
+                output.cleanCurrentBuffer();
+            } catch (error) {
+                callStack.raiseError(
+                    PHPError.E_NOTICE,
+                    'ob_clean(): failed to delete buffer. No buffer to delete'
+                );
+
+                return valueFactory.createBoolean(false);
+            }
+
+            return valueFactory.createBoolean(true);
         },
 
         /**
@@ -44,6 +59,11 @@ module.exports = function (internals) {
             try {
                 output.popBuffer();
             } catch (error) {
+                callStack.raiseError(
+                    PHPError.E_NOTICE,
+                    'ob_end_clean(): failed to delete buffer. No buffer to delete'
+                );
+
                 return valueFactory.createBoolean(false);
             }
 
@@ -56,7 +76,6 @@ module.exports = function (internals) {
          * will be written to stdout
          *
          * @see {@link https://secure.php.net/manual/en/function.ob-end-flush.php}
-         * @TODO: Output E_NOTICE on failure
          *
          * @returns {BooleanValue} Returns true on success or false on failure
          */
@@ -65,6 +84,11 @@ module.exports = function (internals) {
                 output.flushCurrentBuffer();
                 output.popBuffer();
             } catch (error) {
+                callStack.raiseError(
+                    PHPError.E_NOTICE,
+                    'ob_end_flush(): failed to delete and flush buffer. No buffer to delete or flush'
+                );
+
                 return valueFactory.createBoolean(false);
             }
 
@@ -77,9 +101,22 @@ module.exports = function (internals) {
          * will be written to stdout
          *
          * @see {@link https://secure.php.net/manual/en/function.ob-flush.php}
+         *
+         * @returns {BooleanValue} Returns true on success or false on failure
          */
         'ob_flush': function () {
-            output.flushCurrentBuffer();
+            try {
+                output.flushCurrentBuffer();
+            } catch (error) {
+                callStack.raiseError(
+                    PHPError.E_NOTICE,
+                    'ob_flush(): failed to flush buffer. No buffer to flush'
+                );
+
+                return valueFactory.createBoolean(false);
+            }
+
+            return valueFactory.createBoolean(true);
         },
 
         /**
@@ -91,8 +128,14 @@ module.exports = function (internals) {
          * @returns {StringValue|BooleanValue} Returns the output buffer or FALSE if no buffer is active
          */
         'ob_get_clean': function () {
-            var contents = output.getCurrentBufferContents();
+            var contents;
 
+            if (output.getDepth() === 0) {
+                // No buffer is active (except the default StdoutBuffer, which does not count for this)
+                return valueFactory.createBoolean(false);
+            }
+
+            contents = output.getCurrentBufferContents();
             output.popBuffer();
 
             return valueFactory.createString(contents);
@@ -129,6 +172,11 @@ module.exports = function (internals) {
             var contents;
 
             if (output.getDepth() === 0) {
+                callStack.raiseError(
+                    PHPError.E_NOTICE,
+                    'ob_get_flush(): failed to delete and flush buffer. No buffer to delete or flush'
+                );
+
                 // No buffer is active (except the default StdoutBuffer, which does not count for this)
                 return valueFactory.createBoolean(false);
             }
