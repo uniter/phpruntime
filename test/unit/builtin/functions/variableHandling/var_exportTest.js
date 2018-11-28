@@ -23,7 +23,7 @@ describe('PHP "var_export" builtin function', function () {
     beforeEach(function () {
         this.callStack = sinon.createStubInstance(CallStack);
         this.output = sinon.createStubInstance(Output);
-        this.valueFactory = new ValueFactory();
+        this.valueFactory = new ValueFactory(null, this.callStack);
         this.internals = {
             callStack: this.callStack,
             output: this.output,
@@ -123,9 +123,12 @@ describe('PHP "var_export" builtin function', function () {
         });
 
         it('should throw an error when a non-empty object is given, for now (TODO)', function () {
-            var myClassObject = sinon.createStubInstance(Class);
+            var myClassObject = sinon.createStubInstance(Class),
+                myObjectValue = this.valueFactory.createObject({myProp: 21}, myClassObject);
             myClassObject.getName.returns('My\\Stuff\\MyClass');
-            this.valueReference.getValue.returns(this.valueFactory.createObject({myProp: 21}, myClassObject));
+            myObjectValue.declareProperty('myProp', myClassObject, 'public')
+                .initialise(this.valueFactory.createInteger(21));
+            this.valueReference.getValue.returns(myObjectValue);
 
             expect(function () {
                 this.var_export(this.valueReference, this.returnReference);
