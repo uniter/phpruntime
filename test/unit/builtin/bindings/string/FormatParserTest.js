@@ -89,6 +89,23 @@ describe('FormatParser', function () {
                     {kind: 'ordinary', text: ' my format string'}
                 ]
             },
+            'an integer padded with hashes, 4 decimal places, with the pad char specified after the period': {
+                format: 'this is %9.#4d my format string',
+                expectedDirectives: [
+                    {kind: 'ordinary', text: 'this is '},
+                    {
+                        kind: 'conversion-specification',
+                        argumentPosition: 0,
+                        type: 'signed-decimal',
+                        showPositiveSign: false,
+                        paddingCharacter: '#',
+                        alignmentSpecifier: 'right',
+                        widthSpecifier: 9,
+                        precisionSpecifier: 4
+                    },
+                    {kind: 'ordinary', text: ' my format string'}
+                ]
+            },
             'a locale-aware floating-point number padded with hashes, showing positive sign, left-justified, 12 decimal places': {
                 format: 'this is %+\'#-20.12f my format string',
                 expectedDirectives: [
