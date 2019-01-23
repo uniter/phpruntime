@@ -10,9 +10,6 @@
 'use strict';
 
 module.exports = function (internals) {
-    var globalNamespace = internals.globalNamespace,
-        Exception = globalNamespace.getClass('Exception');
-
     /**
      * Exception thrown if an argument is not of the expected type
      *
@@ -20,11 +17,11 @@ module.exports = function (internals) {
      * @constructor
      */
     function InvalidArgumentException() {
-        Exception.construct(this, arguments);
+        internals.callSuperConstructor(this, arguments);
     }
 
-    // Extend the base PHP Exception class
-    InvalidArgumentException.superClass = Exception;
+    // Extend the base PHP LogicException class
+    internals.extendClass('LogicException');
 
     internals.disableAutoCoercion();
 
