@@ -10,7 +10,9 @@
 'use strict';
 
 var expect = require('chai').expect,
+    phpCommon = require('phpcommon'),
     sinon = require('sinon'),
+    Exception = phpCommon.Exception,
     FormatConverter = require('../../../../../src/builtin/bindings/string/FormatConverter'),
     FormatParser = require('../../../../../src/builtin/bindings/string/FormatParser'),
     MissingFormatArgumentException = require('../../../../../src/builtin/bindings/string/Exception/MissingFormatArgumentException'),
@@ -106,6 +108,18 @@ describe('NativeFormatter', function () {
             expect(function () {
                 this.formatter.format('my string with no specs');
             }.bind(this)).to.throw(MissingFormatArgumentException);
+        });
+
+        it('should throw when an invalid kind of directive is returned by the format parser', function () {
+            this.formatParser.parse
+                .withArgs('my string')
+                .returns([
+                    {kind: 'invalid-directive-kind', someArg: 21}
+                ]);
+
+            expect(function () {
+                this.formatter.format('my string');
+            }.bind(this)).to.throw(Exception, 'Unsupported directive kind "invalid-directive-kind"');
         });
     });
 });
