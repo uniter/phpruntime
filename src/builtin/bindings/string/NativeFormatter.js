@@ -10,6 +10,8 @@
 'use strict';
 
 var _ = require('microdash'),
+    phpCommon = require('phpcommon'),
+    Exception = phpCommon.Exception,
     MissingFormatArgumentException = require('./Exception/MissingFormatArgumentException');
 
 /**
@@ -66,7 +68,7 @@ _.extend(NativeFormatter.prototype, {
                     return formatter.formatConverter.convert(arg, directive);
                 }
 
-                throw new Error('Unsupported directive kind "' + directive.kind + '"');
+                throw new Exception('Unsupported directive kind "' + directive.kind + '"');
             })
             .join('');
     }
