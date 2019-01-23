@@ -20,6 +20,16 @@ module.exports = function (internals) {
         valueFactory = internals.valueFactory;
 
     return {
+        /**
+         * Split a string into an array by a certain substring
+         *
+         * @see {@link https://secure.php.net/manual/en/function.explode.php}
+         *
+         * @param {Reference|StringValue|Variable} delimiterReference  The substring to split the input string on
+         * @param {Reference|StringValue|Variable} stringReference  The string to split
+         * @param {Reference|IntegerValue|Variable} limitReference  The string to split
+         * @returns {ArrayValue|BooleanValue} The resulting array on success, or false on failure
+         */
         'explode': function (delimiterReference, stringReference, limitReference) {
             var delimiter,
                 elements,

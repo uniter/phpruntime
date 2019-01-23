@@ -132,9 +132,18 @@ module.exports = function (internals) {
             // Return the number of bytes written to the file on success
             return valueFactory.createInteger(data.length);
         },
+
+        /**
+         * Determines whether a file (not a directory) exists with the given path
+         *
+         * @see {@link https://secure.php.net/manual/en/function.get-include-path.php}
+         *
+         * @returns {StringValue}
+         */
         'get_include_path': function () {
             return valueFactory.createString(iniState.get(INCLUDE_PATH_INI));
         },
+
         /**
          * Determines whether a file (not a directory) exists with the given path
          *
@@ -163,6 +172,14 @@ module.exports = function (internals) {
             // FIXME: Stub
             return pathReference;
         },
+
+        /**
+         * Changes the include path, returning the old one
+         *
+         * @see {@link https://secure.php.net/manual/en/function.set-include-path.php}
+         *
+         * @returns {StringValue} Returns the old include path that was set previously
+         */
         'set_include_path': function (newIncludePathReference) {
             var oldIncludePath = iniState.get(INCLUDE_PATH_INI);
 
@@ -170,6 +187,7 @@ module.exports = function (internals) {
 
             return valueFactory.createString(oldIncludePath);
         },
+
         'unlink': function (pathReference, contextReference) {
             var fileSystem,
                 path;
