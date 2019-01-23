@@ -11,15 +11,15 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    tools = require('../../tools');
+    tools = require('../../../tools');
 
 describe('PHP "InvalidArgumentException" builtin class integration', function () {
-    it('should extend the Exception base class', function () {
+    it('should extend the LogicException base class', function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 $exception = new InvalidArgumentException('Oops');
 
-return $exception instanceof Exception;
+return $exception instanceof LogicException;
 EOS
 */;}), //jshint ignore:line
             module = tools.syncTranspile(null, php),

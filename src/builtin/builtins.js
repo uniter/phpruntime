@@ -15,7 +15,7 @@ var arrayConstants = require('./constants/array'),
     classFunctions = require('./functions/class'),
     configOptionsAndInfoFunctions = require('./functions/optionsAndInfo/config'),
     constantFunctions = require('./functions/misc/constant'),
-    Countable = require('./interfaces/Countable'),
+    Countable = require('./interfaces/spl/Countable'),
     environmentFunctions = require('./functions/optionsAndInfo/environment'),
     errorHandlingConstants = require('./constants/errorHandling'),
     errorHandlingFunctions = require('./functions/errorHandling'),
@@ -24,7 +24,8 @@ var arrayConstants = require('./constants/array'),
     filesystemFunctions = require('./functions/filesystem'),
     functionHandlingFunctions = require('./functions/functionHandling'),
     htmlStringFunctions = require('./functions/string/html'),
-    InvalidArgumentException = require('./classes/InvalidArgumentException'),
+    InvalidArgumentException = require('./classes/Exception/InvalidArgumentException'),
+    LogicException = require('./classes/Exception/LogicException'),
     pcreConstants = require('./constants/pcre'),
     phpConstants = require('./constants/php'),
     phpOptionsAndInfoFunctions = require('./functions/optionsAndInfo/php'),
@@ -39,10 +40,23 @@ module.exports = {
     bindingGroups: [
         stringBindings
     ],
-    classes: {
-        'Countable': Countable,
-        'InvalidArgumentException': InvalidArgumentException
-    },
+    classGroups: [
+        function () {
+            return {
+                'Countable': Countable
+            };
+        },
+        function () {
+            return {
+                'LogicException': LogicException
+            };
+        },
+        function () {
+            return {
+                'InvalidArgumentException': InvalidArgumentException
+            };
+        }
+    ],
     constantGroups: [
         arrayConstants,
         errorHandlingConstants,
