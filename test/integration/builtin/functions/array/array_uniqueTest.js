@@ -11,9 +11,7 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../../sync');
+    tools = require('../../../tools');
 
 describe('PHP "array_unique" builtin function integration', function () {
     it('should be able to fetch only the unique values of an array', function () {
@@ -26,13 +24,7 @@ $result[] = array_unique(['a' => 'green', 'red', 'b' => 'green', 'blue', 'red'])
 return $result;
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.syncTranspile(null, php),
             engine = module();
 
         expect(engine.execute().getNative()).to.deep.equal([
