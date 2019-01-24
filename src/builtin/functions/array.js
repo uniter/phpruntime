@@ -223,12 +223,24 @@ module.exports = function (internals) {
             return arrayValue.shift();
         },
 
+        /**
+         * Returns a new array without duplicate values from a source array
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-unique.php}
+         *
+         * @param {Variable|ArrayValue} arrayReference
+         * @param {Variable|IntegerValue} sortFlagsReference
+         * @returns {ArrayValue}
+         */
         'array_unique': function (arrayReference, sortFlagsReference) {
             var arrayValue,
                 resultPairs = [],
                 usedValues = {};
 
-            // TODO: Handle missing `arrayReference` arg etc.
+            if (!arrayReference) {
+                callStack.raiseError(PHPError.E_WARNING, 'array_unique() expects at least 1 parameter, 0 given');
+                return valueFactory.createNull();
+            }
 
             if (sortFlagsReference) {
                 throw new Error('array_unique() :: Sort flags are not yet supported');
