@@ -77,6 +77,38 @@ module.exports = function (internals) {
         'is_int': createTypeChecker('is_int', 'integer'),
 
         /**
+         * Determines whether a variable is a number or a string containing a number
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-numeric.php}
+         *
+         * @param {Variable|Reference|Value} valueReference The variable or value to check the numericness of
+         * @returns {BooleanValue}
+         */
+        'is_numeric': function (valueReference) {
+            var value;
+
+            if (!valueReference) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'is_numeric() expects exactly 1 parameter, 0 given'
+                );
+
+                return valueFactory.createNull();
+            }
+
+            value = valueReference.getValue();
+
+            return valueFactory.createBoolean(
+                value.getType() === 'integer' ||
+                value.getType() === 'float' ||
+                (
+                    value.getType() === 'string' &&
+                    isFinite(value.getNative())
+                )
+            );
+        },
+
+        /**
          * Determines whether the type of a variable is an object
          *
          * @see {@link https://secure.php.net/manual/en/function.is-object.php}
