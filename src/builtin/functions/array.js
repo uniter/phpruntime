@@ -26,6 +26,72 @@ module.exports = function (internals) {
 
     methods = {
         /**
+         * Determines the difference between arrays. A new array will be returned,
+         * with all the elements of the first array that are not present in any of the other arrays
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-diff.php}
+         *
+         * @returns {ArrayValue|NullValue}
+         */
+        'array_diff': function () {
+            var firstArrayValue,
+                remainingElementPairs,
+                returnNull = false;
+
+            if (arguments.length < 2) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'array_diff() expects at least 2 parameters, ' + arguments.length + ' given'
+                );
+                return valueFactory.createNull();
+            }
+
+            firstArrayValue = arguments[0].getValue();
+
+            if (firstArrayValue.getType() !== 'array') {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'array_diff(): Argument #0 is not an array'
+                );
+                return valueFactory.createNull();
+            }
+
+            // Start with the key-value pairs for the elements of the first array,
+            // as for each successive array we will compare their values against the values
+            // of this first one
+            remainingElementPairs = firstArrayValue.getKeys().map(function (keyValue) {
+                return firstArrayValue.getElementPairByKey(keyValue);
+            });
+
+            _.each([].slice.call(arguments, 1), function (arrayReference, argumentIndex) {
+                var arrayValue = arrayReference.getValue();
+
+                if (arrayValue.getType() !== 'array') {
+                    callStack.raiseError(
+                        PHPError.E_WARNING,
+                        'array_diff(): Argument #' + (argumentIndex + 2) + ' is not an array'
+                    );
+                    returnNull = true;
+                    return false;
+                }
+
+                _.each(arrayValue.getKeys(), function (keyValue) {
+                    var elementValue = arrayValue.getElementByKey(keyValue).getValue();
+
+                    remainingElementPairs = remainingElementPairs.filter(function (remainingElementPair) {
+                        return elementValue.getValue().isNotEqualTo(remainingElementPair.getValue()).getNative();
+                    });
+                });
+            });
+
+            if (returnNull) {
+                return valueFactory.createNull();
+            }
+
+            return valueFactory.createArray(remainingElementPairs);
+        },
+
+        /**
          * Determines whether the given key or index exists in the array
          *
          * @see {@link https://secure.php.net/manual/en/function.array-key-exists.php}
