@@ -11,6 +11,7 @@
 
 var phpCommon = require('phpcommon'),
     Exception = phpCommon.Exception,
+    NoActiveOutputBufferException = require('phpcore/src/Exception/NoActiveOutputBufferException'),
     PHPError = phpCommon.PHPError;
 
 /**
@@ -36,6 +37,10 @@ module.exports = function (internals) {
             try {
                 output.cleanCurrentBuffer();
             } catch (error) {
+                if (!(error instanceof NoActiveOutputBufferException)) {
+                    throw error;
+                }
+
                 callStack.raiseError(
                     PHPError.E_NOTICE,
                     'ob_clean(): failed to delete buffer. No buffer to delete'
@@ -84,6 +89,10 @@ module.exports = function (internals) {
                 output.flushCurrentBuffer();
                 output.popBuffer();
             } catch (error) {
+                if (!(error instanceof NoActiveOutputBufferException)) {
+                    throw error;
+                }
+
                 callStack.raiseError(
                     PHPError.E_NOTICE,
                     'ob_end_flush(): failed to delete and flush buffer. No buffer to delete or flush'
