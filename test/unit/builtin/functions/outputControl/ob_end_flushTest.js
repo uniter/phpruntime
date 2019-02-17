@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     sinon = require('sinon'),
     outputControlFunctionFactory = require('../../../../../src/builtin/functions/outputControl'),
     CallStack = require('phpcore/src/CallStack'),
-    Exception = phpCommon.Exception,
+    NoActiveOutputBufferException = require('phpcore/src/Exception/NoActiveOutputBufferException'),
     PHPError = phpCommon.PHPError,
     Output = require('phpcore/src/Output/Output'),
     ValueFactory = require('phpcore/src/ValueFactory').sync();
@@ -58,7 +58,7 @@ describe('PHP "ob_end_flush" builtin function', function () {
 
     describe('on failure', function () {
         beforeEach(function () {
-            this.output.flushCurrentBuffer.throws(new Exception('Failed to flush buffer'));
+            this.output.flushCurrentBuffer.throws(new NoActiveOutputBufferException());
         });
 
         it('should raise a notice', function () {
