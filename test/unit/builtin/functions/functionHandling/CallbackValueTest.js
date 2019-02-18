@@ -23,6 +23,17 @@ describe('CallbackValue', function () {
         this.value = new CallbackValue(this.referenceCallback, this.valueCallback);
     });
 
+    describe('getNative()', function () {
+        it('should fetch the native value via the provided callback', function () {
+            var value = sinon.createStubInstance(Value);
+            value.getNative.returns(1001);
+
+            this.valueCallback.returns(value);
+
+            expect(this.value.getNative()).to.equal(1001);
+        });
+    });
+
     describe('getReference()', function () {
         it('should fetch the reference via the provided callback', function () {
             var reference = sinon.createStubInstance(Reference);

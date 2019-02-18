@@ -32,9 +32,18 @@ function CallbackValue(referenceCallback, valueCallback) {
 
 _.extend(CallbackValue.prototype, {
     /**
-     * Fetches the reference for this value via the provided callback
+     * Fetches the eventual native value of this value via the provided callback
      *
      * @returns {*}
+     */
+    getNative: function () {
+        return this.getValue().getNative();
+    },
+
+    /**
+     * Fetches the reference for this value via the provided callback
+     *
+     * @returns {Reference|Value}
      */
     getReference: function () {
         return this.referenceCallback();
@@ -43,7 +52,7 @@ _.extend(CallbackValue.prototype, {
     /**
      * Fetches the eventual value of this value via the provided callback
      *
-     * @returns {*}
+     * @returns {Value}
      */
     getValue: function () {
         return this.valueCallback();
