@@ -11,9 +11,7 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../../sync');
+    tools = require('../../../tools');
 
 describe('PHP "call_user_func" builtin function integration', function () {
     it('should be able to call a function with three arguments that returns a value', function () {
@@ -29,13 +27,7 @@ function sayHello($name, $age, $location)
 return call_user_func('sayHello', 'Frank', 27, 'Cardiff, UK');
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.syncTranspile(null, php),
             engine = module();
 
         expect(engine.execute().getNative()).to.equal('done');
@@ -45,6 +37,23 @@ Hi Frank - 27 from Cardiff, UK!
 EOS
 */;}) //jshint ignore:line
         );
+    });
+
+    it('should be able to call a wrapped JS function', function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+
+return call_user_func($doubleItWithJS, 21);
+EOS
+*/;}), //jshint ignore:line
+            module = tools.syncTranspile(null, php),
+            engine = module();
+
+        engine.defineGlobal('doubleItWithJS', function (numberToDouble) {
+            return numberToDouble * 2;
+        });
+
+        expect(engine.execute().getNative()).to.equal(42);
     });
 
     it('should not pass the arguments by reference', function () {
@@ -62,13 +71,7 @@ call_user_func('myModifier', $myVar);
 return $myVar;
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.syncTranspile(null, php),
             engine = module();
 
         expect(engine.execute().getNative()).to.equal(21);
