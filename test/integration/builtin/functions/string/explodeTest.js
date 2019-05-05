@@ -20,10 +20,20 @@ describe('PHP "explode" builtin function integration', function () {
 
 $result = [];
 
+// No limit
 $result[] = explode(',', '21,101,hello');
+
+// Positive limit
 $result[] = explode(',', 'first,second,third,fourth,fifth', 3);
+
+// Negative limit (strip N elements from the end of the array)
 $result[] = explode(',', 'first,second,third,fourth,fifth', -2);
+
+// Zero limit (limit of 1)
 $result[] = explode(',', 'well,hello,there', 0);
+
+// Positive limit higher than possible elements
+$result[] = explode(',', 'first,second', 10);
 
 return $result;
 EOS
@@ -36,7 +46,8 @@ EOS
             ['21', '101', 'hello'],
             ['first', 'second', 'third,fourth,fifth'],
             ['first', 'second', 'third'],
-            ['well,hello,there']
+            ['well,hello,there'],
+            ['first', 'second']
         ]);
     });
 });

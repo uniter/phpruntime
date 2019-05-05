@@ -49,6 +49,10 @@ module.exports = function (internals) {
             if (limit < 0) {
                 elements = elements.slice(0, elements.length + limit);
             } else if (limit !== null) {
+                if (limit > elements.length) {
+                    limit = elements.length;
+                }
+
                 elements = elements.slice(0, limit - 1).concat(elements.slice(limit - 1).join(delimiter));
             }
 
