@@ -190,24 +190,24 @@ _.extend(Driver.prototype, {
     /**
      * Notifies the debugging engine that a statement in the PHP script has been executed
      *
-     * @param {string} path Path to the PHP script
+     * @param {string} file Path to the PHP script
      * @param {number} startLine Line that the statement starts on
      * @param {number} startColumn Column that the statement starts at
      * @param {number} endLine Line that the statement finishes on (often the same as the start line)
      * @param {number} endColumn Column that the statement finishes at
      */
-    tick: function (path, startLine, startColumn, endLine, endColumn) {
+    tick: function (file, startLine, startColumn, endLine, endColumn) {
         var doPause = true,
             driver = this;
 
         function checkForBreakpoint() {
             if (
-                hasOwn.call(driver.lineBreakpoints, path) &&
+                hasOwn.call(driver.lineBreakpoints, 'file:///' + file) &&
                 // Only the start line of the statement can have a breakpoint set on it
-                hasOwn.call(driver.lineBreakpoints[path], startLine)
+                hasOwn.call(driver.lineBreakpoints['file:///' + file], startLine)
             ) {
                 // Breakpoint hit!
-                driver.eventEmitter.emit('line_breakpoint', path, startLine, startColumn, endLine, endColumn, function () {
+                driver.eventEmitter.emit('line_breakpoint', file, startLine, startColumn, endLine, endColumn, function () {
                     doPause = false;
                 });
 
@@ -230,7 +230,7 @@ _.extend(Driver.prototype, {
                 return;
             case STATE_STEPPING_INTO:
                 setTimeout(function () {
-                    driver.eventEmitter.emit('stepped_into', path, startLine, startColumn, endLine, endColumn);
+                    driver.eventEmitter.emit('stepped_into', file, startLine, startColumn, endLine, endColumn);
                 }, 1);
 
                 // Just pause before the very next statement for a step-into
@@ -250,7 +250,7 @@ _.extend(Driver.prototype, {
                     driver.callStack.getLength() < driver.callStackLength
                 ) {
                     setTimeout(function () {
-                        driver.eventEmitter.emit('stepped_over', path, startLine, startColumn, endLine, endColumn);
+                        driver.eventEmitter.emit('stepped_over', file, startLine, startColumn, endLine, endColumn);
                     }, 1);
 
                     // We've finished stepping over the statement, so pause execution again
