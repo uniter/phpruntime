@@ -11,9 +11,7 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../../sync');
+    tools = require('../../../tools');
 
 describe('PHP "array_keys" builtin function integration', function () {
     it('should be able to fetch all keys defined by an array', function () {
@@ -23,25 +21,21 @@ describe('PHP "array_keys" builtin function integration', function () {
 $myArray = [
     'my numerically indexed value',
     'my_element' => 'my value',
-    'my_null_element' => null
+    'my_null_element' => null,
+    'my second numerically indexed value'
 ];
 
 return array_keys($myArray);
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.syncTranspile(null, php),
             engine = module();
 
         expect(engine.execute().getNative()).to.deep.equal([
             0,
             'my_element',
-            'my_null_element'
+            'my_null_element',
+            1 // Even when there are some assoc. elements in between, indexing is separate
         ]);
     });
 });
