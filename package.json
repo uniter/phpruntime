@@ -23,6 +23,7 @@
     "test": "npm run jshint && npm run mocha"
   },
   "dependencies": {
+    "dbgproxy": "0.0.1",
     "microdash": "~1",
     "phpcommon": "^1.12.0",
     "phpcore": "^5.7.0"
