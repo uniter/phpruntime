@@ -445,6 +445,16 @@ module.exports = function (internals) {
             return valueFactory.createString(values.join(glueValue.getNative()));
         },
 
+        /**
+         * Determines whether a value (the "needle") exists in a given array (the "haystack")
+         *
+         * @see {@link https://secure.php.net/manual/en/function.in-array.php}
+         *
+         * @param {Variable|Value} needleReference
+         * @param {Variable|Value} haystackReference
+         * @param {Variable|Value} strictMatchReference
+         * @returns {BooleanValue}
+         */
         'in_array': function (needleReference, haystackReference, strictMatchReference) {
             var contains = false,
                 haystackValue,
