@@ -152,4 +152,14 @@ describe('PHP "array_unique" builtin function', function () {
             expect(result.getType()).to.equal('null');
         });
     });
+
+    describe('when sort flags are provided (currently unsupported)', function () {
+        it('should throw an error', function () {
+            var sortFlagsReference = sinon.createStubInstance(Variable);
+
+            expect(function () {
+                this.array_unique(this.arrayReference, sortFlagsReference);
+            }.bind(this)).to.throw('array_unique() :: Sort flags are not yet supported');
+        });
+    });
 });
