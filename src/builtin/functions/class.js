@@ -49,7 +49,8 @@ module.exports = function (internals) {
          * @returns {StringValue|BooleanValue}
          */
         'get_class': function (objectReference) {
-            var currentClass;
+            var currentClass,
+                objectValue;
 
             if (!objectReference) {
                 currentClass = callStack.getCallerScope().getCurrentClass();
@@ -66,7 +67,19 @@ module.exports = function (internals) {
                 return valueFactory.createString(currentClass.getName());
             }
 
-            return valueFactory.createString(objectReference.getValue().getClassName());
+            objectValue = objectReference.getValue();
+
+            if (objectValue.getType() !== 'object') {
+                // If specified, the value must be an object
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'get_class() expects parameter 1 to be object, ' + objectValue.getType() + ' given'
+                );
+
+                return valueFactory.createBoolean(false);
+            }
+
+            return valueFactory.createString(objectValue.getClassName());
         },
 
         /**
