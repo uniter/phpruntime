@@ -119,7 +119,8 @@ module.exports = function (internals) {
                 );
             }
 
-            throw new Error('FIXME: Wrong object arg type given - do what? ...');
+            // Invalid "object" given - just return false (no warning/notice)
+            return valueFactory.createBoolean(false);
         }
     };
 };
