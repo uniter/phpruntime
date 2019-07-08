@@ -17,6 +17,8 @@ module.exports = function (internals) {
          * Fetches the value of a PHP configuration option as it was set in the INI file.
          * Any changes made at runtime (eg. with ini_set(...)) will _not_ be taken into account.
          *
+         * @see {@link https://secure.php.net/manual/en/function.get-cfg-var.php}
+         *
          * @param {Reference|Value|Variable} optionNameReference
          * @return {Value}
          */
