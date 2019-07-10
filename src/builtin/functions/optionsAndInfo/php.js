@@ -55,6 +55,13 @@ module.exports = function (internals) {
             return valueFactory.createString(string);
         },
 
+        /**
+         * Returns the PHP version that this version of Uniter is targeting
+         *
+         * @see {@link https://secure.php.net/manual/en/function.phpversion.php}
+         *
+         * @returns {BooleanValue|StringValue}
+         */
         'phpversion': function (extensionName) {
             if (extensionName) {
                 // No extensions are supported (yet)
