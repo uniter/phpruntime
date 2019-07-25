@@ -11,6 +11,8 @@
 
 var _ = require('microdash'),
     phpCommon = require('phpcommon'),
+    FailureException = require('./Exception/FailureException'),
+    KeyValuePair = require('phpcore/src/KeyValuePair'),
     PHPError = phpCommon.PHPError;
 
 /**
@@ -29,11 +31,11 @@ module.exports = function (internals) {
          *
          * @see {@link https://secure.php.net/manual/en/function.preg-match.php}
          *
-         * @param {Variable|Value} patternReference
-         * @param {Variable|Value} subjectReference
-         * @param {Variable|Value} matchesReference
-         * @param {Variable|Value} flagsReference
-         * @param {Variable|Value} offsetReference
+         * @param {Reference|Variable|Value} patternReference
+         * @param {Reference|Variable|Value} subjectReference
+         * @param {Reference|Variable|Value} matchesReference
+         * @param {Reference|Variable|Value} flagsReference
+         * @param {Reference|Variable|Value} offsetReference
          * @returns {IntegerValue|BooleanValue}
          */
         'preg_match': function (patternReference, subjectReference, matchesReference, flagsReference, offsetReference) {
@@ -58,7 +60,7 @@ module.exports = function (internals) {
             }
 
             if (flagsReference && flagsReference.getValue().getNative() !== 0) {
-                throw new Error('preg_match() - flags arg not yet supported');
+                throw new Error('preg_match(): flags arg not yet supported');
             }
 
             if (offsetReference) {
@@ -66,8 +68,17 @@ module.exports = function (internals) {
             }
 
             patternValue = patternReference.getValue();
-            pattern = patternValue.getNative();
             subjectValue = subjectReference.getValue();
+
+            if (patternValue.getType() !== 'string') {
+                throw new Error('preg_match(): Non-string pattern not yet supported');
+            }
+
+            if (subjectValue.getType() !== 'string') {
+                throw new Error('preg_match(): Non-string subject not yet supported');
+            }
+
+            pattern = patternValue.getNative();
             subject = subjectValue.getNative();
 
             patternMatch = pattern.match(/^([\s\S])([\s\S]*)\1([\s\S]*)$/);
@@ -82,7 +93,7 @@ module.exports = function (internals) {
 
             pattern = patternMatch[2];
             modifiers = patternMatch[3];
-            invalidModifiers = modifiers.replace(/[gi]/g, '');
+            invalidModifiers = modifiers.replace(/[i]/g, '');
 
             if (invalidModifiers !== '') {
                 callStack.raiseError(
@@ -140,20 +151,44 @@ module.exports = function (internals) {
             return valueFactory.createInteger(matched ? 1 : 0);
         },
 
-        'preg_replace': function (patternReference, replacementReference, subjectReference /*, limitReference, countReference*/) {
-            var patterns = [],
+        /**
+         * Perform a regular expression find and replace
+         *
+         * @see {@link https://secure.php.net/manual/en/function.preg-replace.php}
+         *
+         * @param {Reference|Variable|Value} patternReference
+         * @param {Reference|Variable|Value} replacementReference
+         * @param {Reference|Variable|Value} subjectReference
+         * @param {Reference|Variable|Value} limitReference
+         * @param {Reference|Variable|Value} countReference
+         * @returns {ArrayValue|NullValue|StringValue}
+         */
+        'preg_replace': function (patternReference, replacementReference, subjectReference, limitReference, countReference) {
+            var count = 0,
+                invalidModifiers,
+                limit = -1,
+                modifiers,
+                patterns = [],
                 patternMatch,
                 patternValue,
                 replacements = [],
                 replacementValue,
                 singleReplacement,
-                subject,
+                singleSubject,
+                subjects = [],
                 subjectValue;
 
-            // TODO: Handle required args etc.
+            if (arguments.length < 3) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'preg_replace() expects at least 3 parameters, 1 given'
+                );
+                return valueFactory.createNull();
+            }
 
             patternValue = patternReference.getValue();
             replacementValue = replacementReference.getValue();
+            subjectValue = subjectReference.getValue();
 
             if (patternValue.getType() === 'array') {
                 _.each(patternValue.getValues(), function (patternValue) {
@@ -162,7 +197,7 @@ module.exports = function (internals) {
             } else if (patternValue.getType() === 'string') {
                 patterns.push(patternValue.getNative());
             } else {
-                throw new Error('Invalid type');
+                throw new Error('preg_replace(): Non-array/string pattern not yet supported'); // TODO: Coerce/raise PHP error
             }
 
             if (replacementValue.getType() === 'array') {
@@ -174,30 +209,119 @@ module.exports = function (internals) {
                 replacements.push(replacementValue.getNative());
                 singleReplacement = true;
             } else {
-                throw new Error('Invalid type');
+                throw new Error('preg_replace(): Non-array/string replacement not yet supported'); // TODO: Coerce/raise PHP error
             }
 
-            subjectValue = subjectReference.getValue();
-            subject = subjectValue.getNative();
+            if (limitReference) {
+                limit = limitReference.getNative();
+            }
 
-            _.each(patterns, function (pattern, index) {
-                var regex,
-                    replacement = singleReplacement ?
-                        replacements[0] :
-                        (index < replacements.length ? replacements[index] : '');
+            /**
+             * Performs find/replace of all pattern & replacement pairs for one specific subject
+             *
+             * @param {string} subject
+             * @return {string}
+             */
+            function replaceSubject(subject) {
+                _.each(patterns, function (pattern, index) {
+                    var countWithinPatternForSubject = 0,
+                        regex,
+                        replacement = singleReplacement ?
+                            replacements[0] :
+                            (index < replacements.length ? replacements[index] : '');
 
-                patternMatch = pattern.match(/^([\s\S])([\s\S]*)\1([gi]*)$/);
+                    patternMatch = pattern.match(/^([\s\S])([\s\S]*)\1([\s\S]*)$/);
 
-                if (!patternMatch) {
-                    throw new Error('Invalid regex "' + pattern + '"');
+                    if (!patternMatch) {
+                        callStack.raiseError(
+                            PHPError.E_WARNING,
+                            'preg_replace(): No ending delimiter \'' + pattern.charAt(0) + '\' found'
+                        );
+                        throw new FailureException(valueFactory.createNull());
+                    }
+
+                    pattern = patternMatch[2];
+                    modifiers = patternMatch[3];
+                    invalidModifiers = modifiers.replace(/[i]/g, '');
+
+                    if (invalidModifiers !== '') {
+                        callStack.raiseError(
+                            PHPError.E_WARNING,
+                            // As per the reference implementation, only the first invalid modifier is mentioned
+                            'preg_replace(): Unknown modifier \'' + invalidModifiers.charAt(0) + '\''
+                        );
+                        throw new FailureException(valueFactory.createNull());
+                    }
+
+                    // For preg_replace, the match is implicitly always global
+                    modifiers += 'g';
+
+                    try {
+                        regex = new RegExp(pattern, modifiers);
+                    } catch (error) {
+                        callStack.raiseError(
+                            PHPError.E_WARNING,
+                            'preg_replace(): Compilation failed [Uniter]: only basic-level preg support is enabled, ' +
+                            'this may be a valid but unsupported PCRE regex. JS RegExp error: ' + error
+                        );
+                        throw new FailureException(valueFactory.createNull());
+                    }
+
+                    if (countReference || limit > -1) {
+                        // Caller wants to either record the total number of replacements done
+                        // or limit the no. of replacements for each subject string
+                        subject = subject.replace(regex, function (all) {
+                            countWithinPatternForSubject++;
+
+                            if (limit > -1 && countWithinPatternForSubject > limit) {
+                                return all;
+                            }
+
+                            count++; // Only include replacements that were actually done in the count
+
+                            return replacement;
+                        });
+                    } else {
+                        subject = subject.replace(regex, replacement);
+                    }
+                });
+
+                return subject;
+            }
+
+            try {
+                if (subjectValue.getType() === 'array') {
+                    singleSubject = false;
+
+                    _.each(subjectValue.getKeys(), function (subjectKey) {
+                        var subject = subjectValue.getElementByKey(subjectKey).getNative();
+
+                        subjects.push(
+                            new KeyValuePair(
+                                subjectKey,
+                                valueFactory.createString(replaceSubject(subject))
+                            )
+                        );
+                    });
+                } else if (subjectValue.getType() === 'string') {
+                    singleSubject = true;
+                    subjects[0] = valueFactory.createString(replaceSubject(subjectValue.getNative()));
+                } else {
+                    throw new Error('preg_replace(): Non-array/string subject not yet supported'); // TODO: Coerce/raise PHP error
+                }
+            } catch (error) {
+                if (error instanceof FailureException) {
+                    return error.getReturnValue();
                 }
 
-                regex = new RegExp(patternMatch[2], patternMatch[3]);
+                throw error;
+            }
 
-                subject = subject.replace(regex, replacement);
-            });
+            if (countReference) {
+                countReference.setValue(valueFactory.createInteger(count));
+            }
 
-            return valueFactory.createString(subject);
+            return singleSubject ? subjects[0] : valueFactory.createArray(subjects);
         }
     };
 };

@@ -64,7 +64,7 @@ describe('PHP "preg_match" basic-level builtin function', function () {
                     matchesVariable,
                     this.valueFactory.createInteger(256)
                 );
-            }.bind(this)).to.throw('preg_match() - flags arg not yet supported');
+            }.bind(this)).to.throw('preg_match(): flags arg not yet supported');
         });
     });
 
@@ -117,6 +117,30 @@ describe('PHP "preg_match" basic-level builtin function', function () {
 
             expect(this.resultValue.getType()).to.equal('boolean');
             expect(this.resultValue.getNative()).to.be.false;
+        });
+    });
+
+    describe('when a non-string pattern is given', function () {
+        it('should throw an error (coercion not yet supported here)', function () {
+            expect(function () {
+                this.preg_match(
+                    this.valueFactory.createInteger(1001),
+                    this.valueFactory.createString('my subject'),
+                    sinon.createStubInstance(Variable)
+                );
+            }.bind(this)).to.throw('preg_match(): Non-string pattern not yet supported');
+        });
+    });
+
+    describe('when a non-string subject is given', function () {
+        it('should throw an error (coercion not yet supported here)', function () {
+            expect(function () {
+                this.preg_match(
+                    this.valueFactory.createString('/my pattern/'),
+                    this.valueFactory.createInteger(1001),
+                    sinon.createStubInstance(Variable)
+                );
+            }.bind(this)).to.throw('preg_match(): Non-string subject not yet supported');
         });
     });
 
@@ -195,6 +219,38 @@ describe('PHP "preg_match" basic-level builtin function', function () {
             expect(this.callStack.raiseError).to.have.been.calledWith(
                 'Warning',
                 'preg_match(): Unknown modifier \'a\''
+            );
+        });
+
+        it('should return false', function () {
+            this.doCall();
+
+            expect(this.resultValue.getType()).to.equal('boolean');
+            expect(this.resultValue.getNative()).to.be.false;
+        });
+    });
+
+    describe('when the invalid, implicit global match modifier "g" is given', function () {
+        // NB: For a global match, preg_match_all(...) should be used
+
+        beforeEach(function () {
+            this.patternReference = sinon.createStubInstance(Variable);
+            this.subjectReference = sinon.createStubInstance(Variable);
+            this.patternReference.getValue.returns(this.valueFactory.createString('/invalid preg modifier/g'));
+            this.subjectReference.getValue.returns(this.valueFactory.createString('some subject'));
+
+            this.doCall = function () {
+                this.resultValue = this.preg_match(this.patternReference, this.subjectReference);
+            }.bind(this);
+        });
+
+        it('should raise a warning', function () {
+            this.doCall();
+
+            expect(this.callStack.raiseError).to.have.been.calledOnce;
+            expect(this.callStack.raiseError).to.have.been.calledWith(
+                'Warning',
+                'preg_match(): Unknown modifier \'g\''
             );
         });
 

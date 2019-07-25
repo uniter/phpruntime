@@ -24,14 +24,14 @@ $result[] = preg_replace('/dog/', 'cat', 'the dog jumped over the fence');
 $result[] = preg_replace(
     [
         '/first/',
-        '/second/'
+        '/SECOND/i'
     ],
     'number',
     'first then second'
 );
 $result[] = preg_replace(
     [
-        '/hello/',
+        '/hel{2}o/',
         '/world/'
     ],
     [
@@ -39,6 +39,46 @@ $result[] = preg_replace(
         'planet'
     ],
     'hello there world'
+);
+$result[] = preg_replace(
+    [
+        '/hel{2}o/',
+        '/world/'
+    ],
+    [
+        'goodbye',
+        'planet'
+    ],
+    [
+        'hello there world',
+        'the world said hello'
+    ]
+);
+$result[] = preg_replace(
+    [
+        '/a{2}/',
+        '/b{2}/'
+    ],
+    [
+        '[from: a]',
+        '[from: b]'
+    ],
+    [
+        'aa bb aa bb aa bb aa bb',
+        'aaaaaaaabbbbbbbb'
+    ],
+    3,
+    $count
+);
+$result[] = $count;
+
+$result[] = preg_replace(
+    '/hello/',
+    'goodbye',
+    [
+        'first' => 'well hello there',
+        'second' => 'anything'
+    ]
 );
 
 return $result;
@@ -56,9 +96,28 @@ EOS
         engine = module();
 
         expect(engine.execute().getNative()).to.deep.equal([
-            'the cat jumped over the fence',
-            'number then number',
-            'goodbye there planet'
+            'the cat jumped over the fence',    // Single pattern and single replacement
+            'number then number',               // As above, but with case insensitivity modifier
+            'goodbye there planet',             // Multiple patterns and replacements for a single subject
+
+            // Multiple patterns and replacements for multiple subjects
+            [
+                'goodbye there planet',
+                'the planet said goodbye'
+            ],
+
+            // Setting a limit on no. of replacements, which should be per-pattern per-subject
+            [
+                '[from: a] [from: b] [from: a] [from: b] [from: a] [from: b] aa bb',
+                '[from: a][from: a][from: a]aa[from: b][from: b][from: b]bb'
+            ],
+            12, // If requested, the count stored should be the total across all subjects' replacements
+
+            // If subject is an _associative_ array, the keys should be preserved
+            {
+                'first': 'well goodbye there',
+                'second': 'anything'
+            }
         ]);
     });
 });
