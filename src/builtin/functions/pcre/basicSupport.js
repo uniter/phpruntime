@@ -20,8 +20,6 @@ var _ = require('microdash'),
 /**
  * Basic-level PCRE support module. JavaScript's own RegExp implementation is used,
  * meaning that only the JavaScript-compliant subset of regular expression is supported.
- *
- *
  */
 module.exports = function (internals) {
     var callStack = internals.callStack,
