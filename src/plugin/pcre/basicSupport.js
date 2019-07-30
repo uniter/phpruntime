@@ -9,10 +9,13 @@
 
 'use strict';
 
-module.exports = function () {
-    return {
-        'PREG_OFFSET_CAPTURE': 256,
-        'PREG_PATTERN_ORDER': 1,
-        'PREG_SET_ORDER': 2
-    };
+var basicLevelPcreFunctionGroup = require('../../builtin/functions/pcre/basicSupport');
+
+/**
+ * PCRE preg_* functions support using the builtin JS RegExp class
+ */
+module.exports = {
+    functionGroups: [
+        basicLevelPcreFunctionGroup
+    ]
 };

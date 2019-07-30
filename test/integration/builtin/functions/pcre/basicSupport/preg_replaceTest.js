@@ -21,6 +21,7 @@ describe('PHP "preg_replace" basic-level builtin function integration', function
 
 $result = [];
 $result[] = preg_replace('/dog/', 'cat', 'the dog jumped over the fence');
+// Replacing an array of patterns with a single replacement
 $result[] = preg_replace(
     [
         '/first/',
@@ -29,6 +30,7 @@ $result[] = preg_replace(
     'number',
     'first then second'
 );
+// Replacing an array of patterns with an array of matching replacements
 $result[] = preg_replace(
     [
         '/hel{2}o/',
