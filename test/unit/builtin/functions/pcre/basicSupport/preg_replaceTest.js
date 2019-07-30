@@ -19,10 +19,16 @@ var expect = require('chai').expect,
 describe('PHP "preg_replace" basic-level builtin function', function () {
     beforeEach(function () {
         this.callStack = sinon.createStubInstance(CallStack);
+        this.getConstant = sinon.stub();
         this.valueFactory = new ValueFactory();
+
+        this.getConstant.withArgs('PREG_OFFSET_CAPTURE').returns(256);
+        this.getConstant.withArgs('PREG_PATTERN_ORDER').returns(1);
+        this.getConstant.withArgs('PREG_SET_ORDER').returns(2);
 
         this.preg_replace = basicSupportExtension({
             callStack: this.callStack,
+            getConstant: this.getConstant,
             valueFactory: this.valueFactory
         }).preg_replace;
     });
@@ -167,7 +173,7 @@ describe('PHP "preg_replace" basic-level builtin function', function () {
             expect(this.callStack.raiseError).to.have.been.calledWith(
                 'Warning',
                 'preg_replace(): Compilation failed [Uniter]: only basic-level preg support is enabled, ' +
-                'this may be a valid but unsupported PCRE regex. ' +
+                '"/? invalid regex/" may be a valid but unsupported PCRE regex. ' +
                 'JS RegExp error: SyntaxError: Invalid regular expression: /? invalid regex/: Nothing to repeat'
             );
         });
