@@ -30,7 +30,7 @@
   "devDependencies": {
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
-    "jshint": "^2.10.1",
+    "jshint": "^2.10.2",
     "mocha": "^5.2.0",
     "nowdoc": "^1.0.1",
     "phptoast": "^6.0.3",
