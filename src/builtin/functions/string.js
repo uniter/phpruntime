@@ -388,12 +388,24 @@ module.exports = function (internals) {
          * @returns {IntegerValue}                      The number of occurrences found
          */
         'substr_count': function (haystackReference, needleReference, offsetReference, lengthReference) {
-            var haystack = haystackReference.getNative(),
-                needle = needleReference.getNative(),
-                // Negative offsets are natively supported by JS .substr()
-                offset = offsetReference ? offsetReference.getNative() : 0,
-                length, // Undefined length will extract to the end of the string
+            var haystack,
+                needle,
+                offset,
+                length,
                 trimmedHaystack;
+
+            if (arguments.length < 2) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'substr_count() expects at least 2 parameters, ' + arguments.length + ' given'
+                );
+                return valueFactory.createNull();
+            }
+
+            haystack = haystackReference.getValue().coerceToString().getNative();
+            needle = needleReference.getValue().coerceToString().getNative();
+            // Negative offsets are natively supported by JS .substr()
+            offset = offsetReference ? offsetReference.getNative() : 0;
 
             if (lengthReference) {
                 length = lengthReference.getNative();
