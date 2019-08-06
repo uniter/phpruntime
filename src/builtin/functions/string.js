@@ -291,8 +291,26 @@ module.exports = function (internals) {
             return valueFactory.createString(string.toLowerCase());
         },
 
+        /**
+         * Convert a string to uppercase
+         *
+         * @see {@link https://secure.php.net/manual/en/function.strtoupper.php}
+         *
+         * @param {Reference|StringValue|Variable} stringReference  The string to convert to uppercase
+         * @returns {StringValue|NullValue} The resulting string on success, or null on failure
+         */
         'strtoupper': function (stringReference) {
-            var string = stringReference.getNative();
+            var string;
+
+            if (arguments.length < 1) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'strtoupper() expects exactly 1 parameter, ' + arguments.length + ' given'
+                );
+                return valueFactory.createNull();
+            }
+
+            string = stringReference.getValue().coerceToString().getNative();
 
             return valueFactory.createString(string.toUpperCase());
         },
