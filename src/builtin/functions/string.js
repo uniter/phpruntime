@@ -209,10 +209,35 @@ module.exports = function (internals) {
             return valueFactory.createInteger(offset + position);
         },
 
+        /**
+         * Fetch the substring after (and including) the last occurrence of a needle
+         *
+         * @see {@link https://secure.php.net/manual/en/function.strrchr.php}
+         *
+         * @param {Reference|StringValue|Variable} haystackReference  The string to search for the needle inside
+         * @param {Reference|StringValue|Variable} needleReference  The substring to look for in the haystack
+         * @returns {StringValue|BooleanValue|NullValue} The resulting string on success, false if not found and null on error
+         */
         'strrchr': function (haystackReference, needleReference) {
-            var haystack = haystackReference.getNative(),
-                needle = needleReference.getNative().charAt(0),
-                position = haystack.lastIndexOf(needle);
+            var haystack,
+                needleValue,
+                needle,
+                position;
+
+            if (arguments.length < 2) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'strrchr() expects exactly 2 parameters, ' + arguments.length + ' given'
+                );
+                return valueFactory.createNull();
+            }
+
+            haystack = haystackReference.getValue().coerceToString().getNative();
+            needleValue = needleReference.getValue();
+            needle = needleValue.getType() === 'string' ?
+                needleValue.getNative().charAt(0) :
+                String.fromCharCode(needleValue.coerceToInteger().getNative());
+            position = haystack.lastIndexOf(needle);
 
             if (position === -1) {
                 // Return FALSE if needle is not found in haystack
