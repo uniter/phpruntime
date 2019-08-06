@@ -267,8 +267,26 @@ module.exports = function (internals) {
             return valueFactory.createInteger(offset + position);
         },
 
+        /**
+         * Convert a string to lowercase
+         *
+         * @see {@link https://secure.php.net/manual/en/function.strtolower.php}
+         *
+         * @param {Reference|StringValue|Variable} stringReference  The string to convert to lowercase
+         * @returns {StringValue|NullValue} The resulting string on success, or null on failure
+         */
         'strtolower': function (stringReference) {
-            var string = stringReference.getNative();
+            var string;
+
+            if (arguments.length < 1) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'strtolower() expects exactly 1 parameter, ' + arguments.length + ' given'
+                );
+                return valueFactory.createNull();
+            }
+
+            string = stringReference.getValue().coerceToString().getNative();
 
             return valueFactory.createString(string.toLowerCase());
         },
