@@ -36,9 +36,17 @@ module.exports = function (internals) {
                 limit,
                 string;
 
-            delimiter = delimiterReference.getValue().getNative();
+            if (arguments.length < 2) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'explode() expects at least 2 parameters, ' + arguments.length + ' given'
+                );
+                return valueFactory.createNull();
+            }
+
+            delimiter = delimiterReference.getValue().coerceToString().getNative();
             limit = limitReference ? limitReference.getValue().getNative() : null;
-            string = stringReference.getValue().getNative();
+            string = stringReference.getValue().coerceToString().getNative();
 
             elements = string.split(delimiter);
 
