@@ -32,6 +32,7 @@ var arrayConstants = require('./constants/array'),
     phpOptionsAndInfoFunctions = require('./functions/optionsAndInfo/php'),
     splFunctions = require('./functions/spl'),
     stringBindings = require('./bindings/string'),
+    stringConstants = require('./constants/string'),
     stringFunctions = require('./functions/string'),
     timeDateAndTimeFunctions = require('./functions/dateAndTime/time'),
     timeFunctions = require('./functions/time'),
@@ -63,7 +64,8 @@ module.exports = {
         errorHandlingConstants,
         filesystemConstants,
         pcreConstants,
-        phpConstants
+        phpConstants,
+        stringConstants
     ],
     functionGroups: [
         arrayFunctions,

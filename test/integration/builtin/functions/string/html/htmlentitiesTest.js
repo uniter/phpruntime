@@ -20,17 +20,27 @@ describe('PHP "htmlentities" builtin function integration', function () {
 
 $result = [];
 
-$result[] = htmlentities('My <strong>HTML</strong> string');
+$result[] = htmlentities('My <strong>HTML</strong> string & \'then\' "some"');
+$result[] = htmlentities('My <strong>HTML</strong> string & \'then\' "some"', ENT_QUOTES);
+$result[] = htmlentities('My <strong>HTML</strong> string & \'then\' "some"', ENT_NOQUOTES);
+
+$result[] = htmlentities('My <strong>HTML</strong> &lt; string &amp; \'then\' "some"', ENT_QUOTES, 'UTF-8');
+$result[] = htmlentities('My <strong>HTML</strong> &lt; string &amp; \'then\' "some"', ENT_QUOTES, 'UTF-8', false);
 
 return $result;
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php),
+            module = tools.syncTranspile(null, php),
             engine = module();
 
         expect(engine.execute().getNative()).to.deep.equal([
-            'My &lt;strong&gt;HTML&lt;/strong&gt; string'
+            'My &lt;strong&gt;HTML&lt;/strong&gt; string &amp; \'then\' &quot;some&quot;',
+            'My &lt;strong&gt;HTML&lt;/strong&gt; string &amp; &#039;then&#039; &quot;some&quot;',
+            'My &lt;strong&gt;HTML&lt;/strong&gt; string &amp; \'then\' "some"',
+
+            // Testing double_encode parameter
+            'My &lt;strong&gt;HTML&lt;/strong&gt; &amp;lt; string &amp;amp; &#039;then&#039; &quot;some&quot;',
+            'My &lt;strong&gt;HTML&lt;/strong&gt; &lt; string &amp; &#039;then&#039; &quot;some&quot;'
         ]);
     });
 });
