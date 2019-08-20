@@ -47,8 +47,20 @@ module.exports = function (internals) {
          * @returns {StringValue}
          */
         'gettype': function (valueReference) {
-            var value = valueReference.getValue(),
-                type = value.getType();
+            var value,
+                type;
+
+            if (!valueReference) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'gettype() expects exactly 1 parameter, 0 given'
+                );
+
+                return valueFactory.createNull();
+            }
+
+            value = valueReference.getValue();
+            type = value.getType();
 
             if (type === 'float') {
                 // For historical reasons "double" is returned rather than "float"
