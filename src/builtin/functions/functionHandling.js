@@ -101,7 +101,7 @@ module.exports = function (internals) {
                     'func_get_args(): Called from the global scope - no function context'
                 );
 
-                return valueFactory.createNull();
+                return valueFactory.createBoolean(false);
             }
 
             return valueFactory.createArray(callerCall.getFunctionArgs());
@@ -125,7 +125,7 @@ module.exports = function (internals) {
                     'func_num_args(): Called from the global scope - no function context'
                 );
 
-                return valueFactory.createNull();
+                return valueFactory.createInteger(-1);
             }
 
             return valueFactory.createInteger(callerCall.getFunctionArgs().length);

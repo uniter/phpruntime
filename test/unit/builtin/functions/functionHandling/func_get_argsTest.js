@@ -69,8 +69,11 @@ describe('PHP "func_get_args" builtin function', function () {
             );
         });
 
-        it('should return NULL', function () {
-            expect(this.callFuncGetArgs().getType()).to.equal('null');
+        it('should return false', function () {
+            var resultValue = this.callFuncGetArgs();
+
+            expect(resultValue.getType()).to.equal('boolean');
+            expect(resultValue.getNative()).to.be.false;
         });
     });
 });

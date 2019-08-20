@@ -70,8 +70,11 @@ describe('PHP "func_num_args" builtin function', function () {
             );
         });
 
-        it('should return NULL', function () {
-            expect(this.callFuncNumArgs().getType()).to.equal('null');
+        it('should return -1', function () {
+            var resultValue = this.callFuncNumArgs();
+
+            expect(resultValue.getType()).to.equal('integer');
+            expect(resultValue.getNative()).to.equal(-1);
         });
     });
 });
