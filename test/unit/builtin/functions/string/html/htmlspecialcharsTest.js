@@ -21,7 +21,8 @@ var expect = require('chai').expect,
     ENT_NOQUOTES = 0,
     ENT_COMPAT = 2,
     ENT_QUOTES = 3,
-    ENT_HTML401 = 0;
+    ENT_HTML401 = 0,
+    ENT_SUBSTITUTE = 8;
 
 describe('PHP "htmlspecialchars" builtin function', function () {
     beforeEach(function () {
@@ -112,6 +113,20 @@ describe('PHP "htmlspecialchars" builtin function', function () {
             .returns(this.valueFactory.createString('hello <there> \'world\' & "planet"'));
         this.flagsReference.getValue
             .returns(this.valueFactory.createInteger(ENT_NOQUOTES));
+
+        resultValue = this.htmlspecialchars(this.stringReference, this.flagsReference);
+
+        expect(resultValue.getType()).to.equal('string');
+        expect(resultValue.getNative()).to.equal('hello &lt;there&gt; \'world\' &amp; "planet"');
+    });
+
+    it('should accept the ENT_SUBSTITUTE flag (not applicable)', function () {
+        /*jshint bitwise: false */
+        var resultValue;
+        this.stringReference.getValue
+            .returns(this.valueFactory.createString('hello <there> \'world\' & "planet"'));
+        this.flagsReference.getValue
+            .returns(this.valueFactory.createInteger(ENT_SUBSTITUTE));
 
         resultValue = this.htmlspecialchars(this.stringReference, this.flagsReference);
 

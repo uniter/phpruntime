@@ -25,7 +25,9 @@ return [
     ENT_COMPAT,
     ENT_QUOTES,
 
-    ENT_HTML401
+    ENT_HTML401,
+
+    ENT_SUBSTITUTE
 ];
 EOS
 */;}), //jshint ignore:line
@@ -40,7 +42,9 @@ EOS
             2, // ENT_COMPAT
             3, // ENT_QUOTES
 
-            0 // ENT_HTML401
+            0, // ENT_HTML401
+
+            8  // ENT_SUBSTITUTE
         ]);
     });
 });
