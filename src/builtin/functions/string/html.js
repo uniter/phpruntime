@@ -100,6 +100,41 @@ module.exports = function (internals) {
         return tableData;
     }
 
+    /**
+     * Performs the actual HTML-encoding of a string using a given translation table
+     *
+     * @param {string} string String to encode
+     * @param {object} translationTable Translation table (as returned from getTranslationTable())
+     * @param {boolean} doubleEncode
+     */
+    function htmlEncode(string, translationTable, doubleEncode) {
+        _.forOwn(translationTable, function (entityHTML, character) {
+            var cacheKey = (doubleEncode ? '<double>' : '<single>') + character,
+                pattern,
+                regex;
+
+            if (!hasOwn.call(characterRegexCache, cacheKey)) {
+                pattern = '\\' + character;
+
+                if (character === '&' && !doubleEncode) {
+                    // Ensure we don't double-encode any entities in the two possible formats
+                    // "&lt;" or "&#012"
+                    pattern += '(?!\\w+;|#\\d+;)';
+                }
+
+                regex = new RegExp(pattern, 'g');
+
+                characterRegexCache[cacheKey] = regex;
+            } else {
+                regex = characterRegexCache[cacheKey];
+            }
+
+            string = string.replace(regex, entityHTML);
+        });
+
+        return string;
+    }
+
     return {
         /**
          * Fetches the translation table used by htmlspecialchars(...) or htmlentities(...)
@@ -173,29 +208,56 @@ module.exports = function (internals) {
                 encoding
             );
 
-            _.forOwn(translationTable, function (entityHTML, character) {
-                var cacheKey = (doubleEncode ? '<double>' : '<single>') + character,
-                    pattern,
-                    regex;
+            string = htmlEncode(string, translationTable, doubleEncode);
 
-                if (!hasOwn.call(characterRegexCache, cacheKey)) {
-                    pattern = '\\' + character;
+            return valueFactory.createString(string);
+        },
 
-                    if (character === '&' && !doubleEncode) {
-                        // Ensure we don't double-encode any entities in the two possible formats
-                        // "&lt;" or "&#012"
-                        pattern += '(?!\\w+;|#\\d+;)';
-                    }
+        /**
+         * Converts all special characters to HTML entities
+         *
+         * @see {@link https://secure.php.net/manual/en/function.htmlspecialchars.php}
+         *
+         * @param {Reference|StringValue|Variable} stringReference
+         * @param {IntegerValue|Reference|Variable} flagsReference
+         * @param {Reference|StringValue|Variable} encodingReference
+         * @param {BooleanValue|Reference|Variable} doubleEncodeReference
+         * @returns {StringValue}
+         */
+        'htmlspecialchars': function (stringReference, flagsReference, encodingReference, doubleEncodeReference) {
+            /*jshint bitwise: false */
+            var doubleEncode,
+                string,
+                flags,
+                encoding,
+                translationTable;
 
-                    regex = new RegExp(pattern, 'g');
+            if (arguments.length < 1) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'htmlspecialchars() expects at least 1 parameter, ' + arguments.length + ' given'
+                );
+                return valueFactory.createNull();
+            }
 
-                    characterRegexCache[cacheKey] = regex;
-                } else {
-                    regex = characterRegexCache[cacheKey];
-                }
+            doubleEncode = doubleEncodeReference ?
+                doubleEncodeReference.getValue().coerceToBoolean().getNative() :
+                true;
+            string = stringReference.getValue().coerceToString().getNative();
+            flags = flagsReference ?
+                flagsReference.getValue().coerceToInteger().getNative() :
+                ENT_COMPAT | ENT_HTML401;
+            encoding = encodingReference ?
+                encodingReference.getValue().coerceToString().getNative() :
+                'UTF-8';
+            translationTable = getTranslationTable(
+                'htmlspecialchars',
+                HTML_SPECIALCHARS,
+                flags,
+                encoding
+            );
 
-                string = string.replace(regex, entityHTML);
-            });
+            string = htmlEncode(string, translationTable, doubleEncode);
 
             return valueFactory.createString(string);
         }
