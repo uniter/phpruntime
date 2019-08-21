@@ -191,6 +191,15 @@ module.exports = function (internals) {
                 }
             }
 
+            if (!valueReference) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'var_export() expects at least 1 parameter, 0 given'
+                );
+
+                return valueFactory.createNull();
+            }
+
             value = valueReference.getValue();
 
             // Output the string representation by default, or return it if specified

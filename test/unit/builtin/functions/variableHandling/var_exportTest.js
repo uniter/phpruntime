@@ -10,12 +10,14 @@
 'use strict';
 
 var expect = require('chai').expect,
+    phpCommon = require('phpcommon'),
     sinon = require('sinon'),
     variableHandlingFunctionFactory = require('../../../../../src/builtin/functions/variableHandling'),
     CallStack = require('phpcore/src/CallStack'),
     Class = require('phpcore/src/Class').sync(),
     KeyValuePair = require('phpcore/src/KeyValuePair'),
     Output = require('phpcore/src/Output/Output'),
+    PHPError = phpCommon.PHPError,
     Value = require('phpcore/src/Value').sync(),
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
@@ -175,6 +177,24 @@ describe('PHP "var_export" builtin function', function () {
             this.valueReference.getValue.returns(this.valueFactory.createFloat(123.56));
 
             expect(this.var_export(this.valueReference).getType()).to.equal('null');
+        });
+    });
+
+    describe('when not passed any argument', function () {
+        it('should raise a warning', function () {
+            this.var_export();
+
+            expect(this.callStack.raiseError).to.have.been.calledOnce;
+            expect(this.callStack.raiseError).to.have.been.calledWith(
+                PHPError.E_WARNING,
+                'var_export() expects at least 1 parameter, 0 given'
+            );
+        });
+
+        it('should return null', function () {
+            var resultValue = this.var_export();
+
+            expect(resultValue.getType()).to.equal('null');
         });
     });
 });
