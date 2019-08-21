@@ -19,7 +19,7 @@ var _ = require('microdash'),
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
-        stdout = internals.stdout,
+        output = internals.output,
         valueFactory = internals.valueFactory;
 
     function createTypeChecker(name, type) {
@@ -38,11 +38,184 @@ module.exports = function (internals) {
     }
 
     return {
+        /**
+         * Fetches the type of a variable or value
+         *
+         * @see {@link https://secure.php.net/manual/en/function.gettype.php}
+         *
+         * @param {Variable|Value} valueReference The variable or value to fetch the type of
+         * @returns {StringValue}
+         */
+        'gettype': function (valueReference) {
+            var value,
+                type;
+
+            if (!valueReference) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'gettype() expects exactly 1 parameter, 0 given'
+                );
+
+                return valueFactory.createNull();
+            }
+
+            value = valueReference.getValue();
+            type = value.getType();
+
+            if (type === 'float') {
+                // For historical reasons "double" is returned rather than "float"
+                type = 'double';
+            } else if (type === 'null') {
+                type = 'NULL';
+            }
+
+            return valueFactory.createString(type);
+        },
+
         'is_array': createTypeChecker('is_array', 'array'),
 
         'is_bool': createTypeChecker('is_bool', 'boolean'),
 
         'is_float': createTypeChecker('is_float', 'float'),
+
+        /**
+         * Determines whether the type of a variable is an integer
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-int.php}
+         *
+         * @param {Variable|Reference|Value} valueReference The variable or value to check the type of
+         * @returns {BooleanValue}
+         */
+        'is_int': createTypeChecker('is_int', 'integer'),
+
+        /**
+         * Determines whether a variable is a number or a string containing a number
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-numeric.php}
+         *
+         * @param {Variable|Reference|Value} valueReference The variable or value to check the numericness of
+         * @returns {BooleanValue}
+         */
+        'is_numeric': function (valueReference) {
+            var value;
+
+            if (!valueReference) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'is_numeric() expects exactly 1 parameter, 0 given'
+                );
+
+                return valueFactory.createNull();
+            }
+
+            value = valueReference.getValue();
+
+            return valueFactory.createBoolean(
+                value.getType() === 'integer' ||
+                value.getType() === 'float' ||
+                (
+                    value.getType() === 'string' &&
+                    isFinite(value.getNative())
+                )
+            );
+        },
+
+        /**
+         * Determines whether the type of a variable is an object
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-object.php}
+         *
+         * @param {Variable|Reference|Value} valueReference The variable or value to check the type of
+         * @returns {BooleanValue}
+         */
+        'is_object': createTypeChecker('is_object', 'object'),
+
+        /**
+         * Determines whether the type of a variable is a string
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-string.php}
+         *
+         * @param {Variable|Reference|Value} valueReference The variable or value to check the type of
+         * @returns {BooleanValue}
+         */
+        'is_string': createTypeChecker('is_string', 'string'),
+
+        /**
+         * Outputs or returns a valid PHP code string that will evaluate to the given value
+         *
+         * @see {@link https://secure.php.net/manual/en/function.var-export.php}
+         *
+         * @param {Variable|Reference|Value} valueReference The variable or value to export
+         * @param {Variable|Reference|Value} returnReference Whether to return the string rather than output
+         * @returns {NullValue|StringValue} Returns NULL when outputting, the code string when return=true
+         */
+        'var_export': function (valueReference, returnReference) {
+            var exportedCodeString,
+                shouldReturn,
+                value;
+
+            function exportValue(value) {
+                var parts;
+
+                switch (value.getType()) {
+                    case 'array':
+                        parts = [];
+                        value.getKeys().forEach(function (keyValue) {
+                            var elementPair = value.getElementPairByKey(keyValue);
+
+                            parts.push(
+                                '  ' +
+                                exportValue(elementPair.getKey()) +
+                                ' => ' +
+                                exportValue(elementPair.getValue()) +
+                                ',\n'
+                            );
+                        });
+                        return 'array (\n' + parts.join('') + ')';
+                    case 'boolean':
+                    case 'float':
+                    case 'integer':
+                        return '' + value.getNative();
+                    case 'null':
+                        return 'NULL';
+                    case 'object':
+                        if (value.getLength() > 0) {
+                            throw new Error('var_export() :: Non-empty objects not implemented');
+                        }
+
+                        return value.getClassName() + '::__set_state(array(\n))';
+                    case 'string':
+                        return '\'' + value.getNative().replace(/['\\]/g, '\\$&') + '\'';
+                    default:
+                        throw new Error('var_export() :: Unexpected value type "' + value.getType() + '"');
+                }
+            }
+
+            if (!valueReference) {
+                callStack.raiseError(
+                    PHPError.E_WARNING,
+                    'var_export() expects at least 1 parameter, 0 given'
+                );
+
+                return valueFactory.createNull();
+            }
+
+            value = valueReference.getValue();
+
+            // Output the string representation by default, or return it if specified
+            shouldReturn = returnReference ? returnReference.getNative() : false;
+
+            exportedCodeString = exportValue(value);
+
+            if (shouldReturn) {
+                return valueFactory.createString(exportedCodeString);
+            }
+
+            // No trailing newline should be output
+            output.write(exportedCodeString);
+
+            return valueFactory.createNull();
+        },
 
         // NB: This output matches that of PHP with XDebug disabled
         'var_dump': function (valueReference) {
@@ -164,7 +337,7 @@ module.exports = function (internals) {
                 return representation + '\n';
             }
 
-            stdout.write(dump(value, 1));
+            output.write(dump(value, 1));
         }
     };
 };

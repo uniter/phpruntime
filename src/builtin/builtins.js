@@ -13,37 +13,75 @@ var arrayConstants = require('./constants/array'),
     arrayFunctions = require('./functions/array'),
     baseConversionMathFunctions = require('./functions/math/baseConversion'),
     classFunctions = require('./functions/class'),
+    configOptionsAndInfoFunctions = require('./functions/optionsAndInfo/config'),
     constantFunctions = require('./functions/misc/constant'),
-    Countable = require('./interfaces/Countable'),
+    Countable = require('./interfaces/SPL/Countable'),
+    environmentFunctions = require('./functions/optionsAndInfo/environment'),
+    errorHandlingConstants = require('./constants/errorHandling'),
+    errorHandlingFunctions = require('./functions/errorHandling'),
+    extensionOptionsAndInfoFunctions = require('./functions/optionsAndInfo/extension'),
     filesystemConstants = require('./constants/filesystem'),
     filesystemFunctions = require('./functions/filesystem'),
     functionHandlingFunctions = require('./functions/functionHandling'),
-    InvalidArgumentException = require('./classes/InvalidArgumentException'),
+    htmlStringFunctions = require('./functions/string/html'),
+    InvalidArgumentException = require('./classes/Exception/InvalidArgumentException'),
+    LogicException = require('./classes/Exception/LogicException'),
+    outputControlFunctions = require('./functions/outputControl'),
     pcreConstants = require('./constants/pcre'),
     phpConstants = require('./constants/php'),
+    phpOptionsAndInfoFunctions = require('./functions/optionsAndInfo/php'),
+    splFunctions = require('./functions/spl'),
+    stringBindings = require('./bindings/string'),
+    stringConstants = require('./constants/string'),
     stringFunctions = require('./functions/string'),
     timeDateAndTimeFunctions = require('./functions/dateAndTime/time'),
     timeFunctions = require('./functions/time'),
     variableHandlingFunctions = require('./functions/variableHandling');
 
 module.exports = {
-    classes: {
-        'Countable': Countable,
-        'InvalidArgumentException': InvalidArgumentException
-    },
+    bindingGroups: [
+        stringBindings
+    ],
+    classGroups: [
+        function () {
+            return {
+                'Countable': Countable
+            };
+        },
+        function () {
+            return {
+                'LogicException': LogicException
+            };
+        },
+        function () {
+            return {
+                'InvalidArgumentException': InvalidArgumentException
+            };
+        }
+    ],
     constantGroups: [
         arrayConstants,
+        errorHandlingConstants,
         filesystemConstants,
         pcreConstants,
-        phpConstants
+        phpConstants,
+        stringConstants
     ],
     functionGroups: [
         arrayFunctions,
         baseConversionMathFunctions,
         classFunctions,
+        configOptionsAndInfoFunctions,
         constantFunctions,
+        environmentFunctions,
+        errorHandlingFunctions,
+        extensionOptionsAndInfoFunctions,
         filesystemFunctions,
         functionHandlingFunctions,
+        htmlStringFunctions,
+        outputControlFunctions,
+        phpOptionsAndInfoFunctions,
+        splFunctions,
         stringFunctions,
         timeDateAndTimeFunctions,
         timeFunctions,

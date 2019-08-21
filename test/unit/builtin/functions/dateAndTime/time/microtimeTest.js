@@ -12,13 +12,10 @@
 var expect = require('chai').expect,
     sinon = require('sinon'),
     dateAndTimeFunctionFactory = require('../../../../../../src/builtin/functions/dateAndTime/time'),
-    ArrayValue = require('phpcore/src/Value/Array').sync(),
-    BooleanValue = require('phpcore/src/Value/Boolean').sync(),
     CallStack = require('phpcore/src/CallStack'),
     FloatValue = require('phpcore/src/Value/Float').sync(),
     Namespace = require('phpcore/src/Namespace').sync(),
     NullValue = require('phpcore/src/Value/Null').sync(),
-    ObjectValue = require('phpcore/src/Value/Object').sync(),
     PHPError = require('phpcommon').PHPError,
     StringValue = require('phpcore/src/Value/String').sync(),
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
@@ -28,47 +25,7 @@ describe('PHP "microtime" builtin function', function () {
     beforeEach(function () {
         this.callStack = sinon.createStubInstance(CallStack);
         this.globalNamespace = sinon.createStubInstance(Namespace);
-        this.valueFactory = sinon.createStubInstance(ValueFactory);
-        this.valueFactory.createArray.restore();
-        sinon.stub(this.valueFactory, 'createArray', function () {
-            var value = sinon.createStubInstance(ArrayValue);
-            value.getType.returns('array');
-            return value;
-        });
-        this.valueFactory.createBoolean.restore();
-        sinon.stub(this.valueFactory, 'createBoolean', function (native) {
-            var value = sinon.createStubInstance(BooleanValue);
-            value.coerceToBoolean.returns(value);
-            value.getNative.returns(native);
-            value.getType.returns('boolean');
-            return value;
-        });
-        this.valueFactory.createFloat.restore();
-        sinon.stub(this.valueFactory, 'createFloat', function (native) {
-            var value = sinon.createStubInstance(FloatValue);
-            value.getNative.returns(native);
-            value.getType.returns('float');
-            return value;
-        });
-        this.valueFactory.createNull.restore();
-        sinon.stub(this.valueFactory, 'createNull', function () {
-            var value = sinon.createStubInstance(NullValue);
-            value.getType.returns('null');
-            return value;
-        });
-        this.valueFactory.createObject.restore();
-        sinon.stub(this.valueFactory, 'createObject', function () {
-            var value = sinon.createStubInstance(ObjectValue);
-            value.getType.returns('object');
-            return value;
-        });
-        this.valueFactory.createString.restore();
-        sinon.stub(this.valueFactory, 'createString', function (native) {
-            var value = sinon.createStubInstance(StringValue);
-            value.getNative.returns(native);
-            value.getType.returns('string');
-            return value;
-        });
+        this.valueFactory = new ValueFactory();
         this.performance = {
             getTimeInMicroseconds: sinon.stub()
         };

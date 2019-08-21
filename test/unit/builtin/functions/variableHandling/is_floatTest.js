@@ -16,7 +16,6 @@ var expect = require('chai').expect,
     BooleanValue = require('phpcore/src/Value/Boolean').sync(),
     CallStack = require('phpcore/src/CallStack'),
     FloatValue = require('phpcore/src/Value/Float').sync(),
-    IntegerValue = require('phpcore/src/Value/Integer').sync(),
     PHPError = phpCommon.PHPError,
     StringValue = require('phpcore/src/Value/String').sync(),
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
@@ -25,19 +24,7 @@ var expect = require('chai').expect,
 describe('PHP "is_float" builtin function', function () {
     beforeEach(function () {
         this.callStack = sinon.createStubInstance(CallStack);
-        this.valueFactory = sinon.createStubInstance(ValueFactory);
-        this.valueFactory.createBoolean.restore();
-        sinon.stub(this.valueFactory, 'createBoolean', function (native) {
-            var value = sinon.createStubInstance(BooleanValue);
-            value.getNative.returns(native);
-            return value;
-        });
-        this.valueFactory.createInteger.restore();
-        sinon.stub(this.valueFactory, 'createInteger', function (native) {
-            var value = sinon.createStubInstance(IntegerValue);
-            value.getNative.returns(native);
-            return value;
-        });
+        this.valueFactory = new ValueFactory();
         this.internals = {
             callStack: this.callStack,
             valueFactory: this.valueFactory

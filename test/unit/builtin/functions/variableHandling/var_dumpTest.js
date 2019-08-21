@@ -18,7 +18,7 @@ var expect = require('chai').expect,
     variableHandlingFunctionFactory = require('../../../../../src/builtin/functions/variableHandling'),
     CallStack = require('phpcore/src/CallStack'),
     ElementReference = require('phpcore/src/Reference/Element'),
-    Stream = require('phpcore/src/Stream'),
+    Output = require('phpcore/src/Output/Output'),
     Value = require('phpcore/src/Value').sync(),
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
@@ -27,15 +27,14 @@ describe('PHP "var_dump" builtin function', function () {
     beforeEach(function () {
         this.callStack = sinon.createStubInstance(CallStack);
         this.valueFactory = sinon.createStubInstance(ValueFactory);
-        this.stdout = sinon.createStubInstance(Stream);
-        this.stdoutContents = '';
-        this.stdout.write.restore();
-        sinon.stub(this.stdout, 'write', function (data) {
-            this.stdoutContents += data;
+        this.output = sinon.createStubInstance(Output);
+        this.outputContents = '';
+        this.output.write.callsFake(function (data) {
+            this.outputContents += data;
         }.bind(this));
         this.internals = {
             callStack: this.callStack,
-            stdout: this.stdout,
+            output: this.output,
             valueFactory: this.valueFactory
         };
         this.variableHandlingFunctions = variableHandlingFunctionFactory(this.internals);
@@ -50,12 +49,12 @@ describe('PHP "var_dump" builtin function', function () {
         }.bind(this);
     });
 
-    it('should write NULL to stdout when value is null', function () {
+    it('should write NULL to the output when value is null', function () {
         this.valueReference.getType.returns('null');
 
         this.callVardump();
 
-        expect(this.stdoutContents).to.equal('NULL\n');
+        expect(this.outputContents).to.equal('NULL\n');
     });
 
     it('should limit the length of dumped strings to 2048 characters', function () {
@@ -64,7 +63,7 @@ describe('PHP "var_dump" builtin function', function () {
 
         this.callVardump();
 
-        expect(this.stdoutContents).to.equal('string(2060) "' + repeatString('a', 2048) + '..."\n');
+        expect(this.outputContents).to.equal('string(2060) "' + repeatString('a', 2048) + '..."\n');
     });
 
     it('should handle a reference to a variable containing an array assigned to an element of itself', function () {
@@ -74,8 +73,7 @@ describe('PHP "var_dump" builtin function', function () {
             myselfKey = sinon.createStubInstance(Value),
             firstValue = sinon.createStubInstance(Value);
         this.valueReference.getLength.returns(2);
-        this.valueReference.getNative.restore();
-        sinon.stub(this.valueReference, 'getNative', function () {
+        this.valueReference.getNative.callsFake(function () {
             // Array.getNative() always returns a new JS array object
             return [];
         });
@@ -94,7 +92,7 @@ describe('PHP "var_dump" builtin function', function () {
 
         this.callVardump();
 
-        expect(this.stdoutContents).to.equal(
+        expect(this.outputContents).to.equal(
             nowdoc(function () {/*<<<EOS
 array(2) {
   ["first"]=>
@@ -121,8 +119,7 @@ EOS
             firstValue = sinon.createStubInstance(Value),
             secondValue = sinon.createStubInstance(Value);
         this.valueReference.getLength.returns(2);
-        this.valueReference.getNative.restore();
-        sinon.stub(this.valueReference, 'getNative', function () {
+        this.valueReference.getNative.callsFake(function () {
             // Array.getNative() always returns a new JS array object
             return [];
         });
@@ -145,7 +142,7 @@ EOS
 
         this.callVardump();
 
-        expect(this.stdoutContents).to.equal(
+        expect(this.outputContents).to.equal(
             nowdoc(function () {/*<<<EOS
 array(2) {
   ["first"]=>
