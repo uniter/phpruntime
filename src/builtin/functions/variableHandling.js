@@ -187,7 +187,7 @@ module.exports = function (internals) {
                     case 'string':
                         return '\'' + value.getNative().replace(/['\\]/g, '\\$&') + '\'';
                     default:
-                        throw new Error('var_dump() :: Unexpected value type "' + value.getType() + '"');
+                        throw new Error('var_export() :: Unexpected value type "' + value.getType() + '"');
                 }
             }
 

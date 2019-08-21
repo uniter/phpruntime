@@ -16,6 +16,7 @@ var expect = require('chai').expect,
     Class = require('phpcore/src/Class').sync(),
     KeyValuePair = require('phpcore/src/KeyValuePair'),
     Output = require('phpcore/src/Output/Output'),
+    Value = require('phpcore/src/Value').sync(),
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
@@ -133,6 +134,16 @@ describe('PHP "var_export" builtin function', function () {
             expect(function () {
                 this.var_export(this.valueReference, this.returnReference);
             }.bind(this)).to.throw('var_export() :: Non-empty objects not implemented');
+        });
+
+        it('should throw an error when an unexpected value type is given', function () {
+            var myInvalidValue = sinon.createStubInstance(Value);
+            myInvalidValue.getType.returns('something-invalid');
+            this.valueReference.getValue.returns(myInvalidValue);
+
+            expect(function () {
+                this.var_export(this.valueReference, this.returnReference);
+            }.bind(this)).to.throw('var_export() :: Unexpected value type "something-invalid"');
         });
 
         // Skipping "resource" type as we have no support yet
