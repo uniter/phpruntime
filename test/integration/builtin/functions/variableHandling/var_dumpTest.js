@@ -13,6 +13,7 @@ var expect = require('chai').expect,
     myModule = require('./myModule.fixture'),
     myModulePath = require.resolve('./myModule.fixture'),
     nowdoc = require('nowdoc'),
+    path = require('path'),
     phpToAST = require('phptoast'),
     phpToJS = require('phptojs'),
     syncPHPRuntime = require('../../../../../sync');
@@ -43,15 +44,23 @@ array(2) {
   ["myModule"]=>
   string(10) "yes, it is"
   ["theModule"]=>
-  object(JSObject)#1 (7) {
+  object(JSObject)#1 (8) {
     ["id"]=>
     string(${myModulePathLength}) "${myModulePath}"
+    ["path"]=>
+    string(${myModuleDirLength}) "${myModuleDir}"
     ["exports"]=>
     array(2) {
       ["myModule"]=>
       string(10) "yes, it is"
 EOS
-*/;}, {myModulePath: myModulePath, myModulePathLength: myModulePath.length}) //jshint ignore:line
+*/;}, //jshint ignore:line
+            {
+                myModulePath: myModulePath,
+                myModulePathLength: myModulePath.length,
+                myModuleDir: path.dirname(myModulePath),
+                myModuleDirLength: path.dirname(myModulePath).length
+            })
         );
     });
 });
