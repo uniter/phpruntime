@@ -26,7 +26,7 @@ describe('PHP "var_export" builtin function', function () {
     beforeEach(function () {
         this.callStack = sinon.createStubInstance(CallStack);
         this.output = sinon.createStubInstance(Output);
-        this.valueFactory = new ValueFactory(null, this.callStack);
+        this.valueFactory = new ValueFactory(null, 'sync', this.callStack);
         this.internals = {
             callStack: this.callStack,
             output: this.output,

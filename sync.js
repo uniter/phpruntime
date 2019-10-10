@@ -7,6 +7,10 @@
  * https://github.com/uniter/phpruntime/raw/master/MIT-LICENSE.txt
  */
 
+/**
+ * Synchronous (sync) mode entrypoint
+ */
+
 'use strict';
 
 var builtins = require('./src/builtin/builtins'),

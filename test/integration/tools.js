@@ -49,7 +49,8 @@ module.exports = {
             Engine,
             AsyncPHPState,
             phpCommon,
-            pausable
+            pausable,
+            'async'
         );
 
         // Install the standard set of builtins
@@ -65,7 +66,8 @@ module.exports = {
             Engine,
             SyncPHPState,
             phpCommon,
-            null // Don't make Pausable available - running synchronously
+            null, // Don't make Pausable available - running synchronously
+            'sync'
         );
 
         // Install the standard set of builtins
