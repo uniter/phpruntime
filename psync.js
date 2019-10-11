@@ -8,13 +8,16 @@
  */
 
 /**
- * Asynchronous (async) mode entrypoint
+ * "Promise-synchronous" (psync) mode entrypoint
+ *
+ * Allows the public API to be Promise-based even when not using Pausable,
+ * so that switching to/from async mode does not require changes to the consuming application.
  */
 
 'use strict';
 
 var builtins = require('./src/builtin/builtins'),
-    runtime = require('phpcore/async');
+    runtime = require('phpcore/psync');
 
 runtime.install(builtins);
 
