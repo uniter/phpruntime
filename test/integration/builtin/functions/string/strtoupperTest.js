@@ -21,6 +21,8 @@ describe('PHP "strtoupper" builtin function integration', function () {
 $result = [];
 
 $result[] = strtoupper('this IS My STRing');
+$myString = ['my_el' => 'this IS my other STrinG'];
+$result[] = strtoupper($myString['my_el']);
 
 return $result;
 EOS
@@ -30,7 +32,8 @@ EOS
             engine = module();
 
         expect(engine.execute().getNative()).to.deep.equal([
-            'THIS IS MY STRING'
+            'THIS IS MY STRING',
+            'THIS IS MY OTHER STRING'
         ]);
     });
 });

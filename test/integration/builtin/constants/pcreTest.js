@@ -11,30 +11,26 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../sync');
+    tools = require('../../tools');
 
 describe('PHP PCRE constants integration', function () {
     it('should support all the PCRE constants', function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 return [
-    PREG_OFFSET_CAPTURE
+    PREG_OFFSET_CAPTURE,
+    PREG_PATTERN_ORDER,
+    PREG_SET_ORDER
 ];
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.syncTranspile(null, php),
             engine = module();
 
         expect(engine.execute().getNative()).to.deep.equal([
-            256 // PREG_OFFSET_CAPTURE
+            256, // PREG_OFFSET_CAPTURE
+            1,   // PREG_PATTERN_ORDER
+            2    // PREG_SET_ORDER
         ]);
     });
 });

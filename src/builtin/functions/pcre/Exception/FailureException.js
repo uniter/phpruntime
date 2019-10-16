@@ -18,29 +18,15 @@ var _ = require('microdash'),
  * Thrown when an error occurs during PCRE matching or replacement,
  * usually causing either NULL or FALSE to be returned
  *
- * @param {Value} returnValue
  * @constructor
  */
-function FailureException(returnValue) {
+function FailureException() {
     Exception.call(this, 'Failed');
-
-    /**
-     * @type {Value}
-     */
-    this.returnValue = returnValue;
 }
 
 util.inherits(FailureException, Exception);
 
 _.extend(FailureException.prototype, {
-    /**
-     * Fetches the intended return value
-     *
-     * @return {Value}
-     */
-    getReturnValue: function () {
-        return this.returnValue;
-    }
 });
 
 module.exports = FailureException;
