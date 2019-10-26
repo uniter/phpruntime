@@ -13,6 +13,7 @@ var PHPError = require('phpcommon').PHPError;
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
+        errorConfiguration = internals.errorConfiguration,
         valueFactory = internals.valueFactory,
         // Maps the error type PHP constant name to the internal PHPError type that should be raised
         ERROR_CONSTANT_NAME_TO_LEVEL = {
@@ -23,6 +24,27 @@ module.exports = function (internals) {
         };
 
     return {
+        /**
+         * Sets or determines which PHP errors will be reported
+         *
+         * @see {@link https://secure.php.net/manual/en/function.error-reporting.php}
+         *
+         * @returns {IntegerValue}
+         */
+        'error_reporting': function (levelReference) {
+            var currentLevelValue = valueFactory.coerce(errorConfiguration.getErrorReportingLevel());
+
+            if (!levelReference) {
+                // When no argument is given, just return the current reporting level
+
+                return currentLevelValue;
+            }
+
+            errorConfiguration.setErrorReportingLevel(levelReference.getValue().getNative());
+
+            return currentLevelValue;
+        },
+
         /**
          * Generates a user-level error/warning/notice message
          *
