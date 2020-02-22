@@ -71,13 +71,13 @@ call_user_func('myModifier', $myVar);
 return $myVar;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.syncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.equal(21);
+        expect(engine.execute().getNative()).to.equal(21); // Check the modification did not take effect
         expect(engine.getStderr().readAll()).to.equal(
             nowdoc(function () {/*<<<EOS
-PHP Warning: Parameter 1 to myModifier() expected to be a reference, value given
+PHP Warning:  Parameter 1 to myModifier() expected to be a reference, value given in /path/to/my_module.php on line 9
 
 EOS
 */;}) //jshint ignore:line

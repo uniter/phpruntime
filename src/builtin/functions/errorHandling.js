@@ -18,7 +18,7 @@ module.exports = function (internals) {
         // Maps the error type PHP constant name to the internal PHPError type that should be raised
         ERROR_CONSTANT_NAME_TO_LEVEL = {
             'E_USER_DEPRECATED': PHPError.E_DEPRECATED,
-            'E_USER_ERROR': PHPError.E_FATAL,
+            'E_USER_ERROR': PHPError.E_ERROR,
             'E_USER_NOTICE': PHPError.E_NOTICE,
             'E_USER_WARNING': PHPError.E_WARNING
         };

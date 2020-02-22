@@ -16,7 +16,7 @@ var expect = require('chai').expect,
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
-describe('PHP "error_reporting" basic-level builtin function', function () {
+describe('PHP "error_reporting" builtin function', function () {
     beforeEach(function () {
         this.errorConfiguration = sinon.createStubInstance(ErrorConfiguration);
         this.levelReference = sinon.createStubInstance(Variable);
@@ -48,7 +48,7 @@ describe('PHP "error_reporting" basic-level builtin function', function () {
         it('should return the old level', function () {
             var result = this.error_reporting(this.levelReference);
 
-            expect(result.getType()).to.equal('integer');
+            expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(9999);
         });
     });
@@ -68,7 +68,7 @@ describe('PHP "error_reporting" basic-level builtin function', function () {
         it('should return the old level', function () {
             var result = this.error_reporting(this.levelReference);
 
-            expect(result.getType()).to.equal('integer');
+            expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(9999);
         });
     });
@@ -77,7 +77,7 @@ describe('PHP "error_reporting" basic-level builtin function', function () {
         it('should return the current level', function () {
             var result = this.error_reporting();
 
-            expect(result.getType()).to.equal('integer');
+            expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(9999);
         });
     });

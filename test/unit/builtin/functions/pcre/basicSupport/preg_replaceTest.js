@@ -77,7 +77,7 @@ describe('PHP "preg_replace" basic-level builtin function', function () {
                 countVariable
             );
 
-            expect(countVariable.getValue().getType()).to.equal('integer');
+            expect(countVariable.getValue().getType()).to.equal('int');
             expect(countVariable.getValue().getNative()).to.equal(1);
         });
     });

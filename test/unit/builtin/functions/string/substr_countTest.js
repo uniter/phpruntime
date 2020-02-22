@@ -42,7 +42,7 @@ describe('PHP "substr_count" builtin function', function () {
 
         result = this.substr_count(this.haystackReference, this.needleReference);
 
-        expect(result.getType()).to.equal('integer');
+        expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(0);
     });
 
@@ -53,7 +53,7 @@ describe('PHP "substr_count" builtin function', function () {
 
         result = this.substr_count(this.haystackReference, this.needleReference);
 
-        expect(result.getType()).to.equal('integer');
+        expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(3);
     });
 
@@ -64,7 +64,7 @@ describe('PHP "substr_count" builtin function', function () {
 
         result = this.substr_count(this.haystackReference, this.needleReference);
 
-        expect(result.getType()).to.equal('integer');
+        expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(4);
     });
 
@@ -77,7 +77,7 @@ describe('PHP "substr_count" builtin function', function () {
 
         result = this.substr_count(this.haystackReference, this.needleReference, this.offsetReference, this.lengthReference);
 
-        expect(result.getType()).to.equal('integer');
+        expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(2);
     });
 
@@ -90,7 +90,7 @@ describe('PHP "substr_count" builtin function', function () {
 
         result = this.substr_count(this.haystackReference, this.needleReference, this.offsetReference, this.lengthReference);
 
-        expect(result.getType()).to.equal('integer');
+        expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(2);
     });
 
@@ -102,7 +102,7 @@ describe('PHP "substr_count" builtin function', function () {
 
         result = this.substr_count(this.haystackReference, this.needleReference, this.offsetReference);
 
-        expect(result.getType()).to.equal('integer');
+        expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(1);
     });
 
@@ -116,7 +116,7 @@ describe('PHP "substr_count" builtin function', function () {
         // Should search `rstrst`
         result = this.substr_count(this.haystackReference, this.needleReference, this.offsetReference, this.lengthReference);
 
-        expect(result.getType()).to.equal('integer');
+        expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(1);
     });
 
@@ -127,7 +127,7 @@ describe('PHP "substr_count" builtin function', function () {
 
         result = this.substr_count(this.haystackReference, this.needleReference);
 
-        expect(result.getType()).to.equal('integer');
+        expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(3);
     });
 

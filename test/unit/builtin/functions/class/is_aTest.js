@@ -19,7 +19,7 @@ var expect = require('chai').expect,
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
-describe('PHP "is_a" basic-level builtin function', function () {
+describe('PHP "is_a" builtin function', function () {
     beforeEach(function () {
         this.allowStringReference = sinon.createStubInstance(Variable);
         this.callStack = sinon.createStubInstance(CallStack);

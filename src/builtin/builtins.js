@@ -35,7 +35,7 @@ var arrayConstants = require('./constants/array'),
     stringConstants = require('./constants/string'),
     stringFunctions = require('./functions/string'),
     timeDateAndTimeFunctions = require('./functions/dateAndTime/time'),
-    timeFunctions = require('./functions/time'),
+    timeFunctions = require('./functions/misc/time'),
     variableHandlingFunctions = require('./functions/variableHandling');
 
 module.exports = {

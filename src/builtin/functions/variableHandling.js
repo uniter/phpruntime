@@ -86,7 +86,7 @@ module.exports = function (internals) {
          * @param {Variable|Reference|Value} valueReference The variable or value to check the type of
          * @returns {BooleanValue}
          */
-        'is_int': createTypeChecker('is_int', 'integer'),
+        'is_int': createTypeChecker('is_int', 'int'),
 
         /**
          * Determines whether a variable is a number or a string containing a number
@@ -111,7 +111,7 @@ module.exports = function (internals) {
             value = valueReference.getValue();
 
             return valueFactory.createBoolean(
-                value.getType() === 'integer' ||
+                value.getType() === 'int' ||
                 value.getType() === 'float' ||
                 (
                     value.getType() === 'string' &&
@@ -174,7 +174,7 @@ module.exports = function (internals) {
                         return 'array (\n' + parts.join('') + ')';
                     case 'boolean':
                     case 'float':
-                    case 'integer':
+                    case 'int':
                         return '' + value.getNative();
                     case 'null':
                         return 'NULL';
@@ -315,7 +315,7 @@ module.exports = function (internals) {
                     case 'float':
                         representation += 'float(' + value.getNative() + ')';
                         break;
-                    case 'integer':
+                    case 'int':
                         representation += 'int(' + value.getNative() + ')';
                         break;
                     case 'null':
@@ -331,6 +331,8 @@ module.exports = function (internals) {
 
                         representation += 'string(' + nativeLength + ') "' + nativeValue + '"';
                         break;
+                    default:
+                        throw new Error('var_dump() :: Unsupported value type "' + value.getType() + '"');
                     }
                 }
 

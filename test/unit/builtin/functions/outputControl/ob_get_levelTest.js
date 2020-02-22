@@ -36,7 +36,7 @@ describe('PHP "ob_get_level" builtin function', function () {
 
         resultValue = this.ob_get_level();
 
-        expect(resultValue.getType()).to.equal('integer');
+        expect(resultValue.getType()).to.equal('int');
         expect(resultValue.getNative()).to.equal(0);
     });
 
@@ -46,7 +46,7 @@ describe('PHP "ob_get_level" builtin function', function () {
 
         resultValue = this.ob_get_level();
 
-        expect(resultValue.getType()).to.equal('integer');
+        expect(resultValue.getType()).to.equal('int');
         expect(resultValue.getNative()).to.equal(4);
     });
 });

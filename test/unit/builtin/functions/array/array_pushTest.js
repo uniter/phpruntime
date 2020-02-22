@@ -85,7 +85,7 @@ describe('PHP "array_push" builtin function', function () {
 
             result = this.array_push(this.arrayReference, newElementReference);
 
-            expect(result.getType()).to.equal('integer');
+            expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(4); // Original 3 + the pushed one
         });
     });
@@ -141,7 +141,7 @@ describe('PHP "array_push" builtin function', function () {
 
             result = this.array_push(this.arrayReference, newElementReference);
 
-            expect(result.getType()).to.equal('integer');
+            expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(4); // Original 3 + the pushed one
         });
     });
@@ -181,7 +181,7 @@ describe('PHP "array_push" builtin function', function () {
 
             result = this.array_push(this.arrayReference, newElementReference);
 
-            expect(result.getType()).to.equal('integer');
+            expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(1); // No original elements, plus the pushed one
         });
     });
