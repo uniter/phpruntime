@@ -40,8 +40,10 @@ module.exports = function (internals) {
          * @param {Variable|Value} microsecondsReference
          */
         'usleep': function (microsecondsReference) {
-            var microsecondsValue = microsecondsReference.getValue(),
-                pause;
+            var endMicroseconds,
+                microsecondsValue = microsecondsReference.getValue(),
+                pause,
+                performance;
 
             if (microsecondsValue.getType() !== 'int' && microsecondsValue.getType() !== 'float') {
                 callStack.raiseError(
@@ -65,7 +67,10 @@ module.exports = function (internals) {
             } else {
                 // Inefficient version, if we're in (p)sync mode
 
-                while (getPerformance().getTimeInMicroseconds() < microsecondsValue.getNative()) {
+                performance = getPerformance();
+                endMicroseconds = performance.getTimeInMicroseconds() + microsecondsValue.getNative();
+
+                while (performance.getTimeInMicroseconds() < endMicroseconds) { //jshint ignore:line
                     // Busy wait
                 }
             }
