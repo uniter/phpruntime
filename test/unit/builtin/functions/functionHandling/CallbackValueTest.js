@@ -16,41 +16,57 @@ var expect = require('chai').expect,
     Value = require('phpcore/src/Value').sync();
 
 describe('CallbackValue', function () {
-    beforeEach(function () {
-        this.referenceCallback = sinon.stub();
-        this.valueCallback = sinon.stub();
+    var callbackValue,
+        referenceCallback,
+        valueCallback;
 
-        this.value = new CallbackValue(this.referenceCallback, this.valueCallback);
+    beforeEach(function () {
+        referenceCallback = sinon.stub();
+        valueCallback = sinon.stub();
+
+        callbackValue = new CallbackValue(referenceCallback, valueCallback);
     });
 
     describe('getNative()', function () {
         it('should fetch the native value via the provided callback', function () {
             var value = sinon.createStubInstance(Value);
             value.getNative.returns(1001);
+            valueCallback.returns(value);
 
-            this.valueCallback.returns(value);
-
-            expect(this.value.getNative()).to.equal(1001);
+            expect(callbackValue.getNative()).to.equal(1001);
         });
     });
 
     describe('getReference()', function () {
         it('should fetch the reference via the provided callback', function () {
             var reference = sinon.createStubInstance(Reference);
+            referenceCallback.returns(reference);
 
-            this.referenceCallback.returns(reference);
-
-            expect(this.value.getReference()).to.equal(reference);
+            expect(callbackValue.getReference()).to.equal(reference);
         });
     });
 
     describe('getValue()', function () {
         it('should fetch the value via the provided callback', function () {
             var value = sinon.createStubInstance(Value);
+            valueCallback.returns(value);
 
-            this.valueCallback.returns(value);
+            expect(callbackValue.getValue()).to.equal(value);
+        });
+    });
 
-            expect(this.value.getValue()).to.equal(value);
+    describe('getValueOrNull()', function () {
+        it('should fetch the value via the provided callback', function () {
+            var value = sinon.createStubInstance(Value);
+            valueCallback.returns(value);
+
+            expect(callbackValue.getValueOrNull()).to.equal(value);
+        });
+    });
+
+    describe('isDefined()', function () {
+        it('should return true', function () {
+            expect(callbackValue.isDefined()).to.be.true;
         });
     });
 });
