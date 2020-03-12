@@ -24,20 +24,20 @@
   },
   "dependencies": {
     "microdash": "~1",
-    "phpcommon": "^1.13.0",
-    "phpcore": "^5.9.0",
+    "phpcommon": "^2.0.0",
+    "phpcore": "^5.10.0",
     "regextend": "^1.0.0"
   },
   "devDependencies": {
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
-    "jshint": "^2.10.2",
+    "jshint": "^2.11.0",
     "mocha": "^5.2.0",
     "nowdoc": "^1.0.1",
-    "phptoast": "^7.0.0",
-    "phptojs": "^7.1.0",
+    "phptoast": "^7.1.0",
+    "phptojs": "^7.2.0",
     "sinon": "^5.1.1",
-    "sinon-chai": "^3.3.0"
+    "sinon-chai": "^3.5.0"
   },
   "engines": {
     "node": ">=0.6"
