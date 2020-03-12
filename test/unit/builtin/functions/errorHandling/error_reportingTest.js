@@ -12,7 +12,7 @@
 var expect = require('chai').expect,
     errorHandlingExtension = require('../../../../../src/builtin/functions/errorHandling'),
     sinon = require('sinon'),
-    ErrorConfiguration = require('phpcore/src/ErrorConfiguration'),
+    ErrorConfiguration = require('phpcore/src/Error/ErrorConfiguration'),
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
