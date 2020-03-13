@@ -40,7 +40,7 @@ describe('PHP "preg_match_all" basic-level builtin function', function () {
                 this.valueFactory.createString('hello hello hello')
             );
 
-            expect(result.getType()).to.equal('integer');
+            expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(3);
         });
 
@@ -168,7 +168,7 @@ describe('PHP "preg_match_all" basic-level builtin function', function () {
                 this.valueFactory.createString('this will not match')
             );
 
-            expect(result.getType()).to.equal('integer');
+            expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(0);
         });
 

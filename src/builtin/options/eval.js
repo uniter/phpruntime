@@ -17,7 +17,12 @@ var phpToAST = require('phptoast'),
  */
 module.exports = function (internals) {
     var phpParser = phpToAST.create(null, {}),
-        runtime = internals.runtime;
+        runtime = internals.runtime,
+        phpParserState = phpParser.getState(),
+        translator = internals.translator;
+
+    // Provide the runtime's Translator service for use when generating any parsing-related errors
+    phpParserState.setTranslator(translator);
 
     return {
         /**
@@ -35,9 +40,12 @@ module.exports = function (internals) {
                 moduleWrapper,
                 transpiledCode;
 
-            phpParser.getState().setPath(path);
+            phpParserState.setPath(path);
 
-            transpiledCode = phpToJS.transpile(phpParser.parse(evalPHP), {bare: true});
+            transpiledCode = phpToJS.transpile(phpParser.parse(evalPHP), {
+                bare: true,
+                translator: translator
+            });
             /*jshint evil: true */
             moduleWrapper = new Function(
                 'return ' + transpiledCode

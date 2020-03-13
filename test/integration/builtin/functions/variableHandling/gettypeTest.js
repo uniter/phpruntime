@@ -53,7 +53,7 @@ EOS
 
         expect(module().execute().getNative()).to.deep.equal([
             'boolean',
-            'integer',
+            'int',
             'double', // For historical reasons "double" is returned rather than "float"
             'string',
             'array',

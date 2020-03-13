@@ -17,7 +17,6 @@ var arrayConstants = require('./constants/array'),
     constantFunctions = require('./functions/misc/constant'),
     Countable = require('./interfaces/SPL/Countable'),
     environmentFunctions = require('./functions/optionsAndInfo/environment'),
-    errorHandlingConstants = require('./constants/errorHandling'),
     errorHandlingFunctions = require('./functions/errorHandling'),
     extensionOptionsAndInfoFunctions = require('./functions/optionsAndInfo/extension'),
     filesystemConstants = require('./constants/filesystem'),
@@ -36,7 +35,7 @@ var arrayConstants = require('./constants/array'),
     stringConstants = require('./constants/string'),
     stringFunctions = require('./functions/string'),
     timeDateAndTimeFunctions = require('./functions/dateAndTime/time'),
-    timeFunctions = require('./functions/time'),
+    timeFunctions = require('./functions/misc/time'),
     variableHandlingFunctions = require('./functions/variableHandling');
 
 module.exports = {
@@ -62,7 +61,6 @@ module.exports = {
     ],
     constantGroups: [
         arrayConstants,
-        errorHandlingConstants,
         filesystemConstants,
         pcreConstants,
         phpConstants,

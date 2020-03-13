@@ -54,4 +54,55 @@ EOS
         ]);
         expect(engine.getStderr().readAll()).to.equal('');
     });
+
+    it('should correctly raise a ParseError when invalid syntax is given', function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+
+$result = [];
+
+function myFunction() {
+    global $result;
+
+    try {
+        eval("\n\n not @! valid");
+    } catch (Throwable $throwable) {
+        $result[] = get_class($throwable);
+        $result[] = $throwable->getMessage();
+        $result[] = $throwable->getFile();
+        $result[] = $throwable->getLine();
+        $result[] = $throwable->getTraceAsString();
+    }
+}
+
+myFunction();
+
+return $result;
+EOS
+*/;}), //jshint ignore:line
+            syncRuntime = tools.createSyncRuntime(),
+            module = tools.transpile(syncRuntime, '/path/to/my_module.php', php),
+            engine;
+
+        syncRuntime.install(evalPlugin);
+        engine = module();
+
+        expect(engine.execute().getNative()).to.deep.equal([
+            // Error class name
+            'ParseError',
+
+            // Message
+            'syntax error, unexpected \'@\'',
+
+            // File
+            '/path/to/my_module.php(9) : eval()\'d code',
+
+            // Line number
+            3,
+
+            // Trace
+            '#0 /path/to/my_module.php(19): myFunction()\n#1 {main}'
+        ]);
+        expect(engine.getStderr().readAll()).to.equal('');
+    });
 });

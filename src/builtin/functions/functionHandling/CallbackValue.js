@@ -9,7 +9,9 @@
 
 'use strict';
 
-var _ = require('microdash');
+var _ = require('microdash'),
+    util = require('util'),
+    Reference = require('phpcore/src/Reference/Reference');
 
 /**
  * Represents a Value object whose reference or value
@@ -29,6 +31,8 @@ function CallbackValue(referenceCallback, valueCallback) {
      */
     this.valueCallback = valueCallback;
 }
+
+util.inherits(CallbackValue, Reference);
 
 _.extend(CallbackValue.prototype, {
     /**
@@ -56,6 +60,13 @@ _.extend(CallbackValue.prototype, {
      */
     getValue: function () {
         return this.valueCallback();
+    },
+
+    /**
+     * {@inheritdoc}
+     */
+    isDefined: function () {
+        return true;
     }
 });
 

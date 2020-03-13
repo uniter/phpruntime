@@ -15,9 +15,11 @@ var expect = require('chai').expect,
     variableHandlingFunctionFactory = require('../../../../../src/builtin/functions/variableHandling'),
     CallStack = require('phpcore/src/CallStack'),
     Class = require('phpcore/src/Class').sync(),
+    ElementProvider = require('phpcore/src/Reference/Element/ElementProvider'),
     KeyValuePair = require('phpcore/src/KeyValuePair'),
     Output = require('phpcore/src/Output/Output'),
     PHPError = phpCommon.PHPError,
+    Translator = phpCommon.Translator,
     Value = require('phpcore/src/Value').sync(),
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
@@ -26,16 +28,19 @@ describe('PHP "var_export" builtin function', function () {
     beforeEach(function () {
         this.callStack = sinon.createStubInstance(CallStack);
         this.output = sinon.createStubInstance(Output);
-        this.valueFactory = new ValueFactory(null, 'sync', this.callStack);
+        this.translator = sinon.createStubInstance(Translator);
+        this.valueFactory = new ValueFactory(null, 'sync', new ElementProvider(), this.translator);
+        this.valueReference = sinon.createStubInstance(Variable);
         this.internals = {
             callStack: this.callStack,
             output: this.output,
             valueFactory: this.valueFactory
         };
+
+        this.valueFactory.setCallStack(this.callStack);
+
         this.variableHandlingFunctions = variableHandlingFunctionFactory(this.internals);
         this.var_export = this.variableHandlingFunctions.var_export;
-
-        this.valueReference = sinon.createStubInstance(Variable);
     });
 
     describe('in return mode', function () {

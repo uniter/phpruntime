@@ -22,7 +22,7 @@ var expect = require('chai').expect,
     ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
-describe('PHP "get_class" basic-level builtin function', function () {
+describe('PHP "get_class" builtin function', function () {
     beforeEach(function () {
         this.callStack = sinon.createStubInstance(CallStack);
         this.classAutoloader = sinon.createStubInstance(ClassAutoloader);

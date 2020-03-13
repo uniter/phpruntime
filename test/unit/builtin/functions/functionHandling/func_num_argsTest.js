@@ -50,7 +50,7 @@ describe('PHP "func_num_args" builtin function', function () {
         it('should return the number of args passed to the caller as an integer', function () {
             var resultValue = this.callFuncNumArgs();
 
-            expect(resultValue.getType()).to.equal('integer');
+            expect(resultValue.getType()).to.equal('int');
             expect(resultValue.getNative()).to.equal(2);
         });
     });
@@ -73,7 +73,7 @@ describe('PHP "func_num_args" builtin function', function () {
         it('should return -1', function () {
             var resultValue = this.callFuncNumArgs();
 
-            expect(resultValue.getType()).to.equal('integer');
+            expect(resultValue.getType()).to.equal('int');
             expect(resultValue.getNative()).to.equal(-1);
         });
     });

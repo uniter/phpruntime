@@ -143,13 +143,7 @@ module.exports = function (internals) {
         'function_exists': function (nameReference) {
             var name = nameReference.getValue().getNative().replace(/^\\/, '');
 
-            try {
-                globalNamespace.getFunction(name);
-            } catch (e) {
-                return valueFactory.createBoolean(false);
-            }
-
-            return valueFactory.createBoolean(true);
+            return valueFactory.createBoolean(globalNamespace.hasFunction(name));
         }
     };
 };

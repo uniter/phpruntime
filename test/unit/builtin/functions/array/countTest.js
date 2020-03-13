@@ -84,7 +84,7 @@ describe('PHP "count" builtin function', function () {
     it('should return int(1) when an integer is given, regardless of the value', function () {
         this.valueReference = sinon.createStubInstance(IntegerValue);
         this.valueReference.getNative.returns(4123);
-        this.valueReference.getType.returns('integer');
+        this.valueReference.getType.returns('int');
         this.valueReference.getValue.returns(this.valueReference);
 
         expect(this.callCount()).to.be.an.instanceOf(IntegerValue);
@@ -94,7 +94,7 @@ describe('PHP "count" builtin function', function () {
     it('should throw when COUNT_RECURSIVE is specified', function () {
         this.valueReference = sinon.createStubInstance(IntegerValue);
         this.valueReference.getNative.returns(4123);
-        this.valueReference.getType.returns('integer');
+        this.valueReference.getType.returns('int');
         this.valueReference.getValue.returns(this.valueReference);
         this.modeReference.getNative.returns(1);
 

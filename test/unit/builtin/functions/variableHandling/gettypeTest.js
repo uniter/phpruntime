@@ -50,7 +50,7 @@ describe('PHP "gettype" builtin function', function () {
         resultValue = this.gettype(this.valueReference);
 
         expect(resultValue.getType()).to.equal('string');
-        expect(resultValue.getNative()).to.equal('integer');
+        expect(resultValue.getNative()).to.equal('int');
     });
 
     it('should return "double" (for historical reasons) when given a float', function () {
