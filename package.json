@@ -25,7 +25,7 @@
   "dependencies": {
     "microdash": "~1",
     "phpcommon": "^2.0.0",
-    "phpcore": "^5.10.0",
+    "phpcore": "^5.10.1",
     "regextend": "^1.0.0"
   },
   "devDependencies": {
