@@ -588,7 +588,18 @@ module.exports = function (internals) {
             }
 
             return arrayValue.getCurrentElement().getValue();
-        }
+        },
+
+        /**
+         * Alias of count()
+         *
+         * @see {@link https://secure.php.net/manual/en/function.sizeof.php}
+         *
+         * @param {Variable|Value} arrayReference
+         * @param {Variable|Value} modeReference
+         * @returns {IntegerValue}
+         */
+        'sizeof': 'count'
     };
 
     return methods;
