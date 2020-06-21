@@ -314,8 +314,8 @@ module.exports = function (internals) {
 
             arrayValue = arrayReference.getValue();
 
-            // Work on a clone, so we don't mutate the original array
-            arrayValue = arrayValue.clone();
+            // Work on a copy, so we don't mutate the original array
+            arrayValue = arrayValue.getForAssignment();
 
             // First sort the elements alphabetically by value (default/SORT_STRING behaviour)
             arrayValue.sort(function (elementA, elementB) {
