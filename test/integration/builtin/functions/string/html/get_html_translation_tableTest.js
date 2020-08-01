@@ -57,7 +57,7 @@ EOS
                 '<': '&lt;',
                 '>': '&gt;',
 
-                '£': '&pound;' // TODO: Add remaining entities via plugins
+                '£': '&pound;' // TODO: Add remaining entities via addons
             }
         ]);
     });
