@@ -24,46 +24,57 @@ var expect = require('chai').expect,
     Variable = require('phpcore/src/Variable').sync();
 
 describe('PHP "var_dump" builtin function', function () {
+    var callStack,
+        callVardump,
+        internals,
+        output,
+        outputContents,
+        valueFactory,
+        valueReference,
+        variableHandlingFunctions,
+        variableReference,
+        var_dump;
+
     beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.valueFactory = sinon.createStubInstance(ValueFactory);
-        this.output = sinon.createStubInstance(Output);
-        this.outputContents = '';
-        this.output.write.callsFake(function (data) {
-            this.outputContents += data;
-        }.bind(this));
-        this.internals = {
-            callStack: this.callStack,
-            output: this.output,
-            valueFactory: this.valueFactory
+        callStack = sinon.createStubInstance(CallStack);
+        valueFactory = sinon.createStubInstance(ValueFactory);
+        output = sinon.createStubInstance(Output);
+        outputContents = '';
+        output.write.callsFake(function (data) {
+            outputContents += data;
+        });
+        internals = {
+            callStack: callStack,
+            output: output,
+            valueFactory: valueFactory
         };
-        this.variableHandlingFunctions = variableHandlingFunctionFactory(this.internals);
-        this.var_dump = this.variableHandlingFunctions.var_dump;
+        variableHandlingFunctions = variableHandlingFunctionFactory(internals);
+        var_dump = variableHandlingFunctions.var_dump;
 
-        this.valueReference = sinon.createStubInstance(Value);
-        this.variableReference = sinon.createStubInstance(Variable);
-        this.variableReference.getValue.returns(this.valueReference);
+        valueReference = sinon.createStubInstance(Value);
+        variableReference = sinon.createStubInstance(Variable);
+        variableReference.getValue.returns(valueReference);
 
-        this.callVardump = function () {
-            return this.var_dump(this.variableReference);
-        }.bind(this);
+        callVardump = function () {
+            return var_dump(variableReference);
+        };
     });
 
     it('should write NULL to the output when value is null', function () {
-        this.valueReference.getType.returns('null');
+        valueReference.getType.returns('null');
 
-        this.callVardump();
+        callVardump();
 
-        expect(this.outputContents).to.equal('NULL\n');
+        expect(outputContents).to.equal('NULL\n');
     });
 
     it('should limit the length of dumped strings to 2048 characters', function () {
-        this.valueReference.getType.returns('string');
-        this.valueReference.getNative.returns(repeatString('a', 2060));
+        valueReference.getType.returns('string');
+        valueReference.getNative.returns(repeatString('a', 2060));
 
-        this.callVardump();
+        callVardump();
 
-        expect(this.outputContents).to.equal('string(2060) "' + repeatString('a', 2048) + '..."\n');
+        expect(outputContents).to.equal('string(2060) "' + repeatString('a', 2048) + '..."\n');
     });
 
     it('should handle a reference to a variable containing an array assigned to an element of itself', function () {
@@ -72,27 +83,27 @@ describe('PHP "var_dump" builtin function', function () {
             firstKey = sinon.createStubInstance(Value),
             myselfKey = sinon.createStubInstance(Value),
             firstValue = sinon.createStubInstance(Value);
-        this.valueReference.getLength.returns(2);
-        this.valueReference.getNative.callsFake(function () {
+        valueReference.getLength.returns(2);
+        valueReference.getNative.callsFake(function () {
             // Array.getNative() always returns a new JS array object
             return [];
         });
-        this.valueReference.getType.returns('array');
-        this.valueReference.getKeys = sinon.stub().returns([firstKey, myselfKey]);
-        this.valueReference.getElementByKey.withArgs(sinon.match.same(firstKey)).returns(firstElement);
-        this.valueReference.getElementByKey.withArgs(sinon.match.same(myselfKey)).returns(myselfElement);
+        valueReference.getType.returns('array');
+        valueReference.getKeys = sinon.stub().returns([firstKey, myselfKey]);
+        valueReference.getElementByKey.withArgs(sinon.match.same(firstKey)).returns(firstElement);
+        valueReference.getElementByKey.withArgs(sinon.match.same(myselfKey)).returns(myselfElement);
         firstElement.getValue.returns(firstValue);
         firstElement.isReference.returns(false);
         firstValue.getType.returns('string');
         firstValue.getNative.returns('my first string');
-        myselfElement.getValue.returns(this.valueReference);
+        myselfElement.getValue.returns(valueReference);
         myselfElement.isReference.returns(true);
         firstKey.getNative.returns('first');
         myselfKey.getNative.returns('myself');
 
-        this.callVardump();
+        callVardump();
 
-        expect(this.outputContents).to.equal(
+        expect(outputContents).to.equal(
             nowdoc(function () {/*<<<EOS
 array(2) {
   ["first"]=>
@@ -118,15 +129,15 @@ EOS
             secondKey = sinon.createStubInstance(Value),
             firstValue = sinon.createStubInstance(Value),
             secondValue = sinon.createStubInstance(Value);
-        this.valueReference.getLength.returns(2);
-        this.valueReference.getNative.callsFake(function () {
+        valueReference.getLength.returns(2);
+        valueReference.getNative.callsFake(function () {
             // Array.getNative() always returns a new JS array object
             return [];
         });
-        this.valueReference.getType.returns('array');
-        this.valueReference.getKeys = sinon.stub().returns([firstKey, secondKey]);
-        this.valueReference.getElementByKey.withArgs(sinon.match.same(firstKey)).returns(firstElement);
-        this.valueReference.getElementByKey.withArgs(sinon.match.same(secondKey)).returns(secondElement);
+        valueReference.getType.returns('array');
+        valueReference.getKeys = sinon.stub().returns([firstKey, secondKey]);
+        valueReference.getElementByKey.withArgs(sinon.match.same(firstKey)).returns(firstElement);
+        valueReference.getElementByKey.withArgs(sinon.match.same(secondKey)).returns(secondElement);
         firstElement.getValue.returns(firstValue);
         firstElement.isReference.returns(false);
         firstValue.getType.returns('string');
@@ -140,9 +151,9 @@ EOS
         firstKey.getNative.returns('first');
         secondKey.getNative.returns('second');
 
-        this.callVardump();
+        callVardump();
 
-        expect(this.outputContents).to.equal(
+        expect(outputContents).to.equal(
             nowdoc(function () {/*<<<EOS
 array(2) {
   ["first"]=>

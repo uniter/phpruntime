@@ -219,8 +219,7 @@ module.exports = function (internals) {
 
         // NB: This output matches that of PHP with XDebug disabled
         'var_dump': function (valueReference) {
-            var arrays = [],
-                dumps = 0,
+            var dumps = 0,
                 value,
                 objectIDHash = {};
 
@@ -231,7 +230,7 @@ module.exports = function (internals) {
 
             value = valueReference.getValue();
 
-            function dump(value, depth, isReference) {
+            function dump(value, depth, isReference, arraysEncountered) {
                 var currentIndentation = new Array(depth).join('  '),
                     names,
                     nativeLength,
@@ -247,13 +246,21 @@ module.exports = function (internals) {
                 }
 
                 if (value.getType() === 'array') {
-                    if (arrays.indexOf(value.getValue()) > -1) {
+                    nativeValue = value.getValue();
+
+                    if (arraysEncountered.indexOf(nativeValue) > -1) {
+                        // Within the current branch of values being dumped, we've already
+                        // dumped this array - bail out to avoid infinite recursion
                         representation += '*RECURSION*';
+
                         return representation + '\n';
                     }
 
+                    if (depth > 1) {
+                        arraysEncountered.push(nativeValue);
+                    }
+
                     if (isReference) {
-                        arrays.push(value.getValue());
                         representation += '&';
                     }
 
@@ -263,7 +270,12 @@ module.exports = function (internals) {
                         var element = value.getElementByKey(key),
                             elementRepresentation;
 
-                        elementRepresentation = dump(element.getValue(), depth + 1, element.isReference());
+                        elementRepresentation = dump(
+                            element.getValue(),
+                            depth + 1,
+                            element.isReference(),
+                            arraysEncountered.slice()
+                        );
 
                         representation += nextIndentation +
                             '[' +
@@ -298,7 +310,8 @@ module.exports = function (internals) {
                             dump(
                                 property.getValue(),
                                 depth + 1,
-                                property.isReference()
+                                property.isReference(),
+                                arraysEncountered.slice()
                             );
                     });
 
@@ -339,7 +352,7 @@ module.exports = function (internals) {
                 return representation + '\n';
             }
 
-            output.write(dump(value, 1));
+            output.write(dump(value, 1, false, []));
         }
     };
 };
