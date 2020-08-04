@@ -30,7 +30,7 @@ module.exports = function (internals) {
                 '<': '&lt;',
                 '>': '&gt;',
 
-                '£': '&pound;' // TODO: Support adding remaining entities via plugins
+                '£': '&pound;' // TODO: Support adding remaining entities via addons
             },
             HTML_SPECIALCHARS: {
                 '&': '&amp;',

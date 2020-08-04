@@ -12,7 +12,7 @@
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
     tools = require('../tools'),
-    evalPlugin = require('../../../src/plugin/eval');
+    evalAddon = require('../../../src/addon/eval');
 
 describe('PHP eval(...) construct integration', function () {
     it('should allow evaluating expressions with access to the calling scope', function () {
@@ -43,7 +43,7 @@ EOS
             module = tools.transpile(syncRuntime, null, php),
             engine;
 
-        syncRuntime.install(evalPlugin);
+        syncRuntime.install(evalAddon);
         engine = module();
 
         expect(engine.execute().getNative()).to.deep.equal([
@@ -84,7 +84,7 @@ EOS
             module = tools.transpile(syncRuntime, '/path/to/my_module.php', php),
             engine;
 
-        syncRuntime.install(evalPlugin);
+        syncRuntime.install(evalAddon);
         engine = module();
 
         expect(engine.execute().getNative()).to.deep.equal([

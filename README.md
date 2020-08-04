@@ -1,7 +1,7 @@
 PHPRuntime
 ==========
 
-[![Build Status](https://secure.travis-ci.org/uniter/phpruntime.png?branch=master)](http://travis-ci.org/uniter/phpruntime)
+[![Build Status](https://github.com/uniter/phpruntime/workflows/CI/badge.svg)](https://github.com/uniter/phpruntime/actions?query=workflow%3ACI)
 
 Runtime library for PHP environments.
 
