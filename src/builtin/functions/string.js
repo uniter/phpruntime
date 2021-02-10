@@ -419,6 +419,32 @@ module.exports = function (internals) {
             trimmedHaystack = haystack.substr(offset, length);
 
             return valueFactory.createInteger(trimmedHaystack.split(needle).length - 1);
+        },
+
+        /**
+         * Strip whitespace or other characters from both ends of a string
+         *
+         * @see {@link https://secure.php.net/manual/en/function.trim.php}
+         *
+         * @param {Variable|Value} stringReference          The string to trim
+         * @param {Variable|Value} characterMaskReference   Which characters to strip
+         * @returns {StringValue}                           The trimmed string
+         */
+        'trim': function (stringReference, characterMaskReference) {
+            var nativeString = stringReference.getValue().coerceToString().getNative(),
+                characterMask = characterMaskReference ?
+                    characterMaskReference.getValue().getNative() :
+                    ' \t\n\r\0\x0b',
+                characterMaskRegex = new RegExp(
+                    '^[' +
+                    _.escapeRegExp(characterMask) +
+                    ']+|[' +
+                    _.escapeRegExp(characterMask) +
+                    ']+$',
+                    'g'
+                );
+
+            return valueFactory.createString(nativeString.replace(characterMaskRegex, ''));
         }
     };
 };
