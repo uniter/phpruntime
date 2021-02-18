@@ -12,7 +12,7 @@
 var basicLevelPcreFunctionGroup = require('../../builtin/functions/pcre/basicSupport');
 
 /**
- * PCRE preg_* functions support using the builtin JS RegExp class
+ * PCRE preg_* functions support, using the builtin JS RegExp class
  */
 module.exports = {
     functionGroups: [
