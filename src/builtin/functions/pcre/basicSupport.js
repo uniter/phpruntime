@@ -62,7 +62,7 @@ module.exports = function (internals) {
         //     but we'll just support the recommended method via modifier for now
         modifiers = modifiers.replace(/u/g, '');
 
-        invalidModifiers = modifiers.replace(/[AiSs]/g, '');
+        invalidModifiers = modifiers.replace(/[AiSsx]/g, '');
 
         if (invalidModifiers !== '') {
             callStack.raiseError(

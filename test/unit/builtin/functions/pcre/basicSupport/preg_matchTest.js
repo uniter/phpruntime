@@ -99,6 +99,24 @@ describe('PHP "preg_match" basic-level builtin function', function () {
                 ['ell', 6]
             ]);
         });
+
+        it('should support the extended modifier "x"', function () {
+            var matchesVariable = new Variable(callStack, valueFactory, 'matches'),
+                result = preg_match(
+                    valueFactory.createString('/   h  (  e  # A line comment\n  l{2} )  o   \\     there   /x'),
+                    valueFactory.createString('well hello there'),
+                    matchesVariable,
+                    valueFactory.createInteger(256) // PREG_OFFSET_CAPTURE
+                );
+
+            expect(result.getType()).to.equal('int');
+            expect(result.getNative()).to.equal(1);
+            expect(matchesVariable.getValue().getType()).to.equal('array');
+            expect(matchesVariable.getValue().getNative()).to.deep.equal([
+                ['hello there', 5],
+                ['ell', 6]
+            ]);
+        });
     });
 
     describe('on a failed match', function () {
