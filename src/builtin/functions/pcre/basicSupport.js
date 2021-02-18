@@ -62,7 +62,7 @@ module.exports = function (internals) {
         //     but we'll just support the recommended method via modifier for now
         modifiers = modifiers.replace(/u/g, '');
 
-        invalidModifiers = modifiers.replace(/[Ais]/g, '');
+        invalidModifiers = modifiers.replace(/[AiSs]/g, '');
 
         if (invalidModifiers !== '') {
             callStack.raiseError(
@@ -76,6 +76,11 @@ module.exports = function (internals) {
         // Support the implicit start-of-string anchor (sticky) modifier
         if (modifiers.indexOf('A') > -1) {
             modifiers = modifiers.replace(/A/g, 'y'); // Use ES6 "sticky" modifier "y"
+        }
+
+        // Ignore the "study" modifier
+        if (modifiers.indexOf('S') > -1) {
+            modifiers = modifiers.replace(/S/g, '');
         }
 
         // TODO: Shim `s` modifier for old browsers in the separate regextend lib instead
