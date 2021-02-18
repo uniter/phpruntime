@@ -19,6 +19,7 @@ var _ = require('microdash'),
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
+        globalNamespace = internals.globalNamespace,
         output = internals.output,
         valueFactory = internals.valueFactory;
 
@@ -75,6 +76,31 @@ module.exports = function (internals) {
         'is_array': createTypeChecker('is_array', 'array'),
 
         'is_bool': createTypeChecker('is_bool', 'boolean'),
+
+        /**
+         * Determines whether a value is a valid callable function, method, closure or invokable object
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-callable.php}
+         *
+         * @param {Reference|Value|Variable} valueReference
+         * @param {BooleanValue|Reference|Variable=} syntaxOnlyReference
+         * @param {Reference|Variable=} callableNameReference
+         * @returns {BooleanValue}
+         */
+        'is_callable': function (valueReference, syntaxOnlyReference, callableNameReference) {
+            var syntaxOnly = syntaxOnlyReference && syntaxOnlyReference.getValue().getNative(),
+                value = valueReference.getValue();
+
+            if (syntaxOnly) {
+                throw new Error('is_callable() :: syntax_only=true is not supported');
+            }
+
+            if (callableNameReference) {
+                throw new Error('is_callable() :: callable_name is not supported');
+            }
+
+            return valueFactory.createBoolean(value.isCallable(globalNamespace));
+        },
 
         'is_float': createTypeChecker('is_float', 'float'),
 
