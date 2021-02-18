@@ -12,14 +12,9 @@
 var _ = require('microdash'),
     builtins = require('../../src/builtin/builtins'),
     pausable = require('pausable'),
-    phpCommon = require('phpcommon'),
     phpToAST = require('phptoast'),
     phpToJS = require('phptojs'),
-    Engine = require('phpcore/src/Engine'),
-    Environment = require('phpcore/src/Environment'),
-    AsyncPHPState = require('phpcore/src/PHPState').async(pausable),
-    SyncPHPState = require('phpcore/src/PHPState').sync(),
-    Runtime = require('phpcore/src/Runtime').async(pausable),
+    runtimeFactory = require('phpcore/src/shared/runtimeFactory'),
     transpile = function (path, php, phpCore, options) {
         var js,
             module,
@@ -60,14 +55,7 @@ var _ = require('microdash'),
 module.exports = {
     createAsyncRuntime: function () {
         // Create an isolated runtime we can install builtins into without affecting the main singleton one
-        var runtime = new Runtime(
-            Environment,
-            Engine,
-            AsyncPHPState,
-            phpCommon,
-            pausable,
-            'async'
-        );
+        var runtime = runtimeFactory.create('async', pausable);
 
         // Install the standard set of builtins
         runtime.install(builtins);
@@ -77,14 +65,7 @@ module.exports = {
 
     createSyncRuntime: function () {
         // Create an isolated runtime we can install builtins into without affecting the main singleton one
-        var runtime = new Runtime(
-            Environment,
-            Engine,
-            SyncPHPState,
-            phpCommon,
-            null, // Don't make Pausable available - running synchronously
-            'sync'
-        );
+        var runtime = runtimeFactory.create('sync');
 
         // Install the standard set of builtins
         runtime.install(builtins);
