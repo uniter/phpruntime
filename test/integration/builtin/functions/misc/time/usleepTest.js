@@ -42,6 +42,7 @@ EOS
             }),
             engine = module(),
             log = [];
+        this.timeout(5000);
 
         engine.defineCoercingFunction('log', function (message) {
             log.push('[log]: ' + message);
