@@ -19,7 +19,7 @@
   "main": "index",
   "scripts": {
     "jshint": "jshint .",
-    "mocha": "mocha -r test/harness --recursive test/unit/ test/integration/",
+    "mocha": "mocha -r mocha-bootstrap --recursive test/unit/ test/integration/",
     "test": "npm run jshint && npm run mocha"
   },
   "dependencies": {
@@ -33,6 +33,7 @@
     "chai-as-promised": "^7.1.1",
     "jshint": "^2.12.0",
     "mocha": "^8.3.0",
+    "mocha-bootstrap": "^1.0.1",
     "nowdoc": "^1.0.1",
     "phptoast": "^8.0.0",
     "phptojs": "^8.1.0",
