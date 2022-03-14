@@ -12,34 +12,42 @@
 var expect = require('chai').expect,
     sinon = require('sinon'),
     stringFunctionFactory = require('../../../../../src/builtin/functions/string'),
+    tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
 describe('PHP "explode" builtin function', function () {
-    beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.getBinding = sinon.stub();
-        this.valueFactory = new ValueFactory();
-        this.internals = {
-            callStack: this.callStack,
-            getBinding: this.getBinding,
-            valueFactory: this.valueFactory
-        };
-        this.stringFunctions = stringFunctionFactory(this.internals);
-        this.explode = this.stringFunctions.explode;
+    var callStack,
+        delimiterReference,
+        explode,
+        internals,
+        limitReference,
+        stringFunctions,
+        stringReference,
+        valueFactory;
 
-        this.delimiterReference = sinon.createStubInstance(Variable);
-        this.stringReference = sinon.createStubInstance(Variable);
-        this.limitReference = sinon.createStubInstance(Variable);
+    beforeEach(function () {
+        callStack = sinon.createStubInstance(CallStack);
+        valueFactory = tools.createIsolatedState().getValueFactory();
+        internals = {
+            callStack: callStack,
+            getBinding: sinon.stub(),
+            valueFactory: valueFactory
+        };
+        stringFunctions = stringFunctionFactory(internals);
+        explode = stringFunctions.explode;
+
+        delimiterReference = sinon.createStubInstance(Variable);
+        stringReference = sinon.createStubInstance(Variable);
+        limitReference = sinon.createStubInstance(Variable);
     });
 
     it('should return an array with the correct elements when delimiter appears', function () {
         var resultValue;
-        this.delimiterReference.getValue.returns(this.valueFactory.createString(','));
-        this.stringReference.getValue.returns(this.valueFactory.createString('first,second,third'));
+        delimiterReference.getValue.returns(valueFactory.createString(','));
+        stringReference.getValue.returns(valueFactory.createString('first,second,third'));
 
-        resultValue = this.explode(this.delimiterReference, this.stringReference);
+        resultValue = explode(delimiterReference, stringReference);
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal(['first', 'second', 'third']);
@@ -47,10 +55,10 @@ describe('PHP "explode" builtin function', function () {
 
     it('should include elements with empty strings where multiple instances of the delimiter are touching', function () {
         var resultValue;
-        this.delimiterReference.getValue.returns(this.valueFactory.createString(','));
-        this.stringReference.getValue.returns(this.valueFactory.createString('first,second,,,third,fourth'));
+        delimiterReference.getValue.returns(valueFactory.createString(','));
+        stringReference.getValue.returns(valueFactory.createString('first,second,,,third,fourth'));
 
-        resultValue = this.explode(this.delimiterReference, this.stringReference);
+        resultValue = explode(delimiterReference, stringReference);
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal(['first', 'second', '', '', 'third', 'fourth']);
@@ -58,10 +66,10 @@ describe('PHP "explode" builtin function', function () {
 
     it('should return an array with a single empty-string element when the string is empty', function () {
         var resultValue;
-        this.delimiterReference.getValue.returns(this.valueFactory.createString('.'));
-        this.stringReference.getValue.returns(this.valueFactory.createString(''));
+        delimiterReference.getValue.returns(valueFactory.createString('.'));
+        stringReference.getValue.returns(valueFactory.createString(''));
 
-        resultValue = this.explode(this.delimiterReference, this.stringReference);
+        resultValue = explode(delimiterReference, stringReference);
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal(['']);
@@ -69,10 +77,10 @@ describe('PHP "explode" builtin function', function () {
 
     it('should return an array with a single element containing the number coerced to string when the "string" argument is an integer', function () {
         var resultValue;
-        this.delimiterReference.getValue.returns(this.valueFactory.createString('.'));
-        this.stringReference.getValue.returns(this.valueFactory.createInteger(212));
+        delimiterReference.getValue.returns(valueFactory.createString('.'));
+        stringReference.getValue.returns(valueFactory.createInteger(212));
 
-        resultValue = this.explode(this.delimiterReference, this.stringReference);
+        resultValue = explode(delimiterReference, stringReference);
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal(['212']);
@@ -80,10 +88,10 @@ describe('PHP "explode" builtin function', function () {
 
     it('should coerce the "string" argument to a string', function () {
         var resultValue;
-        this.delimiterReference.getValue.returns(this.valueFactory.createString('.'));
-        this.stringReference.getValue.returns(this.valueFactory.createInteger(212));
+        delimiterReference.getValue.returns(valueFactory.createString('.'));
+        stringReference.getValue.returns(valueFactory.createInteger(212));
 
-        resultValue = this.explode(this.delimiterReference, this.stringReference);
+        resultValue = explode(delimiterReference, stringReference);
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal(['212']);
@@ -91,62 +99,68 @@ describe('PHP "explode" builtin function', function () {
 
     it('should coerce the "delimiter" argument to a string', function () {
         var resultValue;
-        this.delimiterReference.getValue.returns(this.valueFactory.createInteger(4));
-        this.stringReference.getValue.returns(this.valueFactory.createInteger(22499));
+        delimiterReference.getValue.returns(valueFactory.createInteger(4));
+        stringReference.getValue.returns(valueFactory.createInteger(22499));
 
-        resultValue = this.explode(this.delimiterReference, this.stringReference);
+        resultValue = explode(delimiterReference, stringReference);
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal(['22', '99']);
     });
 
     describe('when only the delimiter is given', function () {
-        beforeEach(function () {
-            this.delimiterReference.getValue.returns(this.valueFactory.createString('delim'));
+        var doCall,
+            resultValue;
 
-            this.doCall = function () {
-                this.resultValue = this.explode(this.delimiterReference);
-            }.bind(this);
+        beforeEach(function () {
+            delimiterReference.getValue.returns(valueFactory.createString('delim'));
+
+            doCall = function () {
+                resultValue = explode(delimiterReference);
+            };
         });
 
         it('should raise a warning', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 'Warning',
                 'explode() expects at least 2 parameters, 1 given'
             );
         });
 
         it('should return null', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.resultValue.getType()).to.equal('null');
+            expect(resultValue.getType()).to.equal('null');
         });
     });
 
     describe('when no arguments are given', function () {
+        var doCall,
+            resultValue;
+
         beforeEach(function () {
-            this.doCall = function () {
-                this.resultValue = this.explode();
-            }.bind(this);
+            doCall = function () {
+                resultValue = explode();
+            };
         });
 
         it('should raise a warning', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 'Warning',
                 'explode() expects at least 2 parameters, 0 given'
             );
         });
 
         it('should return null', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.resultValue.getType()).to.equal('null');
+            expect(resultValue.getType()).to.equal('null');
         });
     });
 });

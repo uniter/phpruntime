@@ -26,12 +26,12 @@ module.exports = function (internals) {
          *
          * @param {Variable|Value} callbackReference       The function or callable to call
          * @param {...Variable|...Value} argumentReference Variable no. of arguments to pass to the callable
-         * @returns {Value}
+         * @returns {FutureValue}
          */
         'call_user_func': function (callbackReference, argumentReference) { //jshint ignore:line
             var callbackValue = callbackReference.getValue(),
                 expectedReferenceArgumentIndex = null,
-                expectedReferenceError = {},
+                expectedReferenceError = {call_user_func_expectedReferenceError: true},
                 argumentValues = _.map(
                     [].slice.call(arguments, 1),
                     function (argumentReference, argumentIndex) {
@@ -47,23 +47,22 @@ module.exports = function (internals) {
                     }
                 );
 
-            try {
-                return callbackValue.call(argumentValues, globalNamespace);
-            } catch (error) {
-                // Allow any other errors through
-                if (error !== expectedReferenceError) {
-                    throw error;
-                }
+            return callbackValue.call(argumentValues, globalNamespace)
+                .catch(function (error) {
+                    // Allow any other errors through
+                    if (error !== expectedReferenceError) {
+                        throw error;
+                    }
 
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'Parameter ' + (expectedReferenceArgumentIndex + 1) +
+                    callStack.raiseError(
+                        PHPError.E_WARNING,
+                        'Parameter ' + (expectedReferenceArgumentIndex + 1) +
                         ' to ' + callbackValue.getCallableName(globalNamespace) +
                         '() expected to be a reference, value given'
-                );
+                    );
 
-                return valueFactory.createNull();
-            }
+                    return valueFactory.createNull();
+                });
         },
         /**
          * Calls the specified function, returning its result

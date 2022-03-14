@@ -20,6 +20,7 @@ var _ = require('microdash'),
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
+        flow = internals.flow,
         globalNamespace = internals.globalNamespace,
         methods,
         valueFactory = internals.valueFactory;
@@ -139,28 +140,33 @@ module.exports = function (internals) {
          *
          * @param {Variable|Value} callbackReference
          * @param {Variable|ArrayValue} firstArrayReference
-         * @returns {ArrayValue}
+         * @returns {ArrayValue|FutureValue<ArrayValue>}
          */
         'array_map': function (callbackReference, firstArrayReference) {
             var callbackValue = callbackReference.getValue(),
-                firstArrayValue = firstArrayReference.getValue(),
-                result = [];
+                firstArrayValue = firstArrayReference.getValue();
 
             if (arguments.length > 2) {
-                throw new Error('array_map() :: Multiple input arrays are not yet supported');
+                return valueFactory.createRejection(
+                    new Error('array_map() :: Multiple input arrays are not yet supported')
+                );
             }
 
-            _.each(firstArrayValue.getKeys(), function (keyValue) {
-                // Pass the global namespace as the namespace scope -
-                // any normal function callback will need to be fully-qualified
-                // TODO: Test what happens with barewords, eg. `array_map(MyClass::staticMethod, [...])`
-                var elementValue = firstArrayValue.getElementByKey(keyValue),
-                    mappedElementValue = callbackValue.call([elementValue], globalNamespace);
+            return flow.mapAsync(firstArrayValue.getKeys(), function (keyValue) {
+                    // Pass the global namespace as the namespace scope -
+                    // any normal function callback will need to be fully-qualified
+                    var elementValue = firstArrayValue.getElementByKey(keyValue);
 
-                result.push(new KeyValuePair(keyValue, mappedElementValue));
-            });
-
-            return valueFactory.createArray(result);
+                    return callbackValue.call([elementValue], globalNamespace)
+                        .asFuture() // Keep the KeyValuePairs created below rather than wrapping them in ObjectValues.
+                        .next(function (mappedElementValue) {
+                            return new KeyValuePair(keyValue, mappedElementValue);
+                        });
+                })
+                .next(function (keyValuePairs) {
+                    return valueFactory.createArray(keyValuePairs);
+                })
+                .asValue();
         },
 
         /**
@@ -370,7 +376,7 @@ module.exports = function (internals) {
          *
          * @param {Variable|Value} arrayReference
          * @param {Variable|Value} modeReference
-         * @returns {IntegerValue}
+         * @returns {FutureValue<IntegerValue>|IntegerValue}
          */
         'count': function (arrayReference, modeReference) {
             var array = arrayReference.getValue(),
@@ -389,6 +395,7 @@ module.exports = function (internals) {
                 type === 'array' || type === 'object' ? array.getLength() : 1
             );
         },
+
         'current': function (arrayReference) {
             var arrayValue = arrayReference.getValue();
 
@@ -396,7 +403,7 @@ module.exports = function (internals) {
                 return valueFactory.createBoolean(false);
             }
 
-            return arrayValue.getCurrentElement().getValue();
+            return arrayValue.getCurrentElementValue();
         },
 
         /**
@@ -423,6 +430,17 @@ module.exports = function (internals) {
             return arrayValue.getElementByKey(keys[keys.length - 1]).getValue();
         },
 
+        /**
+         * Joins substrings (the "pieces") together with a given delimiter (the "glue").
+         *
+         * TODO: Support 2nd variant with glue arg omitted.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.implode.php}
+         *
+         * @param {Variable|Value} glueReference
+         * @param {Variable|Value} piecesReference
+         * @returns {FutureValue<StringValue>}
+         */
         'implode': function (glueReference, piecesReference) {
             var glueValue = glueReference.getValue(),
                 piecesValue = piecesReference.getValue(),
@@ -438,11 +456,14 @@ module.exports = function (internals) {
 
             values = piecesValue.getValues();
 
-            _.each(values, function (value, key) {
-                values[key] = value.coerceToString().getNative();
-            });
-
-            return valueFactory.createString(values.join(glueValue.getNative()));
+            return flow
+                .mapAsync(values, function (value) {
+                    return value.coerceToString().asEventualNative();
+                })
+                .next(function (pieceStrings) {
+                    return valueFactory.createString(pieceStrings.join(glueValue.getNative()));
+                })
+                .asValue();
         },
 
         /**
@@ -587,7 +608,7 @@ module.exports = function (internals) {
                 return valueFactory.createBoolean(false);
             }
 
-            return arrayValue.getCurrentElement().getValue();
+            return arrayValue.getCurrentElementValue();
         },
 
         /**

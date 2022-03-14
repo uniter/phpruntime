@@ -12,48 +12,68 @@
 var expect = require('chai').expect,
     arrayExtension = require('../../../../../src/builtin/functions/array'),
     sinon = require('sinon'),
+    tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
     KeyValuePair = require('phpcore/src/KeyValuePair'),
     Namespace = require('phpcore/src/Namespace').sync(),
     StringValue = require('phpcore/src/Value/String').sync(),
-    ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
 describe('PHP "array_map" builtin function', function () {
+    var array_map,
+        arrayReference,
+        callbackReference,
+        callbackValue,
+        callStack,
+        flow,
+        futureFactory,
+        globalNamespace,
+        state,
+        valueFactory;
+
     beforeEach(function () {
-        this.arrayReference = sinon.createStubInstance(Variable);
-        this.callbackReference = sinon.createStubInstance(Variable);
-        this.callbackValue = sinon.createStubInstance(StringValue);
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.globalNamespace = sinon.createStubInstance(Namespace);
-        this.valueFactory = new ValueFactory();
+        callStack = sinon.createStubInstance(CallStack);
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        });
+        arrayReference = sinon.createStubInstance(Variable);
+        callbackReference = sinon.createStubInstance(Variable);
+        callbackValue = sinon.createStubInstance(StringValue);
+        flow = state.getFlow();
+        futureFactory = state.getFutureFactory();
+        globalNamespace = sinon.createStubInstance(Namespace);
+        valueFactory = state.getValueFactory();
 
-        this.callbackReference.getValue.returns(this.callbackValue);
-        this.callbackValue.call
-            .withArgs(sinon.match.any, sinon.match.same(this.globalNamespace))
+        callbackReference.getValue.returns(callbackValue);
+        callbackValue.call
+            .withArgs(sinon.match.any, sinon.match.same(globalNamespace))
             .callsFake(function (argValues) {
-                return this.valueFactory.createString(argValues[0].getNative() + ' (mapped)');
-            }.bind(this));
+                return valueFactory.createString(argValues[0].getNative() + ' (mapped)');
+            });
 
-        this.array_map = arrayExtension({
-            callStack: this.callStack,
-            globalNamespace: this.globalNamespace,
-            valueFactory: this.valueFactory
+        array_map = arrayExtension({
+            callStack: callStack,
+            flow: flow,
+            futureFactory: futureFactory,
+            globalNamespace: globalNamespace,
+            valueFactory: valueFactory
         }).array_map;
     });
 
     describe('for an indexed array', function () {
+        var arrayValue;
+
         beforeEach(function () {
-            this.arrayValue = this.valueFactory.createArray([
-                this.valueFactory.createString('my first element'),
-                this.valueFactory.createString('my second element'),
-                this.valueFactory.createString('my last element')
+            arrayValue = valueFactory.createArray([
+                valueFactory.createString('my first element'),
+                valueFactory.createString('my second element'),
+                valueFactory.createString('my last element')
             ]);
-            this.arrayReference.getValue.returns(this.arrayValue);
+            arrayReference.getValue.returns(arrayValue);
         });
 
-        it('should map each element\'s value with the callback', function () {
-            var mappedArrayValue = this.array_map(this.callbackReference, this.arrayReference);
+        it('should map each element\'s value with the callback', async function () {
+            var mappedArrayValue = await array_map(callbackReference, arrayReference).toPromise();
 
             expect(mappedArrayValue.getType()).to.equal('array');
             expect(mappedArrayValue.getNative()).to.deep.equal([
@@ -65,25 +85,25 @@ describe('PHP "array_map" builtin function', function () {
     });
 
     describe('for an associative array', function () {
-        it('should preserve keys if only one array is provided', function () {
-            var arrayValue = this.valueFactory.createArray([
+        it('should preserve keys if only one array is provided', async function () {
+            var arrayValue = valueFactory.createArray([
                     new KeyValuePair(
-                        this.valueFactory.createString('my_first_key'),
-                        this.valueFactory.createString('my first element')
+                        valueFactory.createString('my_first_key'),
+                        valueFactory.createString('my first element')
                     ),
                     new KeyValuePair(
-                        this.valueFactory.createString('my_second_key'),
-                        this.valueFactory.createString('my second element')
+                        valueFactory.createString('my_second_key'),
+                        valueFactory.createString('my second element')
                     ),
                     new KeyValuePair(
-                        this.valueFactory.createString('my_last_key'),
-                        this.valueFactory.createString('my last element')
+                        valueFactory.createString('my_last_key'),
+                        valueFactory.createString('my last element')
                     )
                 ]),
                 mappedArrayValue;
-            this.arrayReference.getValue.returns(arrayValue);
+            arrayReference.getValue.returns(arrayValue);
 
-            mappedArrayValue = this.array_map(this.callbackReference, this.arrayReference);
+            mappedArrayValue = await array_map(callbackReference, arrayReference).toPromise();
 
             expect(mappedArrayValue.getType()).to.equal('array');
             expect(mappedArrayValue.getNative()).to.deep.equal({
@@ -98,18 +118,17 @@ describe('PHP "array_map" builtin function', function () {
         it('should throw an error, as this is not yet supported', function () {
             var arrayReference2 = sinon.createStubInstance(Variable);
 
-            expect(function () {
-                this.array_map(this.callbackReference, this.arrayReference, arrayReference2);
-            }.bind(this)).to.throw('array_map() :: Multiple input arrays are not yet supported');
+            return expect(array_map(callbackReference, arrayReference, arrayReference2).toPromise())
+                .to.eventually.be.rejectedWith('array_map() :: Multiple input arrays are not yet supported');
         });
     });
 
     describe('for an empty array', function () {
-        it('should return an empty array', function () {
+        it('should return an empty array', async function () {
             var result;
-            this.arrayReference.getValue.returns(this.valueFactory.createArray([]));
+            arrayReference.getValue.returns(valueFactory.createArray([]));
 
-            result = this.array_map(this.callbackReference, this.arrayReference);
+            result = await array_map(callbackReference, arrayReference).toPromise();
 
             expect(result.getType()).to.equal('array');
             expect(result.getNative()).to.deep.equal([]);

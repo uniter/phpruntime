@@ -12,67 +12,78 @@
 var expect = require('chai').expect,
     basicSupportExtension = require('../../../../../../src/builtin/functions/pcre/basicSupport'),
     sinon = require('sinon'),
+    tools = require('../../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
 describe('PHP "preg_replace" basic-level builtin function', function () {
+    var callStack,
+        getConstant,
+        preg_replace,
+        valueFactory;
+
     beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.getConstant = sinon.stub();
-        this.valueFactory = new ValueFactory();
+        callStack = sinon.createStubInstance(CallStack);
+        getConstant = sinon.stub();
+        valueFactory = tools.createIsolatedState().getValueFactory();
 
-        this.getConstant.withArgs('PREG_OFFSET_CAPTURE').returns(256);
-        this.getConstant.withArgs('PREG_PATTERN_ORDER').returns(1);
-        this.getConstant.withArgs('PREG_SET_ORDER').returns(2);
+        getConstant.withArgs('PREG_OFFSET_CAPTURE').returns(256);
+        getConstant.withArgs('PREG_PATTERN_ORDER').returns(1);
+        getConstant.withArgs('PREG_SET_ORDER').returns(2);
 
-        this.preg_replace = basicSupportExtension({
-            callStack: this.callStack,
-            getConstant: this.getConstant,
-            valueFactory: this.valueFactory
+        preg_replace = basicSupportExtension({
+            callStack: callStack,
+            getConstant: getConstant,
+            valueFactory: valueFactory
         }).preg_replace;
     });
 
     describe('on a successful replacement of a single pattern for a single subject', function () {
-        beforeEach(function () {
-            this.patternReference = sinon.createStubInstance(Variable);
-            this.replacementReference = sinon.createStubInstance(Variable);
-            this.subjectReference = sinon.createStubInstance(Variable);
-            this.patternReference.getValue.returns(this.valueFactory.createString('/hel{2}o/'));
-            this.replacementReference.getValue.returns(this.valueFactory.createString('goodbye'));
-            this.subjectReference.getValue.returns(this.valueFactory.createString('well hello!'));
+        var doCall,
+            patternReference,
+            replacementReference,
+            resultValue,
+            subjectReference;
 
-            this.doCall = function () {
-                this.resultValue = this.preg_replace(
-                    this.patternReference,
-                    this.replacementReference,
-                    this.subjectReference
+        beforeEach(function () {
+            patternReference = sinon.createStubInstance(Variable);
+            replacementReference = sinon.createStubInstance(Variable);
+            subjectReference = sinon.createStubInstance(Variable);
+            patternReference.getValue.returns(valueFactory.createString('/hel{2}o/'));
+            replacementReference.getValue.returns(valueFactory.createString('goodbye'));
+            subjectReference.getValue.returns(valueFactory.createString('well hello!'));
+
+            doCall = function () {
+                resultValue = preg_replace(
+                    patternReference,
+                    replacementReference,
+                    subjectReference
                 );
-            }.bind(this);
+            };
         });
 
         it('should return the resulting string', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.resultValue.getType()).to.equal('string');
-            expect(this.resultValue.getNative()).to.equal('well goodbye!');
+            expect(resultValue.getType()).to.equal('string');
+            expect(resultValue.getNative()).to.equal('well goodbye!');
         });
 
         it('should not raise any warnings', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.callStack.raiseError).not.to.have.been.called;
+            expect(callStack.raiseError).not.to.have.been.called;
         });
 
         it('should populate the count variable if specified', function () {
-            var countVariable = new Variable(this.callStack, this.valueFactory, 'count'),
+            var countVariable = new Variable(callStack, valueFactory, 'count'),
                 limitReference = sinon.createStubInstance(Variable);
-            limitReference.getValue.returns(this.valueFactory.createInteger(-1));
+            limitReference.getValue.returns(valueFactory.createInteger(-1));
 
-            this.preg_replace(
-                this.patternReference,
-                this.replacementReference,
-                this.subjectReference,
+            preg_replace(
+                patternReference,
+                replacementReference,
+                subjectReference,
                 limitReference,
                 countVariable
             );
@@ -83,94 +94,104 @@ describe('PHP "preg_replace" basic-level builtin function', function () {
     });
 
     describe('when not enough args are given', function () {
-        beforeEach(function () {
-            this.patternReference = sinon.createStubInstance(Variable);
-            this.patternReference.getValue.returns(this.valueFactory.createString('/hel{2}o/'));
+        var doCall,
+            patternReference,
+            resultValue;
 
-            this.doCall = function () {
-                this.resultValue = this.preg_replace(this.patternReference);
-            }.bind(this);
+        beforeEach(function () {
+            patternReference = sinon.createStubInstance(Variable);
+            patternReference.getValue.returns(valueFactory.createString('/hel{2}o/'));
+
+            doCall = function () {
+                resultValue = preg_replace(patternReference);
+            };
         });
 
         it('should raise a warning', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 'Warning',
                 'preg_replace() expects at least 3 parameters, 1 given'
             );
         });
 
         it('should return null', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.resultValue.getType()).to.equal('null');
+            expect(resultValue.getType()).to.equal('null');
         });
     });
 
     describe('when a non-string pattern is given', function () {
         it('should throw an error (coercion not yet supported here)', function () {
             expect(function () {
-                this.preg_replace(
-                    this.valueFactory.createInteger(1001),
-                    this.valueFactory.createString('my replacement'),
-                    this.valueFactory.createString('my subject'),
+                preg_replace(
+                    valueFactory.createInteger(1001),
+                    valueFactory.createString('my replacement'),
+                    valueFactory.createString('my subject'),
                     sinon.createStubInstance(Variable)
                 );
-            }.bind(this)).to.throw('preg_replace(): Non-array/string pattern not yet supported');
+            }).to.throw('preg_replace(): Non-array/string pattern not yet supported');
         });
     });
 
     describe('when a non-string replacement is given', function () {
         it('should throw an error (coercion not yet supported here)', function () {
             expect(function () {
-                this.preg_replace(
-                    this.valueFactory.createString('/my pattern/'),
-                    this.valueFactory.createInteger(1001),
-                    this.valueFactory.createString('my subject'),
+                preg_replace(
+                    valueFactory.createString('/my pattern/'),
+                    valueFactory.createInteger(1001),
+                    valueFactory.createString('my subject'),
                     sinon.createStubInstance(Variable)
                 );
-            }.bind(this)).to.throw('preg_replace(): Non-array/string replacement not yet supported');
+            }).to.throw('preg_replace(): Non-array/string replacement not yet supported');
         });
     });
 
     describe('when a non-string subject is given', function () {
         it('should throw an error (coercion not yet supported here)', function () {
             expect(function () {
-                this.preg_replace(
-                    this.valueFactory.createString('/my pattern/'),
-                    this.valueFactory.createString('my replacement'),
-                    this.valueFactory.createInteger(1001),
+                preg_replace(
+                    valueFactory.createString('/my pattern/'),
+                    valueFactory.createString('my replacement'),
+                    valueFactory.createInteger(1001),
                     sinon.createStubInstance(Variable)
                 );
-            }.bind(this)).to.throw('preg_replace(): Non-array/string subject not yet supported');
+            }).to.throw('preg_replace(): Non-array/string subject not yet supported');
         });
     });
 
     describe('when an invalid regex is given', function () {
-        beforeEach(function () {
-            this.patternReference = sinon.createStubInstance(Variable);
-            this.replacementReference = sinon.createStubInstance(Variable);
-            this.subjectReference = sinon.createStubInstance(Variable);
-            this.patternReference.getValue.returns(this.valueFactory.createString('/? invalid regex/'));
-            this.replacementReference.getValue.returns(this.valueFactory.createString('some replacement'));
-            this.subjectReference.getValue.returns(this.valueFactory.createString('some subject'));
+        var doCall,
+            patternReference,
+            replacementReference,
+            resultValue,
+            subjectReference;
 
-            this.doCall = function () {
-                this.resultValue = this.preg_replace(
-                    this.patternReference,
-                    this.replacementReference,
-                    this.subjectReference
+        beforeEach(function () {
+            patternReference = sinon.createStubInstance(Variable);
+            replacementReference = sinon.createStubInstance(Variable);
+            subjectReference = sinon.createStubInstance(Variable);
+            patternReference.getValue.returns(valueFactory.createString('/? invalid regex/'));
+            replacementReference.getValue.returns(valueFactory.createString('some replacement'));
+            subjectReference.getValue.returns(valueFactory.createString('some subject'));
+
+            doCall = function () {
+                resultValue = preg_replace(
+                    patternReference,
+                    replacementReference,
+                    subjectReference
                 );
-            }.bind(this);
+            };
         });
 
         it('should raise a warning', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 'Warning',
                 'preg_replace(): Compilation failed [Uniter]: only basic-level preg support is enabled, ' +
                 '"/? invalid regex/" may be a valid but unsupported PCRE regex. ' +
@@ -179,114 +200,132 @@ describe('PHP "preg_replace" basic-level builtin function', function () {
         });
 
         it('should return null', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.resultValue.getType()).to.equal('null');
+            expect(resultValue.getType()).to.equal('null');
         });
     });
 
     describe('when no ending delimiter is given', function () {
-        beforeEach(function () {
-            this.patternReference = sinon.createStubInstance(Variable);
-            this.replacementReference = sinon.createStubInstance(Variable);
-            this.subjectReference = sinon.createStubInstance(Variable);
-            this.patternReference.getValue.returns(this.valueFactory.createString('@invalid preg pattern'));
-            this.replacementReference.getValue.returns(this.valueFactory.createString('some replacement'));
-            this.subjectReference.getValue.returns(this.valueFactory.createString('some subject'));
+        var doCall,
+            patternReference,
+            replacementReference,
+            resultValue,
+            subjectReference;
 
-            this.doCall = function () {
-                this.resultValue = this.preg_replace(
-                    this.patternReference,
-                    this.replacementReference,
-                    this.subjectReference
+        beforeEach(function () {
+            patternReference = sinon.createStubInstance(Variable);
+            replacementReference = sinon.createStubInstance(Variable);
+            subjectReference = sinon.createStubInstance(Variable);
+            patternReference.getValue.returns(valueFactory.createString('@invalid preg pattern'));
+            replacementReference.getValue.returns(valueFactory.createString('some replacement'));
+            subjectReference.getValue.returns(valueFactory.createString('some subject'));
+
+            doCall = function () {
+                resultValue = preg_replace(
+                    patternReference,
+                    replacementReference,
+                    subjectReference
                 );
-            }.bind(this);
+            };
         });
 
         it('should raise a warning', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 'Warning',
                 'preg_replace(): No ending delimiter \'@\' found'
             );
         });
 
         it('should return null', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.resultValue.getType()).to.equal('null');
+            expect(resultValue.getType()).to.equal('null');
         });
     });
 
     describe('when an unknown modifier is given', function () {
-        beforeEach(function () {
-            this.patternReference = sinon.createStubInstance(Variable);
-            this.replacementReference = sinon.createStubInstance(Variable);
-            this.subjectReference = sinon.createStubInstance(Variable);
-            this.patternReference.getValue.returns(this.valueFactory.createString('/invalid preg modifier/a'));
-            this.replacementReference.getValue.returns(this.valueFactory.createString('some replacement'));
-            this.subjectReference.getValue.returns(this.valueFactory.createString('some subject'));
+        var doCall,
+            patternReference,
+            replacementReference,
+            resultValue,
+            subjectReference;
 
-            this.doCall = function () {
-                this.resultValue = this.preg_replace(
-                    this.patternReference,
-                    this.replacementReference,
-                    this.subjectReference
+        beforeEach(function () {
+            patternReference = sinon.createStubInstance(Variable);
+            replacementReference = sinon.createStubInstance(Variable);
+            subjectReference = sinon.createStubInstance(Variable);
+            patternReference.getValue.returns(valueFactory.createString('/invalid preg modifier/a'));
+            replacementReference.getValue.returns(valueFactory.createString('some replacement'));
+            subjectReference.getValue.returns(valueFactory.createString('some subject'));
+
+            doCall = function () {
+                resultValue = preg_replace(
+                    patternReference,
+                    replacementReference,
+                    subjectReference
                 );
-            }.bind(this);
+            };
         });
 
         it('should raise a warning', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 'Warning',
                 'preg_replace(): Unknown modifier \'a\''
             );
         });
 
         it('should return null', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.resultValue.getType()).to.equal('null');
+            expect(resultValue.getType()).to.equal('null');
         });
     });
 
     describe('when the invalid, implicit global match modifier "g" is given', function () {
-        beforeEach(function () {
-            this.patternReference = sinon.createStubInstance(Variable);
-            this.replacementReference = sinon.createStubInstance(Variable);
-            this.subjectReference = sinon.createStubInstance(Variable);
-            this.patternReference.getValue.returns(this.valueFactory.createString('/invalid preg modifier/g'));
-            this.replacementReference.getValue.returns(this.valueFactory.createString('some replacement'));
-            this.subjectReference.getValue.returns(this.valueFactory.createString('some subject'));
+        var doCall,
+            patternReference,
+            replacementReference,
+            resultValue,
+            subjectReference;
 
-            this.doCall = function () {
-                this.resultValue = this.preg_replace(
-                    this.patternReference,
-                    this.replacementReference,
-                    this.subjectReference
+        beforeEach(function () {
+            patternReference = sinon.createStubInstance(Variable);
+            replacementReference = sinon.createStubInstance(Variable);
+            subjectReference = sinon.createStubInstance(Variable);
+            patternReference.getValue.returns(valueFactory.createString('/invalid preg modifier/g'));
+            replacementReference.getValue.returns(valueFactory.createString('some replacement'));
+            subjectReference.getValue.returns(valueFactory.createString('some subject'));
+
+            doCall = function () {
+                resultValue = preg_replace(
+                    patternReference,
+                    replacementReference,
+                    subjectReference
                 );
-            }.bind(this);
+            };
         });
 
         it('should raise a warning', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 'Warning',
                 'preg_replace(): Unknown modifier \'g\''
             );
         });
 
         it('should return null', function () {
-            this.doCall();
+            doCall();
 
-            expect(this.resultValue.getType()).to.equal('null');
+            expect(resultValue.getType()).to.equal('null');
         });
     });
 });

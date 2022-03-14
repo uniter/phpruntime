@@ -12,6 +12,7 @@
 var expect = require('chai').expect,
     sinon = require('sinon'),
     functionHandlingFunctionFactory = require('../../../../../src/builtin/functions/functionHandling'),
+    tools = require('../../../tools'),
     CallbackValue = require('../../../../../src/builtin/functions/functionHandling/CallbackValue'),
     CallStack = require('phpcore/src/CallStack'),
     IntegerValue = require('phpcore/src/Value/Integer').sync(),
@@ -19,37 +20,48 @@ var expect = require('chai').expect,
     NullValue = require('phpcore/src/Value/Null').sync(),
     ObjectValue = require('phpcore/src/Value/Object').sync(),
     PHPError = require('phpcommon').PHPError,
-    ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
 describe('PHP "call_user_func" builtin function', function () {
+    var argumentReferences,
+        callbackReference,
+        callbackValue,
+        callStack,
+        call_user_func,
+        callUserFunc,
+        functionHandlingFunctions,
+        globalNamespace,
+        internals,
+        valueFactory;
+
     beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.valueFactory = new ValueFactory();
-        this.globalNamespace = sinon.createStubInstance(Namespace);
-        this.internals = {
-            callStack: this.callStack,
-            globalNamespace: this.globalNamespace,
-            valueFactory: this.valueFactory
+        callStack = sinon.createStubInstance(CallStack);
+        valueFactory = tools.createIsolatedState().getValueFactory();
+        globalNamespace = sinon.createStubInstance(Namespace);
+        internals = {
+            callStack: callStack,
+            globalNamespace: globalNamespace,
+            valueFactory: valueFactory
         };
-        this.functionHandlingFunctions = functionHandlingFunctionFactory(this.internals);
-        this.call_user_func = this.functionHandlingFunctions.call_user_func;
-        this.callbackReference = sinon.createStubInstance(Variable);
-        this.callbackValue = sinon.createStubInstance(ObjectValue);
-        this.argumentReferences = [];
+        functionHandlingFunctions = functionHandlingFunctionFactory(internals);
+        call_user_func = functionHandlingFunctions.call_user_func;
+        callbackReference = sinon.createStubInstance(Variable);
+        callbackValue = sinon.createStubInstance(ObjectValue);
+        argumentReferences = [];
 
-        this.callbackReference.getValue.returns(this.callbackValue);
-        this.callbackValue.getCallableName.withArgs(this.globalNamespace).returns('myFunc');
+        callbackReference.getValue.returns(callbackValue);
+        callbackValue.call.returns(valueFactory.createNull());
+        callbackValue.getCallableName.withArgs(globalNamespace).returns('myFunc');
 
-        this.callUserFunc = function () {
-            return this.call_user_func.apply(null, [this.callbackReference].concat(this.argumentReferences));
-        }.bind(this);
+        callUserFunc = function () {
+            return call_user_func.apply(null, [callbackReference].concat(argumentReferences));
+        };
     });
 
     it('should call the callback value once', function () {
-        this.callUserFunc();
+        callUserFunc();
 
-        expect(this.callbackValue.call).to.have.been.calledOnce;
+        expect(callbackValue.call).to.have.been.calledOnce;
     });
 
     it('should call the function with the resolved arguments passed as CallbackValues', function () {
@@ -59,87 +71,98 @@ describe('PHP "call_user_func" builtin function', function () {
             argumentValue2 = sinon.createStubInstance(IntegerValue);
         argumentReference1.getValue.returns(argumentValue1);
         argumentReference2.getValue.returns(argumentValue2);
-        this.argumentReferences[0] = argumentReference1;
-        this.argumentReferences[1] = argumentReference2;
+        argumentReferences[0] = argumentReference1;
+        argumentReferences[1] = argumentReference2;
 
-        this.callUserFunc();
+        callUserFunc();
 
-        expect(this.callbackValue.call.args[0][0][0]).to.be.an.instanceof(CallbackValue);
-        expect(this.callbackValue.call.args[0][0][0].getValue()).to.equal(argumentValue1);
-        expect(this.callbackValue.call.args[0][0][1]).to.be.an.instanceof(CallbackValue);
-        expect(this.callbackValue.call.args[0][0][1].getValue()).to.equal(argumentValue2);
+        expect(callbackValue.call.args[0][0][0]).to.be.an.instanceof(CallbackValue);
+        expect(callbackValue.call.args[0][0][0].getValue()).to.equal(argumentValue1);
+        expect(callbackValue.call.args[0][0][1]).to.be.an.instanceof(CallbackValue);
+        expect(callbackValue.call.args[0][0][1].getValue()).to.equal(argumentValue2);
     });
 
     it('should call the function with the global namespace', function () {
-        this.callUserFunc();
+        callUserFunc();
 
-        expect(this.callbackValue.call).to.have.been.calledWith(
+        expect(callbackValue.call).to.have.been.calledWith(
             sinon.match.any,
-            this.globalNamespace
+            globalNamespace
         );
     });
 
     it('should return the result of the call', function () {
-        var resultValue = sinon.createStubInstance(IntegerValue);
-        this.callbackValue.call.returns(resultValue);
+        var resultValue = valueFactory.createInteger(21);
+        callbackValue.call.returns(resultValue);
 
-        expect(this.callUserFunc()).to.equal(resultValue);
+        expect(callUserFunc()).to.equal(resultValue);
     });
 
     it('should allow errors from .call(...) to go up the call stack', function () {
-        this.callbackValue.call.throws(new Error('My custom error'));
+        callbackValue.call.throws(new Error('My custom error'));
 
         expect(function () {
-            this.callUserFunc();
-        }.bind(this)).to.throw('My custom error');
+            callUserFunc();
+        }).to.throw('My custom error');
     });
 
     describe('when an argument is expected to be passed by reference', function () {
+        var argumentReference1,
+            argumentReference2,
+            argumentValue1,
+            argumentValue2;
+
         beforeEach(function () {
-            this.argumentReference1 = sinon.createStubInstance(Variable);
-            this.argumentValue1 = sinon.createStubInstance(IntegerValue);
-            this.argumentReference2 = sinon.createStubInstance(Variable);
-            this.argumentValue2 = sinon.createStubInstance(IntegerValue);
-            this.argumentReference1.getValue.returns(this.argumentValue1);
-            this.argumentReference2.getValue.returns(this.argumentValue2);
-            this.argumentReferences[0] = this.argumentReference1;
-            this.argumentReferences[1] = this.argumentReference2;
+            argumentReference1 = sinon.createStubInstance(Variable);
+            argumentValue1 = sinon.createStubInstance(IntegerValue);
+            argumentReference2 = sinon.createStubInstance(Variable);
+            argumentValue2 = sinon.createStubInstance(IntegerValue);
+            argumentReference1.getValue.returns(argumentValue1);
+            argumentReference2.getValue.returns(argumentValue2);
+            argumentReferences[0] = argumentReference1;
+            argumentReferences[1] = argumentReference2;
         });
 
         it('should raise a warning when attempting to fetch the reference of the first argument', function () {
-            this.callbackValue.call.callsFake(function (argumentReferences) {
-                argumentReferences[0].getReference();
+            callbackValue.call.callsFake(function (argumentReferences) {
+                return valueFactory.createFuture(function (resolve) {
+                    resolve(argumentReferences[0].getReference());
+                });
             });
 
-            this.callUserFunc();
+            callUserFunc();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 PHPError.E_WARNING,
                 'Parameter 1 to myFunc() expected to be a reference, value given'
             );
         });
 
         it('should raise a warning when attempting to fetch the reference of the second argument', function () {
-            this.callbackValue.call.callsFake(function (argumentReferences) {
-                argumentReferences[1].getReference();
+            callbackValue.call.callsFake(function (argumentReferences) {
+                return valueFactory.createFuture(function (resolve) {
+                    resolve(argumentReferences[1].getReference());
+                });
             });
 
-            this.callUserFunc();
+            callUserFunc();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 PHPError.E_WARNING,
                 'Parameter 2 to myFunc() expected to be a reference, value given'
             );
         });
 
-        it('should return NULL', function () {
-            this.callbackValue.call.callsFake(function (argumentReferences) {
-                argumentReferences[0].getReference();
+        it('should return FutureValue<NullValue>', function () {
+            callbackValue.call.callsFake(function (argumentReferences) {
+                return valueFactory.createFuture(function (resolve) {
+                    resolve(argumentReferences[0].getReference());
+                });
             });
 
-            expect(this.callUserFunc()).to.be.an.instanceOf(NullValue);
+            expect(callUserFunc().yieldSync()).to.be.an.instanceOf(NullValue);
         });
     });
 });

@@ -11,7 +11,6 @@
 
 var _ = require('microdash'),
     builtins = require('../../src/builtin/builtins'),
-    pausable = require('pausable'),
     phpToAST = require('phptoast'),
     phpToJS = require('phptojs'),
     runtimeFactory = require('phpcore/src/shared/runtimeFactory'),
@@ -55,7 +54,7 @@ var _ = require('microdash'),
 module.exports = {
     createAsyncRuntime: function () {
         // Create an isolated runtime we can install builtins into without affecting the main singleton one
-        var runtime = runtimeFactory.create('async', pausable);
+        var runtime = runtimeFactory.create('async');
 
         // Install the standard set of builtins
         runtime.install(builtins);

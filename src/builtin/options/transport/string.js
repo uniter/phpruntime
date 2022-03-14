@@ -70,10 +70,19 @@ module.exports = function (internals) {
             var subPromise = {
                 reject: promise.reject,
                 resolve: function (result) {
+                    var compiledModule;
+
                     // Support include transports that return PHP code strings
                     // by transpiling them before passing back to the core
                     if (typeof result === 'string') {
-                        promise.resolve(transpile(result, path));
+                        try {
+                            compiledModule = transpile(result, path);
+                        } catch (error) {
+                            promise.reject(error);
+                            return;
+                        }
+
+                        promise.resolve(compiledModule);
                         return;
                     }
 

@@ -12,79 +12,83 @@
 var expect = require('chai').expect,
     arrayExtension = require('../../../../../src/builtin/functions/array'),
     sinon = require('sinon'),
+    tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
     KeyValuePair = require('phpcore/src/KeyValuePair'),
-    ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
 describe('PHP "array_key_exists" builtin function', function () {
-    beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.valueFactory = new ValueFactory();
+    var array_key_exists,
+        callStack,
+        valueFactory;
 
-        this.array_key_exists = arrayExtension({
-            callStack: this.callStack,
-            valueFactory: this.valueFactory
+    beforeEach(function () {
+        callStack = sinon.createStubInstance(CallStack);
+        valueFactory = tools.createIsolatedState().getValueFactory();
+
+        array_key_exists = arrayExtension({
+            callStack: callStack,
+            valueFactory: valueFactory
         }).array_key_exists;
     });
 
     it('should return bool(true) when the element is defined', function () {
-        var keyReference = new Variable(this.callStack, this.valueFactory, 'keyVar'),
-            arrayReference = new Variable(this.callStack, this.valueFactory, 'arrayVar'),
+        var keyReference = new Variable(callStack, valueFactory, 'keyVar'),
+            arrayReference = new Variable(callStack, valueFactory, 'arrayVar'),
             result;
-        keyReference.setValue(this.valueFactory.createString('my_key'));
-        arrayReference.setValue(this.valueFactory.createArray([
+        keyReference.setValue(valueFactory.createString('my_key'));
+        arrayReference.setValue(valueFactory.createArray([
             new KeyValuePair(
-                this.valueFactory.createString('my_key'),
-                this.valueFactory.createString('My value')
+                valueFactory.createString('my_key'),
+                valueFactory.createString('My value')
             ),
             new KeyValuePair(
-                this.valueFactory.createString('your_key'),
-                this.valueFactory.createString('Your value')
+                valueFactory.createString('your_key'),
+                valueFactory.createString('Your value')
             )
         ]));
 
-        result = this.array_key_exists(keyReference, arrayReference);
+        result = array_key_exists(keyReference, arrayReference);
 
         expect(result.getType()).to.equal('boolean');
         expect(result.getNative()).to.be.true;
     });
 
     it('should return bool(true) when the element is defined but with a value of null', function () {
-        var keyReference = new Variable(this.callStack, this.valueFactory, 'keyVar'),
-            arrayReference = new Variable(this.callStack, this.valueFactory, 'arrayVar'),
+        var keyReference = new Variable(callStack, valueFactory, 'keyVar'),
+            arrayReference = new Variable(callStack, valueFactory, 'arrayVar'),
             result;
-        keyReference.setValue(this.valueFactory.createString('my_key'));
-        arrayReference.setValue(this.valueFactory.createArray([
+        keyReference.setValue(valueFactory.createString('my_key'));
+        arrayReference.setValue(valueFactory.createArray([
             new KeyValuePair(
-                this.valueFactory.createString('my_key'),
-                this.valueFactory.createNull()
+                valueFactory.createString('my_key'),
+                valueFactory.createNull()
             ),
             new KeyValuePair(
-                this.valueFactory.createString('your_key'),
-                this.valueFactory.createString('Your value')
+                valueFactory.createString('your_key'),
+                valueFactory.createString('Your value')
             )
         ]));
 
-        result = this.array_key_exists(keyReference, arrayReference);
+        result = array_key_exists(keyReference, arrayReference);
 
         expect(result.getType()).to.equal('boolean');
         expect(result.getNative()).to.be.true;
     });
 
     it('should return bool(false) when the element is not defined', function () {
-        var keyReference = new Variable(this.callStack, this.valueFactory, 'keyVar'),
-            arrayReference = new Variable(this.callStack, this.valueFactory, 'arrayVar'),
+        var keyReference = new Variable(callStack, valueFactory, 'keyVar'),
+            arrayReference = new Variable(callStack, valueFactory, 'arrayVar'),
             result;
-        keyReference.setValue(this.valueFactory.createString('some_undefined_key'));
-        arrayReference.setValue(this.valueFactory.createArray([
+        keyReference.setValue(valueFactory.createString('some_undefined_key'));
+        arrayReference.setValue(valueFactory.createArray([
             new KeyValuePair(
-                this.valueFactory.createString('my_key'),
-                this.valueFactory.createString('My value')
+                valueFactory.createString('my_key'),
+                valueFactory.createString('My value')
             )
         ]));
 
-        result = this.array_key_exists(keyReference, arrayReference);
+        result = array_key_exists(keyReference, arrayReference);
 
         expect(result.getType()).to.equal('boolean');
         expect(result.getNative()).to.be.false;

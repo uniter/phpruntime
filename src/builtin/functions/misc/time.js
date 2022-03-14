@@ -14,8 +14,9 @@ var phpCommon = require('phpcommon'),
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
+        mode = internals.mode,
         optionSet = internals.optionSet,
-        pausable = internals.pausable;
+        valueFactory = internals.valueFactory;
 
     function getPerformance() {
         var performance = optionSet.getOption('performance');
@@ -31,18 +32,18 @@ module.exports = function (internals) {
         /**
          * Pauses execution for the specified number of microseconds.
          * Note that in async mode, this will be implemented by pausing execution
-         * via Pausable and setting a timeout to later resume.
+         * via the Futures/async functionality in PHPCore and setting a timeout to later resume.
          * In (p)sync mode, an (inefficient!) busy wait loop is used to perform the wait.
          * Relying on the busy-wait version is not recommended for production usage!
          *
          * @see {@link https://secure.php.net/manual/en/function.usleep.php}
          *
          * @param {Variable|Value} microsecondsReference
+         * @returns {FutureValue|undefined}
          */
         'usleep': function (microsecondsReference) {
             var endMicroseconds,
                 microsecondsValue = microsecondsReference.getValue(),
-                pause,
                 performance;
 
             if (microsecondsValue.getType() !== 'int' && microsecondsValue.getType() !== 'float') {
@@ -54,25 +55,23 @@ module.exports = function (internals) {
                 return;
             }
 
-            if (pausable) {
+            if (mode === 'async') {
                 // Efficient version, if we're using async mode
 
-                pause = pausable.createPause();
+                return valueFactory.createFuture(function (resolve) {
+                    setTimeout(function () {
+                        resolve();
+                    }, microsecondsValue.getNative() / 1000);
+                });
+            }
 
-                setTimeout(function () {
-                    pause.resume();
-                }, microsecondsValue.getNative() / 1000);
+            // Inefficient version, if we're in (p)sync mode
 
-                pause.now();
-            } else {
-                // Inefficient version, if we're in (p)sync mode
+            performance = getPerformance();
+            endMicroseconds = performance.getTimeInMicroseconds() + microsecondsValue.getNative();
 
-                performance = getPerformance();
-                endMicroseconds = performance.getTimeInMicroseconds() + microsecondsValue.getNative();
-
-                while (performance.getTimeInMicroseconds() < endMicroseconds) { //jshint ignore:line
-                    // Busy wait
-                }
+            while (performance.getTimeInMicroseconds() < endMicroseconds) { //jshint ignore:line
+                // Busy wait
             }
         }
     };

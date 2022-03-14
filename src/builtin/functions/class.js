@@ -90,7 +90,7 @@ module.exports = function (internals) {
          * @param {Variable|Value} objectReference
          * @param {Variable|Value} classNameReference
          * @param {Variable|Value} allowStringReference
-         * @returns {BooleanValue}
+         * @returns {BooleanValue|FutureValue<BooleanValue>}
          */
         'is_a': function (objectReference, classNameReference, allowStringReference) {
             var allowString,
@@ -114,9 +114,19 @@ module.exports = function (internals) {
                     return valueFactory.createBoolean(false);
                 }
 
-                return valueFactory.createBoolean(
-                    globalNamespace.getClass(objectValue.getNative()).is(className)
-                );
+                // Fetch a Future that will resolve to the Class
+                var classFuture = globalNamespace.getClass(objectValue.getNative());
+
+                // Wrap the result as a FutureValue and not a Future
+                return valueFactory.createFuture(function (resolve, reject) {
+                    classFuture.next(
+                        function (classObject) {
+                            resolve(valueFactory.createBoolean(classObject.is(className)));
+                        },
+                        reject
+                    );
+                });
+
             }
 
             // Invalid "object" given - just return false (no warning/notice)

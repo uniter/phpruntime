@@ -9,8 +9,7 @@
 
 'use strict';
 
-var _ = require('microdash'),
-    hasOwn = {}.hasOwnProperty,
+var hasOwn = {}.hasOwnProperty,
     phpCommon = require('phpcommon'),
     MAX_DUMPS = 20000,
     MAX_RECURSION_DEPTH = 5,
@@ -19,6 +18,8 @@ var _ = require('microdash'),
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
+        flow = internals.flow,
+        futureFactory = internals.futureFactory,
         globalNamespace = internals.globalNamespace,
         output = internals.output,
         valueFactory = internals.valueFactory;
@@ -85,7 +86,7 @@ module.exports = function (internals) {
          * @param {Reference|Value|Variable} valueReference
          * @param {BooleanValue|Reference|Variable=} syntaxOnlyReference
          * @param {Reference|Variable=} callableNameReference
-         * @returns {BooleanValue}
+         * @returns {FutureValue<BooleanValue>}
          */
         'is_callable': function (valueReference, syntaxOnlyReference, callableNameReference) {
             var syntaxOnly = syntaxOnlyReference && syntaxOnlyReference.getValue().getNative(),
@@ -99,7 +100,8 @@ module.exports = function (internals) {
                 throw new Error('is_callable() :: callable_name is not supported');
             }
 
-            return valueFactory.createBoolean(value.isCallable(globalNamespace));
+            return value.isCallable(globalNamespace)
+                .asValue();
         },
 
         'is_float': createTypeChecker('is_float', 'float'),
@@ -262,13 +264,16 @@ module.exports = function (internals) {
                     nativeLength,
                     nativeValue,
                     nextIndentation = new Array(depth + 1).join('  '),
-                    representation = currentIndentation;
+                    representationFuture = futureFactory.createPresent(currentIndentation);
 
                 dumps++;
 
                 if (depth > MAX_RECURSION_DEPTH || dumps > MAX_DUMPS) {
-                    representation += '*RECURSION*';
-                    return representation + '\n';
+                    // We've not detected any circular references, but the depth or number of dumps
+                    // has exceeded our hardcoded limits so bail out.
+                    representationFuture = representationFuture.concatString('*RECURSION*');
+
+                    return representationFuture.concatString('\n');
                 }
 
                 if (value.getType() === 'array') {
@@ -276,10 +281,10 @@ module.exports = function (internals) {
 
                     if (arraysEncountered.indexOf(nativeValue) > -1) {
                         // Within the current branch of values being dumped, we've already
-                        // dumped this array - bail out to avoid infinite recursion
-                        representation += '*RECURSION*';
+                        // dumped this array - bail out to avoid infinite recursion.
+                        representationFuture = representationFuture.concatString('*RECURSION*');
 
-                        return representation + '\n';
+                        return representationFuture.concatString('\n');
                     }
 
                     if (depth > 1) {
@@ -287,78 +292,102 @@ module.exports = function (internals) {
                     }
 
                     if (isReference) {
-                        representation += '&';
+                        representationFuture = representationFuture.concatString('&');
                     }
 
-                    representation += 'array(' + value.getLength() + ') {\n';
+                    representationFuture = representationFuture.concatString('array(' + value.getLength() + ') {\n');
 
-                    _.each(value.getKeys(), function (key) {
-                        var element = value.getElementByKey(key),
-                            elementRepresentation;
+                    representationFuture = representationFuture.next(function (previousText) {
+                        return flow.mapAsync(value.getKeys(), function (key) {
+                            var element = value.getElementByKey(key);
 
-                        elementRepresentation = dump(
-                            element.getValue(),
-                            depth + 1,
-                            element.isReference(),
-                            arraysEncountered.slice()
-                        );
-
-                        representation += nextIndentation +
-                            '[' +
-                            JSON.stringify(key.getNative()) +
-                            ']=>\n' +
-                            elementRepresentation;
+                            return element.getValue().asFuture().next(function (elementValue) {
+                                return dump(
+                                    elementValue,
+                                    depth + 1,
+                                    element.isReference(),
+                                    arraysEncountered.slice()
+                                );
+                            }).next(function (elementRepresentation) {
+                                return nextIndentation +
+                                    '[' +
+                                    JSON.stringify(key.getNative()) +
+                                    ']=>\n' +
+                                    elementRepresentation;
+                            });
+                        }).next(function (elementTexts) {
+                            return previousText + elementTexts.join('');
+                        });
                     });
 
-                    representation += currentIndentation + '}';
+                    representationFuture = representationFuture.concatString(currentIndentation + '}');
                 } else if (value.getType() === 'object') {
                     if (hasOwn.call(objectIDHash, value.getID())) {
-                        representation += '*RECURSION*';
-                        return representation + '\n';
+                        representationFuture = representationFuture.concatString('*RECURSION*');
+
+                        return representationFuture.concatString('\n');
                     }
 
                     if (isReference) {
-                        representation += '&';
+                        representationFuture = representationFuture.concatString('&');
                     }
 
                     names = value.getInstancePropertyNames();
 
-                    representation += 'object(' + value.getClassName() + ')#' + value.getID() + ' (' + names.length + ') {\n';
+                    representationFuture = representationFuture.concatString(
+                        // ObjectValues have their unique ID shown.
+                        'object(' + value.getClassName() + ')#' + value.getID() + ' (' + names.length + ') {\n'
+                    );
 
                     objectIDHash[value.getID()] = true;
 
-                    _.each(names, function (nameValue) {
-                        var property = value.getInstancePropertyByName(nameValue);
-                        representation += nextIndentation +
-                            '[' +
-                            JSON.stringify(nameValue.getNative()) +
-                            ']=>\n' +
-                            dump(
-                                property.getValue(),
-                                depth + 1,
-                                property.isReference(),
-                                arraysEncountered.slice()
-                            );
+                    representationFuture = representationFuture.next(function (previousText) {
+                        return flow.mapAsync(names, function (nameValue) {
+                            var property = value.getInstancePropertyByName(nameValue);
+
+                            return property.getValue().asFuture().next(function (propertyValue) {
+                                return dump(
+                                    propertyValue,
+                                    depth + 1,
+                                    property.isReference(),
+                                    arraysEncountered.slice()
+                                );
+                            }).next(function (propertyRepresentation) {
+                                return nextIndentation +
+                                    '[' +
+                                    JSON.stringify(nameValue.getNative()) +
+                                    ']=>\n' +
+                                    propertyRepresentation;
+                            });
+                        }).next(function (propertyTexts) {
+                            return previousText + propertyTexts.join('');
+                        });
                     });
 
-                    representation += currentIndentation + '}';
+                    representationFuture = representationFuture.concatString(currentIndentation + '}');
                 } else {
                     if (isReference) {
-                        representation += '&';
+                        representationFuture = representationFuture.concatString('&');
                     }
 
                     switch (value.getType()) {
                     case 'boolean':
-                        representation += 'bool(' + (value.getNative() ? 'true' : 'false') + ')';
+                        representationFuture = representationFuture.concatString(
+                            'bool(' + (value.getNative() ? 'true' : 'false') + ')'
+                        );
                         break;
                     case 'float':
-                        representation += 'float(' + value.getNative() + ')';
+                        representationFuture = representationFuture.concatString(
+                            'float(' + value.getNative() + ')'
+                        );
                         break;
                     case 'int':
-                        representation += 'int(' + value.getNative() + ')';
+                        representationFuture = representationFuture.concatString(
+                            'int(' + value.getNative() + ')'
+                        );
                         break;
                     case 'null':
-                        representation += 'NULL';
+                        representationFuture = representationFuture.concatString('NULL');
                         break;
                     case 'string':
                         nativeValue = value.getNative();
@@ -368,17 +397,21 @@ module.exports = function (internals) {
                             nativeValue = nativeValue.substr(0, MAX_STRING_LENGTH) + '...';
                         }
 
-                        representation += 'string(' + nativeLength + ') "' + nativeValue + '"';
+                        representationFuture = representationFuture.concatString(
+                            'string(' + nativeLength + ') "' + nativeValue + '"'
+                        );
                         break;
                     default:
                         throw new Error('var_dump() :: Unsupported value type "' + value.getType() + '"');
                     }
                 }
 
-                return representation + '\n';
+                return representationFuture.concatString('\n');
             }
 
-            output.write(dump(value, 1, false, []));
+            return dump(value, 1, false, []).next(function (text) {
+                output.write(text);
+            });
         }
     };
 };

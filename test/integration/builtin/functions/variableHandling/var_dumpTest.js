@@ -180,42 +180,7 @@ object(JSObject)#1 (6) {
     ["myOtherSubProp"]=>
     int(21)
     ["recursiveRefToParentObject"]=>
-    object(JSObject)#3 (6) {
-      ["myBoolean"]=>
-      bool(true)
-      ["myFunction"]=>
-      object(JSObject)#4 (0) {
-      }
-      ["myNumber"]=>
-      int(1234)
-      ["myString"]=>
-      string(8) "my value"
-      ["myNestedNonRecursiveObject"]=>
-      array(1) {
-        ["mySubProp"]=>
-        string(17) "my sub prop value"
-      }
-      ["myRecursiveObject"]=>
-      array(2) {
-        ["myOtherSubProp"]=>
-        int(21)
-        ["recursiveRefToParentObject"]=>
-        object(JSObject)#5 (6) {
-          ["myBoolean"]=>
-          *RECURSION*
-          ["myFunction"]=>
-          *RECURSION*
-          ["myNumber"]=>
-          *RECURSION*
-          ["myString"]=>
-          *RECURSION*
-          ["myNestedNonRecursiveObject"]=>
-          *RECURSION*
-          ["myRecursiveObject"]=>
-          *RECURSION*
-        }
-      }
-    }
+    *RECURSION*
   }
 }
 

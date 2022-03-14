@@ -11,6 +11,7 @@
 
 var expect = require('chai').expect,
     sinon = require('sinon'),
+    tools = require('../../../../tools'),
     dateAndTimeFunctionFactory = require('../../../../../../src/builtin/functions/dateAndTime/time'),
     CallStack = require('phpcore/src/CallStack'),
     FloatValue = require('phpcore/src/Value/Float').sync(),
@@ -18,45 +19,56 @@ var expect = require('chai').expect,
     NullValue = require('phpcore/src/Value/Null').sync(),
     PHPError = require('phpcommon').PHPError,
     StringValue = require('phpcore/src/Value/String').sync(),
-    ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
 describe('PHP "microtime" builtin function', function () {
+    var args,
+        callMicrotime,
+        callStack,
+        dateAndTimeFunctions,
+        getAsFloatReference,
+        globalNamespace,
+        internals,
+        microtime,
+        optionSet,
+        performance,
+        valueFactory;
+
     beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.globalNamespace = sinon.createStubInstance(Namespace);
-        this.valueFactory = new ValueFactory();
-        this.performance = {
+        callStack = sinon.createStubInstance(CallStack);
+        globalNamespace = sinon.createStubInstance(Namespace);
+        valueFactory = tools.createIsolatedState().getValueFactory();
+        performance = {
             getTimeInMicroseconds: sinon.stub()
         };
-        this.optionSet = {
+        optionSet = {
             getOption: sinon.stub()
         };
-        this.optionSet.getOption.withArgs('performance').returns(this.performance);
-        this.internals = {
-            callStack: this.callStack,
-            globalNamespace: this.globalNamespace,
-            optionSet: this.optionSet,
-            valueFactory: this.valueFactory
+        optionSet.getOption.withArgs('performance').returns(performance);
+        internals = {
+            callStack: callStack,
+            globalNamespace: globalNamespace,
+            optionSet: optionSet,
+            valueFactory: valueFactory
         };
-        this.dateAndTimeFunctions = dateAndTimeFunctionFactory(this.internals);
-        this.microtime = this.dateAndTimeFunctions.microtime;
+        dateAndTimeFunctions = dateAndTimeFunctionFactory(internals);
+        microtime = dateAndTimeFunctions.microtime;
 
-        this.getAsFloatReference = sinon.createStubInstance(Variable);
+        getAsFloatReference = sinon.createStubInstance(Variable);
 
-        this.args = [this.getAsFloatReference];
+        args = [getAsFloatReference];
 
-        this.callMicrotime = function () {
-            return this.microtime.apply(null, this.args);
-        }.bind(this);
+        callMicrotime = function () {
+            return microtime.apply(null, args);
+        };
     });
 
     it('should return the current seconds+us when $get_as_float = true', function () {
         var result;
-        this.performance.getTimeInMicroseconds.returns(123456789);
-        this.getAsFloatReference.getValue.returns(this.valueFactory.createBoolean(true));
+        performance.getTimeInMicroseconds.returns(123456789);
+        getAsFloatReference.getValue.returns(valueFactory.createBoolean(true));
 
-        result = this.callMicrotime();
+        result = callMicrotime();
 
         expect(result).to.be.an.instanceOf(FloatValue);
         expect(result.getNative()).to.equal(123.456789);
@@ -64,10 +76,10 @@ describe('PHP "microtime" builtin function', function () {
 
     it('should return a string with the current seconds and us when $get_as_float = false', function () {
         var result;
-        this.performance.getTimeInMicroseconds.returns(123456789);
-        this.getAsFloatReference.getValue.returns(this.valueFactory.createBoolean(false));
+        performance.getTimeInMicroseconds.returns(123456789);
+        getAsFloatReference.getValue.returns(valueFactory.createBoolean(false));
 
-        result = this.callMicrotime();
+        result = callMicrotime();
 
         expect(result).to.be.an.instanceOf(StringValue);
         expect(result.getNative()).to.equal('0.456789 123');
@@ -75,10 +87,10 @@ describe('PHP "microtime" builtin function', function () {
 
     it('should return a string with the current seconds and us when $get_as_float is not provided', function () {
         var result;
-        this.performance.getTimeInMicroseconds.returns(123456789);
-        this.args.length = 0;
+        performance.getTimeInMicroseconds.returns(123456789);
+        args.length = 0;
 
-        result = this.callMicrotime();
+        result = callMicrotime();
 
         expect(result).to.be.an.instanceOf(StringValue);
         expect(result.getNative()).to.equal('0.456789 123');
@@ -86,61 +98,61 @@ describe('PHP "microtime" builtin function', function () {
 
     describe('when an array is given for $get_as_float', function () {
         beforeEach(function () {
-            this.getAsFloatReference.getValue.returns(this.valueFactory.createArray([21]));
+            getAsFloatReference.getValue.returns(valueFactory.createArray([21]));
         });
 
         it('should raise an error', function () {
-            this.performance.getTimeInMicroseconds.returns(123456789);
+            performance.getTimeInMicroseconds.returns(123456789);
 
-            this.callMicrotime();
+            callMicrotime();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 PHPError.E_WARNING,
                 'microtime() expects parameter 1 to be boolean, array given'
             );
         });
 
         it('should return null', function () {
-            this.performance.getTimeInMicroseconds.returns(123456789);
-            this.getAsFloatReference.getValue.returns(this.valueFactory.createArray([21]));
+            performance.getTimeInMicroseconds.returns(123456789);
+            getAsFloatReference.getValue.returns(valueFactory.createArray([21]));
 
-            expect(this.callMicrotime()).to.be.an.instanceOf(NullValue);
+            expect(callMicrotime()).to.be.an.instanceOf(NullValue);
         });
     });
 
     describe('when an object is given for $get_as_float', function () {
         beforeEach(function () {
-            this.getAsFloatReference.getValue.returns(this.valueFactory.createObject({}, 'MyClass'));
+            getAsFloatReference.getValue.returns(valueFactory.createObject({}, 'MyClass'));
         });
 
         it('should raise an error', function () {
-            this.performance.getTimeInMicroseconds.returns(123456789);
+            performance.getTimeInMicroseconds.returns(123456789);
 
-            this.callMicrotime();
+            callMicrotime();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 PHPError.E_WARNING,
                 'microtime() expects parameter 1 to be boolean, object given'
             );
         });
 
         it('should return null', function () {
-            this.performance.getTimeInMicroseconds.returns(123456789);
-            this.getAsFloatReference.getValue.returns(this.valueFactory.createObject({}, 'MyClass'));
+            performance.getTimeInMicroseconds.returns(123456789);
+            getAsFloatReference.getValue.returns(valueFactory.createObject({}, 'MyClass'));
 
-            expect(this.callMicrotime()).to.be.an.instanceOf(NullValue);
+            expect(callMicrotime()).to.be.an.instanceOf(NullValue);
         });
     });
 
     describe('when no "performance" option is defined', function () {
         it('should throw an error', function () {
-            this.optionSet.getOption.withArgs('performance').returns(null);
+            optionSet.getOption.withArgs('performance').returns(null);
 
             expect(function () {
-                this.callMicrotime();
-            }.bind(this)).to.throw('performance :: No `performance` option is configured');
+                callMicrotime();
+            }).to.throw('performance :: No `performance` option is configured');
         });
     });
 });
