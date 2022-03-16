@@ -18,6 +18,7 @@ var arrayConstants = require('./constants/array'),
     Countable = require('./interfaces/SPL/Countable'),
     environmentFunctions = require('./functions/optionsAndInfo/environment'),
     errorHandlingFunctions = require('./functions/errorHandling'),
+    errorMessages = require('./messages/error.en_GB'),
     extensionOptionsAndInfoFunctions = require('./functions/optionsAndInfo/extension'),
     filesystemConstants = require('./constants/filesystem'),
     filesystemFunctions = require('./functions/filesystem'),
@@ -30,7 +31,10 @@ var arrayConstants = require('./constants/array'),
     pcreConstants = require('./constants/pcre'),
     phpConstants = require('./constants/php'),
     phpOptionsAndInfoFunctions = require('./functions/optionsAndInfo/php'),
+    Serializable = require('./interfaces/SPL/Serializable'),
     splFunctions = require('./functions/spl'),
+    SplDoublyLinkedList = require('./classes/SPL/Datastructures/SplDoublyLinkedList'),
+    SplQueue = require('./classes/SPL/Datastructures/SplQueue'),
     stringBindings = require('./bindings/string'),
     stringConstants = require('./constants/string'),
     stringFunctions = require('./functions/string'),
@@ -45,17 +49,20 @@ module.exports = {
     classGroups: [
         function () {
             return {
-                'Countable': Countable
+                'Countable': Countable,
+                'LogicException': LogicException,
+                'Serializable': Serializable
             };
         },
         function () {
             return {
-                'LogicException': LogicException
+                'SplDoublyLinkedList': SplDoublyLinkedList
             };
         },
         function () {
             return {
-                'InvalidArgumentException': InvalidArgumentException
+                'InvalidArgumentException': InvalidArgumentException,
+                'SplQueue': SplQueue
             };
         }
     ],
@@ -86,5 +93,8 @@ module.exports = {
         timeDateAndTimeFunctions,
         timeFunctions,
         variableHandlingFunctions
+    ],
+    translationCatalogues: [
+        errorMessages
     ]
 };
