@@ -32,14 +32,16 @@ namespace My\Space
     }
 }
 
-$firstObject = new My\Space\FirstClass;
-$secondObject = new My\Space\SecondClass;
+namespace {
+    $firstObject = new My\Space\FirstClass;
+    $secondObject = new My\Space\SecondClass;
 
-$result = [];
-$result[] = get_class($firstObject);
-$result[] = $secondObject->getItsClass();
+    $result = [];
+    $result[] = get_class($firstObject);
+    $result[] = $secondObject->getItsClass();
 
-return $result;
+    return $result;
+}
 EOS
 */;}), //jshint ignore:line
             syncRuntime = tools.createSyncRuntime(),

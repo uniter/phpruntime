@@ -24,21 +24,21 @@
   },
   "dependencies": {
     "microdash": "^1.4.2",
-    "phpcommon": "^2.0.0",
-    "phpcore": "^6.0.1",
-    "regextend": "^1.0.0"
+    "phpcommon": "^2.0.1",
+    "phpcore": "^7.0.0",
+    "regextend": "^1.1.0"
   },
   "devDependencies": {
-    "chai": "^4.2.0",
+    "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
-    "jshint": "^2.12.0",
-    "mocha": "^8.3.0",
-    "mocha-bootstrap": "^1.0.1",
+    "jshint": "^2.13.4",
+    "mocha": "^9.2.2",
+    "mocha-bootstrap": "^1.0.2",
     "nowdoc": "^1.0.1",
-    "phptoast": "^8.0.0",
-    "phptojs": "^8.1.0",
-    "sinon": "^9.2.4",
-    "sinon-chai": "^3.5.0"
+    "phptoast": "^9.0.0",
+    "phptojs": "^9.0.0",
+    "sinon": "^13.0.1",
+    "sinon-chai": "^3.7.0"
   },
   "engines": {
     "node": ">=0.6"

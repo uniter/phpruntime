@@ -12,8 +12,8 @@
 var expect = require('chai').expect,
     basicSupportExtension = require('../../../../../../src/builtin/functions/pcre/basicSupport'),
     sinon = require('sinon'),
+    tools = require('../../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
 describe('PHP "preg_match" basic-level builtin function', function () {
@@ -25,7 +25,7 @@ describe('PHP "preg_match" basic-level builtin function', function () {
     beforeEach(function () {
         callStack = sinon.createStubInstance(CallStack);
         getConstant = sinon.stub();
-        valueFactory = new ValueFactory();
+        valueFactory = tools.createIsolatedState().getValueFactory();
 
         getConstant.withArgs('PREG_OFFSET_CAPTURE').returns(256);
         getConstant.withArgs('PREG_PATTERN_ORDER').returns(1);

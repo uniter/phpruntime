@@ -11,6 +11,7 @@
 
 var expect = require('chai').expect,
     sinon = require('sinon'),
+    tools = require('../../../tools'),
     arrayFunctionFactory = require('../../../../../src/builtin/functions/array'),
     ArrayValue = require('phpcore/src/Value/Array').sync(),
     CallStack = require('phpcore/src/CallStack'),
@@ -18,42 +19,50 @@ var expect = require('chai').expect,
     KeyValuePair = require('phpcore/src/KeyValuePair'),
     NullValue = require('phpcore/src/Value/Null').sync(),
     PHPError = require('phpcommon').PHPError,
-    StringValue = require('phpcore/src/Value/String').sync(),
-    ValueFactory = require('phpcore/src/ValueFactory').sync();
+    StringValue = require('phpcore/src/Value/String').sync();
 
 describe('PHP "array_merge" builtin function', function () {
+    var args,
+        arrayFunctions,
+        array_merge,
+        callArrayMerge,
+        callStack,
+        createKeyValuePair,
+        internals,
+        valueFactory;
+
     beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.valueFactory = new ValueFactory();
-        this.createKeyValuePair = function (key, value) {
+        callStack = sinon.createStubInstance(CallStack);
+        valueFactory = tools.createIsolatedState().getValueFactory();
+        createKeyValuePair = function (key, value) {
             var keyValuePair = sinon.createStubInstance(KeyValuePair);
             keyValuePair.getKey.returns(key);
             keyValuePair.getValue.returns(value);
             return keyValuePair;
         };
-        this.internals = {
-            callStack: this.callStack,
-            valueFactory: this.valueFactory
+        internals = {
+            callStack: callStack,
+            valueFactory: valueFactory
         };
-        this.args = [];
-        this.arrayFunctions = arrayFunctionFactory(this.internals);
-        this.array_merge = this.arrayFunctions.array_merge;
+        args = [];
+        arrayFunctions = arrayFunctionFactory(internals);
+        array_merge = arrayFunctions.array_merge;
 
-        this.callArrayMerge = function () {
-            return this.array_merge.apply(null, this.args);
-        }.bind(this);
+        callArrayMerge = function () {
+            return array_merge.apply(null, args);
+        };
     });
 
     it('should return an array with the merged elements when two indexed arrays are provided', function () {
-        var array1Element1 = this.valueFactory.createInteger(1),
-            array1Element2 = this.valueFactory.createInteger(4),
-            array2Element1 = this.valueFactory.createInteger(7),
-            array2Element2 = this.valueFactory.createInteger(21),
+        var array1Element1 = valueFactory.createInteger(1),
+            array1Element2 = valueFactory.createInteger(4),
+            array2Element1 = valueFactory.createInteger(7),
+            array2Element2 = valueFactory.createInteger(21),
             result;
-        this.args[0] = this.valueFactory.createArray([array1Element1, array1Element2]);
-        this.args[1] = this.valueFactory.createArray([array2Element1, array2Element2]);
+        args[0] = valueFactory.createArray([array1Element1, array1Element2]);
+        args[1] = valueFactory.createArray([array2Element1, array2Element2]);
 
-        result = this.callArrayMerge();
+        result = callArrayMerge();
 
         expect(result).to.be.an.instanceOf(ArrayValue);
         expect(result.getKeys()).to.have.length(4);
@@ -69,25 +78,25 @@ describe('PHP "array_merge" builtin function', function () {
     });
 
     it('should return an array with the merged elements when two associative arrays are provided', function () {
-        var array1Key1 = this.valueFactory.createString('first'),
-            array1Element1 = this.valueFactory.createInteger(1),
-            array1Key2 = this.valueFactory.createString('second'),
-            array1Element2 = this.valueFactory.createInteger(4),
-            array2Key1 = this.valueFactory.createString('third'),
-            array2Element1 = this.valueFactory.createInteger(7),
-            array2Key2 = this.valueFactory.createString('first'), // Overrides first array's
-            array2Element2 = this.valueFactory.createInteger(21),
+        var array1Key1 = valueFactory.createString('first'),
+            array1Element1 = valueFactory.createInteger(1),
+            array1Key2 = valueFactory.createString('second'),
+            array1Element2 = valueFactory.createInteger(4),
+            array2Key1 = valueFactory.createString('third'),
+            array2Element1 = valueFactory.createInteger(7),
+            array2Key2 = valueFactory.createString('first'), // Overrides first array's
+            array2Element2 = valueFactory.createInteger(21),
             result;
-        this.args[0] = this.valueFactory.createArray([
-            this.createKeyValuePair(array1Key1, array1Element1),
-            this.createKeyValuePair(array1Key2, array1Element2)
+        args[0] = valueFactory.createArray([
+            createKeyValuePair(array1Key1, array1Element1),
+            createKeyValuePair(array1Key2, array1Element2)
         ]);
-        this.args[1] = this.valueFactory.createArray([
-            this.createKeyValuePair(array2Key1, array2Element1),
-            this.createKeyValuePair(array2Key2, array2Element2)
+        args[1] = valueFactory.createArray([
+            createKeyValuePair(array2Key1, array2Element1),
+            createKeyValuePair(array2Key2, array2Element2)
         ]);
 
-        result = this.callArrayMerge();
+        result = callArrayMerge();
 
         expect(result).to.be.an.instanceOf(ArrayValue);
         expect(result.getKeys()).to.have.length(3);
@@ -106,17 +115,17 @@ describe('PHP "array_merge" builtin function', function () {
 
     describe('when no arguments are provided', function () {
         it('should raise a warning', function () {
-            this.callArrayMerge();
+            callArrayMerge();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 PHPError.E_WARNING,
                 'array_merge() expects at least 1 parameter, 0 given'
             );
         });
 
         it('should return NULL', function () {
-            var result = this.callArrayMerge();
+            var result = callArrayMerge();
 
             expect(result).to.be.an.instanceOf(NullValue);
         });
@@ -124,22 +133,22 @@ describe('PHP "array_merge" builtin function', function () {
 
     describe('when one of the arguments is not an array', function () {
         beforeEach(function () {
-            this.args[0] = this.valueFactory.createArray([this.valueFactory.createInteger(21)]);
-            this.args[1] = this.valueFactory.createInteger(27);
+            args[0] = valueFactory.createArray([valueFactory.createInteger(21)]);
+            args[1] = valueFactory.createInteger(27);
         });
 
         it('should raise a warning', function () {
-            this.callArrayMerge();
+            callArrayMerge();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 PHPError.E_WARNING,
                 'array_merge(): Argument #2 is not an array'
             );
         });
 
         it('should return NULL', function () {
-            var result = this.callArrayMerge();
+            var result = callArrayMerge();
 
             expect(result).to.be.an.instanceOf(NullValue);
         });

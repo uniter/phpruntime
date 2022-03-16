@@ -13,76 +13,88 @@ var expect = require('chai').expect,
     classExtension = require('../../../../../src/builtin/functions/class'),
     phpCommon = require('phpcommon'),
     sinon = require('sinon'),
+    tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
     Class = require('phpcore/src/Class').sync(),
     ClassAutoloader = require('phpcore/src/ClassAutoloader').sync(),
     Namespace = require('phpcore/src/Namespace').sync(),
     PHPError = phpCommon.PHPError,
     Scope = require('phpcore/src/Scope').sync(),
-    ValueFactory = require('phpcore/src/ValueFactory').sync(),
     Variable = require('phpcore/src/Variable').sync();
 
 describe('PHP "get_class" builtin function', function () {
-    beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.classAutoloader = sinon.createStubInstance(ClassAutoloader);
-        this.globalNamespace = sinon.createStubInstance(Namespace);
-        this.objectReference = sinon.createStubInstance(Variable);
-        this.valueFactory = new ValueFactory();
+    var callStack,
+        classAutoloader,
+        get_class,
+        globalNamespace,
+        objectReference,
+        valueFactory;
 
-        this.get_class = classExtension({
-            callStack: this.callStack,
-            classAutoloader: this.classAutoloader,
-            globalNamespace: this.globalNamespace,
-            valueFactory: this.valueFactory
+    beforeEach(function () {
+        callStack = sinon.createStubInstance(CallStack);
+        classAutoloader = sinon.createStubInstance(ClassAutoloader);
+        globalNamespace = sinon.createStubInstance(Namespace);
+        objectReference = sinon.createStubInstance(Variable);
+        valueFactory = tools.createIsolatedState().getValueFactory();
+
+        get_class = classExtension({
+            callStack: callStack,
+            classAutoloader: classAutoloader,
+            globalNamespace: globalNamespace,
+            valueFactory: valueFactory
         }).get_class;
     });
 
     describe('when no object is given and called inside a class', function () {
+        var callerScope,
+            currentClass;
+
         beforeEach(function () {
-            this.callerScope = sinon.createStubInstance(Scope);
-            this.callStack.getCallerScope.returns(this.callerScope);
+            callerScope = sinon.createStubInstance(Scope);
+            callStack.getCallerScope.returns(callerScope);
 
-            this.currentClass = sinon.createStubInstance(Class);
-            this.callerScope.getCurrentClass.returns(this.currentClass);
+            currentClass = sinon.createStubInstance(Class);
+            callerScope.getCurrentClass.returns(currentClass);
 
-            this.currentClass.getName.returns('My\\Namespaced\\MyClass');
+            currentClass.getName.returns('My\\Namespaced\\MyClass');
         });
 
         it('should return a string with the current object\'s class', function () {
-            var resultValue = this.get_class();
+            var resultValue = get_class();
 
             expect(resultValue.getType()).to.equal('string');
             expect(resultValue.getNative()).to.equal('My\\Namespaced\\MyClass');
         });
 
         it('should not raise any notice', function () {
-            this.get_class();
+            get_class();
 
-            expect(this.callStack.raiseError).not.to.have.been.called;
+            expect(callStack.raiseError).not.to.have.been.called;
         });
     });
 
     describe('when no object is given but called outside a class', function () {
-        beforeEach(function () {
-            this.callerScope = sinon.createStubInstance(Scope);
-            this.callStack.getCallerScope.returns(this.callerScope);
+        var callerScope;
 
-            this.callerScope.getCurrentClass.returns(null);
+        beforeEach(function () {
+            callerScope = sinon.createStubInstance(Scope);
+            callStack.getCallerScope.returns(callerScope);
+
+            callerScope.getCurrentClass.returns(null);
         });
 
         it('should raise a warning', function () {
-            this.get_class();
+            get_class();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 PHPError.E_WARNING,
                 'get_class() called without object from outside a class'
             );
         });
 
         it('should return bool(false)', function () {
-            var result = this.get_class();
+            var result = get_class();
 
             expect(result.getType()).to.equal('boolean');
             expect(result.getNative()).to.be.false;
@@ -90,45 +102,50 @@ describe('PHP "get_class" builtin function', function () {
     });
 
     describe('when an object is given', function () {
+        var classObject,
+            objectValue;
+
         beforeEach(function () {
-            this.classObject = sinon.createStubInstance(Class);
-            this.classObject.getName.returns('My\\Namespaced\\MyClass');
-            this.objectValue = this.valueFactory.createObject({}, this.classObject);
-            this.objectReference.getValue.returns(this.objectValue);
+            classObject = sinon.createStubInstance(Class);
+            classObject.getName.returns('My\\Namespaced\\MyClass');
+            objectValue = valueFactory.createObject({}, classObject);
+            objectReference.getValue.returns(objectValue);
         });
 
         it('should return a string with the given object\'s class', function () {
-            var resultValue = this.get_class(this.objectReference);
+            var resultValue = get_class(objectReference);
 
             expect(resultValue.getType()).to.equal('string');
             expect(resultValue.getNative()).to.equal('My\\Namespaced\\MyClass');
         });
 
         it('should not raise any notice', function () {
-            this.get_class(this.objectReference);
+            get_class(objectReference);
 
-            expect(this.callStack.raiseError).not.to.have.been.called;
+            expect(callStack.raiseError).not.to.have.been.called;
         });
     });
 
     describe('when a string is given as the object', function () {
+        var objectValue;
+
         beforeEach(function () {
-            this.objectValue = this.valueFactory.createString('I am not an object');
-            this.objectReference.getValue.returns(this.objectValue);
+            objectValue = valueFactory.createString('I am not an object');
+            objectReference.getValue.returns(objectValue);
         });
 
         it('should raise a warning', function () {
-            this.get_class(this.objectReference);
+            get_class(objectReference);
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 PHPError.E_WARNING,
                 'get_class() expects parameter 1 to be object, string given'
             );
         });
 
         it('should return bool(false)', function () {
-            var result = this.get_class(this.objectReference);
+            var result = get_class(objectReference);
 
             expect(result.getType()).to.equal('boolean');
             expect(result.getNative()).to.be.false;
@@ -136,23 +153,25 @@ describe('PHP "get_class" builtin function', function () {
     });
 
     describe('when null is given as the object', function () {
+        var objectValue;
+
         beforeEach(function () {
-            this.objectValue = this.valueFactory.createNull();
-            this.objectReference.getValue.returns(this.objectValue);
+            objectValue = valueFactory.createNull();
+            objectReference.getValue.returns(objectValue);
         });
 
         it('should raise a warning', function () {
-            this.get_class(this.objectReference);
+            get_class(objectReference);
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 PHPError.E_WARNING,
                 'get_class() expects parameter 1 to be object, null given'
             );
         });
 
         it('should return bool(false)', function () {
-            var result = this.get_class(this.objectReference);
+            var result = get_class(objectReference);
 
             expect(result.getType()).to.equal('boolean');
             expect(result.getNative()).to.be.false;
