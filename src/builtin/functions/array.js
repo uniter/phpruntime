@@ -233,48 +233,48 @@ module.exports = function (internals) {
                 return valueFactory.createNull();
             }
 
-            _.each(arguments, function (arrayReference, argumentIndex) {
-                var arrayValue = arrayReference.getValue();
-
-                if (arrayValue.getType() !== 'array') {
-                    callStack.raiseError(
-                        PHPError.E_WARNING,
-                        'array_merge(): Argument #' + (argumentIndex + 1) + ' is not an array'
-                    );
-                    returnNull = true;
-                    return false;
-                }
-
-                _.each(arrayValue.getKeys(), function (key) {
-                    var mergedKey,
-                        nativeKey;
-
-                    if (key.isNumeric()) {
-                        nativeKey = nextIndex++;
-                        mergedKey = valueFactory.createInteger(nativeKey);
-                        nativeKeys.push(nativeKey);
-                    } else {
-                        nativeKey = key.getNative();
-                        mergedKey = key;
-
-                        if (!hasOwn.call(nativeKeyToElementMap, nativeKey)) {
-                            nativeKeys.push(nativeKey);
-                        }
+            return flow.eachAsync(arguments, function (arrayReference, argumentIndex) {
+                return arrayReference.getValue().next(function (arrayValue) {
+                    if (arrayValue.getType() !== 'array') {
+                        callStack.raiseError(
+                            PHPError.E_WARNING,
+                            'array_merge(): Argument #' + (argumentIndex + 1) + ' is not an array'
+                        );
+                        returnNull = true;
+                        return false;
                     }
 
-                    nativeKeyToElementMap[nativeKey] = arrayValue.getElementPairByKey(key, mergedKey);
+                    _.each(arrayValue.getKeys(), function (key) {
+                        var mergedKey,
+                            nativeKey;
+
+                        if (key.isNumeric()) {
+                            nativeKey = nextIndex++;
+                            mergedKey = valueFactory.createInteger(nativeKey);
+                            nativeKeys.push(nativeKey);
+                        } else {
+                            nativeKey = key.getNative();
+                            mergedKey = key;
+
+                            if (!hasOwn.call(nativeKeyToElementMap, nativeKey)) {
+                                nativeKeys.push(nativeKey);
+                            }
+                        }
+
+                        nativeKeyToElementMap[nativeKey] = arrayValue.getElementPairByKey(key, mergedKey);
+                    });
                 });
+            }).next(function () {
+                if (returnNull) {
+                    return valueFactory.createNull();
+                }
+
+                mergedElements = _.map(nativeKeys, function (nativeKey) {
+                    return nativeKeyToElementMap[nativeKey];
+                });
+
+                return valueFactory.createArray(mergedElements);
             });
-
-            if (returnNull) {
-                return valueFactory.createNull();
-            }
-
-            mergedElements = _.map(nativeKeys, function (nativeKey) {
-                return nativeKeyToElementMap[nativeKey];
-            });
-
-            return valueFactory.createArray(mergedElements);
         },
 
         /**
@@ -487,15 +487,22 @@ module.exports = function (internals) {
             );
         },
 
-        'current': function (arrayReference) {
-            var arrayValue = arrayReference.getValue();
+        /**
+         * Fetches the value of the element currently pointed to by the internal array pointer.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.current.php}
+         *
+         * @returns {Value}
+         */
+        'current': internals.typeFunction('mixed $array: mixed', function (arrayValue) {
+            // FIXME: Add union type above once supported.
 
             if (arrayValue.getPointer() >= arrayValue.getLength()) {
                 return valueFactory.createBoolean(false);
             }
 
             return arrayValue.getCurrentElementValue();
-        },
+        }),
 
         /**
          * Set the internal pointer of an array to its last element,
@@ -507,19 +514,20 @@ module.exports = function (internals) {
          * @param {Variable|Value} arrayReference
          * @returns {Value}
          */
-        'end': function (arrayReference) {
-            var arrayValue = arrayReference.getValue(),
-                keys = arrayValue.getKeys();
+        'end': internals.typeFunction('array &$array', function (arrayReference) {
+            return arrayReference.getValue().next(function (arrayValue) {
+                var keys = arrayValue.getKeys();
 
-            if (keys.length === 0) {
-                return valueFactory.createBoolean(false);
-            }
+                if (keys.length === 0) {
+                    return valueFactory.createBoolean(false);
+                }
 
-            // Advance the array's internal pointer to the last element
-            arrayValue.setPointer(keys.length - 1);
+                // Advance the array's internal pointer to the last element
+                arrayValue.setPointer(keys.length - 1);
 
-            return arrayValue.getElementByKey(keys[keys.length - 1]).getValue();
-        },
+                return arrayValue.getCurrentElementValue();
+            });
+        }),
 
         /**
          * Joins substrings (the "pieces") together with a given delimiter (the "glue").
@@ -680,27 +688,50 @@ module.exports = function (internals) {
 
             return valueFactory.createBoolean(true);
         },
-        'next': function (arrayReference) {
-            var arrayValue = arrayReference.getValue();
 
-            if (arrayValue.getType() !== 'array') {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'next() expects parameter 1 to be array, ' +
-                    arrayValue.getType() +
-                    ' given'
-                );
-                return valueFactory.createNull();
+        /**
+         * Advances the internal array pointer by one and returns the new current element's value.
+         * Returns false if there are no more elements.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.next.php}
+         *
+         * @returns {BooleanValue|Value}
+         */
+        'next': internals.typeFunction('array &$array', function (arrayReference) {
+            return arrayReference.getValue().next(function (arrayValue) {
+                arrayValue.setPointer(arrayValue.getPointer() + 1);
+
+                if (arrayValue.getPointer() >= arrayValue.getLength()) {
+                    return valueFactory.createBoolean(false);
+                }
+
+                return arrayValue.getCurrentElementValue();
+            });
+        }),
+
+        /**
+         * Resets the internal array pointer and returns the first element, or false if none.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.reset.php}
+         *
+         * @param {Variable|Value} arrayReference
+         * @param {Variable|Value} modeReference
+         * @returns {BooleanValue|Value}
+         */
+        'reset': internals.typeFunction(
+            'mixed &$array: mixed',
+            function (arrayReference) {
+                // TODO: Add union array|object type above once supported.
+
+                return arrayReference.getValue().next(function (arrayValue) {
+                    arrayValue.reset();
+
+                    return arrayValue.getLength() > 0 ?
+                        arrayValue.getElementByIndex(0).getValue() :
+                        valueFactory.createBoolean(false);
+                });
             }
-
-            arrayValue.setPointer(arrayValue.getPointer() + 1);
-
-            if (arrayValue.getPointer() >= arrayValue.getLength()) {
-                return valueFactory.createBoolean(false);
-            }
-
-            return arrayValue.getCurrentElementValue();
-        },
+        ),
 
         /**
          * Alias of count()

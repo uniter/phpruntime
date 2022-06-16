@@ -13,20 +13,21 @@ var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
     tools = require('../../../tools');
 
-describe('PHP "end" builtin function integration', function () {
+describe('PHP "current" builtin function integration', function () {
     it('should support both empty and populated arrays', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 $result = [];
-$myFirstArray = ['first', 21];
+$myFirstArray = ['first', 21, 101];
 $mySecondArray = [1 => 'one', 0 => 'zero']; // Order should be as defined, not numeric
 
-$result['end first array'] = end($myFirstArray);
-$result['end second array'] = end($mySecondArray);
+next($myFirstArray); // Advance to the second element
+
+$result['current of first array'] = current($myFirstArray);
+$result['current of second array'] = current($mySecondArray);
 $myUnrelatedArray = [];
-$result['end unrelated empty array'] = end($myUnrelatedArray);
-$result['current first array'] = current($myFirstArray);
+$result['current of unrelated empty array'] = current($myUnrelatedArray);
 
 return $result;
 EOS
@@ -35,13 +36,9 @@ EOS
             engine = module();
 
         expect((await engine.execute()).getNative()).to.deep.equal({
-            'end first array': 21,
-            // Order should be as defined, not numeric.
-            'end second array': 'zero',
-            // False should be returned for an empty array
-            'end unrelated empty array': false,
-            // Internal pointer of $myFirstArray should have been moved to the end.
-            'current first array': 21
+            'current of first array': 21,
+            'current of second array': 'one',
+            'current of unrelated empty array': false
         });
     });
 });
