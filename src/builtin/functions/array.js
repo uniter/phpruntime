@@ -16,6 +16,7 @@ var _ = require('microdash'),
     IMPLODE = 'implode',
     KeyValuePair = require('phpcore/src/KeyValuePair'),
     SORT_REGULAR = 0,
+    Exception = phpCommon.Exception,
     PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {
@@ -91,6 +92,47 @@ module.exports = function (internals) {
 
             return valueFactory.createArray(remainingElementPairs);
         },
+
+        /**
+         * Associative sort - sorts an array in-place, by value, in ascending order,
+         * maintaining key->value associations.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.asort.php}
+         *
+         * @param {Variable|Value} arrayReference
+         * @param {Variable|Value|undefined} sortFlagsReference
+         * @returns {BooleanValue}
+         */
+        'asort': internals.typeFunction(
+            'array &$array, int $flags = 0: bool',
+            function (arrayReference, sortFlagsValue) {
+                // TODO: Use SORT_REGULAR as the parameter default above when constants are supported in signatures.
+                var sortFlags = sortFlagsValue.getNative();
+
+                if (sortFlags !== SORT_REGULAR) {
+                    throw new Exception(
+                        'asort() :: Only SORT_REGULAR (' +
+                        SORT_REGULAR +
+                        ') is supported, ' +
+                        sortFlags +
+                        ' given'
+                    );
+                }
+
+                return arrayReference.getValue().next(function (arrayValue) {
+                    arrayValue.sort(function (elementA, elementB) {
+                        // TODO: Handle FutureValues being returned here,
+                        //       if the element has a reference assigned that evaluates to a FutureValue.
+                        var nativeKeyA = elementA.getValue().getNative(),
+                            nativeKeyB = elementB.getValue().getNative();
+
+                        return String(nativeKeyA).localeCompare(nativeKeyB);
+                    });
+
+                    return valueFactory.createBoolean(true);
+                });
+            }
+        ),
 
         /**
          * Determines whether the given key or index exists in the array
