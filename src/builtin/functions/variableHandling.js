@@ -41,6 +41,26 @@ module.exports = function (internals) {
 
     return {
         /**
+         * Fetches the type of a resource value.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.get-resource-type.php}
+         *
+         * @param {Variable|Value} valueReference The variable or value to fetch the type of
+         * @returns {StringValue}
+         */
+        'get_resource_type': internals.typeFunction(
+            // FIXME: Add resource parameter type once supported.
+            'mixed $resource',
+            function (resourceValue) {
+                if (resourceValue.getType() !== 'resource') {
+                    throw new Error('get_resource_type() :: Non-resource given - FIXME add parameter type');
+                }
+
+                return resourceValue.getResourceType();
+            }
+        ),
+
+        /**
          * Fetches the type of a variable or value
          *
          * @see {@link https://secure.php.net/manual/en/function.gettype.php}
