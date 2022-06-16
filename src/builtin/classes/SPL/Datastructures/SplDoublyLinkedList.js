@@ -28,8 +28,6 @@ module.exports = function (internals) {
      * @constructor
      */
     function SplDoublyLinkedList() {
-        internals.callSuperConstructor(this, arguments);
-
         this.setInternalProperty('items', []);
     }
 
