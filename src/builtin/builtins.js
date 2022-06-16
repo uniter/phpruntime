@@ -42,6 +42,7 @@ var arrayConstants = require('./constants/array'),
     stringFunctions = require('./functions/string'),
     timeDateAndTimeFunctions = require('./functions/dateAndTime/time'),
     timeFunctions = require('./functions/misc/time'),
+    urlFunctions = require('./functions/url'),
     variableHandlingFunctions = require('./functions/variableHandling');
 
 module.exports = {
@@ -96,6 +97,7 @@ module.exports = {
         stringFunctions,
         timeDateAndTimeFunctions,
         timeFunctions,
+        urlFunctions,
         variableHandlingFunctions
     ],
     translationCatalogues: [
