@@ -34,6 +34,7 @@ var arrayConstants = require('./constants/array'),
     Serializable = require('./interfaces/SPL/Serializable'),
     splFunctions = require('./functions/spl'),
     SplDoublyLinkedList = require('./classes/SPL/Datastructures/SplDoublyLinkedList'),
+    SplObjectStorage = require('./classes/SPL/Datastructures/SplObjectStorage'),
     SplQueue = require('./classes/SPL/Datastructures/SplQueue'),
     stringBindings = require('./bindings/string'),
     stringConstants = require('./constants/string'),
@@ -62,6 +63,7 @@ module.exports = {
         function () {
             return {
                 'InvalidArgumentException': InvalidArgumentException,
+                'SplObjectStorage': SplObjectStorage,
                 'SplQueue': SplQueue
             };
         }
