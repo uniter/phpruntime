@@ -25,18 +25,9 @@ module.exports = function (internals) {
         valueFactory = internals.valueFactory;
 
     function createTypeChecker(name, type) {
-        return function (valueReference) {
-            if (!valueReference) {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    name + '() expects exactly 1 parameter, 0 given'
-                );
-
-                return valueFactory.createBoolean(false);
-            }
-
-            return valueFactory.createBoolean(valueReference.getValue().getType() === type);
-        };
+        return internals.typeFunction('mixed $value: bool', function (value) {
+            return valueFactory.createBoolean(value.getType() === type);
+        });
     }
 
     return {
@@ -177,6 +168,16 @@ module.exports = function (internals) {
          * @returns {BooleanValue}
          */
         'is_object': createTypeChecker('is_object', 'object'),
+
+        /**
+         * Determines whether the type of a variable is a resource.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-resource.php}
+         *
+         * @param {Variable|Reference|Value} valueReference The variable or value to check the type of.
+         * @returns {BooleanValue}
+         */
+        'is_resource': createTypeChecker('is_resource', 'resource'),
 
         /**
          * Determines whether the type of a variable is a string
