@@ -282,6 +282,55 @@ module.exports = function (internals) {
         },
 
         /**
+         * Searches for a value in an array, returning the first key with that value.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-search.php}
+         *
+         * @param {Variable|ArrayValue} arrayReference
+         * @returns {Value}
+         */
+        'array_search': internals.typeFunction(
+            // FIXME: Add return type once union types supported.
+            'mixed $needle, array $haystack, bool $strict = false',
+            function (needleValue, haystackValue, strictValue) {
+                var strict = strictValue.getNative(),
+                    resultKeyValue = false;
+
+                return flow.eachAsync(haystackValue.getKeys(), function (keyValue) {
+                    var elementPair = haystackValue.getElementPairByKey(keyValue);
+
+                    return elementPair.getValue()
+                        .asFuture()
+                        .next(function (elementValue) {
+                            if (strict) {
+                                return needleValue.isIdenticalTo(elementValue)
+                                    .asEventualNative()
+                                    .next(function (isIdentical) {
+                                        if (isIdentical) {
+                                            resultKeyValue = keyValue;
+
+                                            // Value was found, no need to check any further elements.
+                                            return false;
+                                        }
+                                    });
+                            }
+
+                            if (needleValue.compareWithPresent(elementValue) === 0) {
+                                resultKeyValue = keyValue;
+
+                                // Value was found, no need to check any further elements.
+                                return false;
+                            }
+                        });
+                })
+                    .next(function () {
+                        return resultKeyValue;
+                    })
+                    .asValue();
+            }
+        ),
+
+        /**
          * Shifts an element off the beginning of an array
          *
          * @see {@link https://secure.php.net/manual/en/function.array-shift.php}
