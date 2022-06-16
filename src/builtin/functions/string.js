@@ -357,24 +357,39 @@ module.exports = function (internals) {
             return valueFactory.createString(string);
         },
 
-        'substr': function (stringReference, startReference, lengthReference) {
-            var string = stringReference.getValue().getNative(),
-                start = startReference.getValue().getNative(),
-                length = lengthReference ? lengthReference.getValue().getNative() : string.length,
-                substring;
+        /**
+         * Extracts part of a string.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.substr.php}
+         *
+         * @param {Reference|Variable|Value} stringValue The string to extract from.
+         * @param {Reference|Variable|Value} offsetValue The position to start from.
+         * @param {Reference|Variable|Value} lengthValue The no. of chars to extract.
+         * @returns {StringValue} The extracted substring.
+         */
+        'substr': internals.typeFunction(
+            'string $string, int $offset, ?int $length = null: string',
+            function (stringValue, offsetValue, lengthValue) {
+                var string = stringValue.getNative(),
+                    start = offsetValue.getNative(),
+                    length = lengthValue.getType() !== 'null' ? lengthValue.getNative() : string.length,
+                    substring;
 
-            if (start < 0) {
-                start = string.length + start;
+                if (start < 0) {
+                    // Negative start offsets are offset from the end of the string.
+                    start = string.length + start;
+                }
+
+                if (length < 0) {
+                    // Negative lengths subtract the last N characters of the string.
+                    length = string.length - start + length;
+                }
+
+                substring = string.substr(start, length);
+
+                return valueFactory.createString(substring);
             }
-
-            if (length < 0) {
-                length = string.length - start + length;
-            }
-
-            substring = string.substr(start, length);
-
-            return valueFactory.createString(substring);
-        },
+        ),
 
         /**
          * Counts the number of substring occurrences
