@@ -67,6 +67,31 @@ module.exports = function (internals) {
             return valueFactory.createArray(elements);
         },
 
+        /**
+         * Strip whitespace or other characters from the end of a string.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.rtrim.php}
+         *
+         * @param {Variable|Value} stringReference          The string to trim
+         * @param {Variable|Value} characterMaskReference   Which characters to strip
+         * @returns {StringValue}                           The trimmed string
+         */
+        'rtrim': internals.typeFunction(
+            'string $string, string $characters = " \\n\\r\\t\\u000b\\u0000": string',
+            function (stringValue, characterMaskValue) {
+                var nativeString = stringValue.getNative(),
+                    characterMask = characterMaskValue.getNative(),
+                    characterMaskRegex = new RegExp(
+                        '[' +
+                        _.escapeRegExp(characterMask) +
+                        ']+$',
+                        'g'
+                    );
+
+                return valueFactory.createString(nativeString.replace(characterMaskRegex, ''));
+            }
+        ),
+
         'strlen': function (stringReference) {
             var stringValue = stringReference.getValue();
 
