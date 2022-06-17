@@ -13,6 +13,7 @@ var arrayConstants = require('./constants/array'),
     arrayFunctions = require('./functions/array'),
     baseConversionMathFunctions = require('./functions/math/baseConversion'),
     classFunctions = require('./functions/class'),
+    clockServices = require('./services/clock'),
     configOptionsAndInfoFunctions = require('./functions/optionsAndInfo/config'),
     constantFunctions = require('./functions/misc/constant'),
     Countable = require('./interfaces/SPL/Countable'),
@@ -99,6 +100,9 @@ module.exports = {
         timeFunctions,
         urlFunctions,
         variableHandlingFunctions
+    ],
+    serviceGroups: [
+        clockServices
     ],
     translationCatalogues: [
         errorMessages

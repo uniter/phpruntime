@@ -10,7 +10,8 @@
 'use strict';
 
 module.exports = function (internals) {
-    var optionSet = internals.optionSet,
+    var clock = internals.getService('clock'),
+        optionSet = internals.optionSet,
         valueFactory = internals.valueFactory;
 
     function getPerformance() {
@@ -54,6 +55,18 @@ module.exports = function (internals) {
                     Math.floor(timeInSeconds)
                 );
             }
-        )
+        ),
+
+        /**
+         * Returns the current Unix timestamp;
+         * the number of seconds since the Unix Epoch (1st January 1970 00:00:00 GMT).
+         *
+         * @see {@link https://secure.php.net/manual/en/function.time.php}
+         *
+         * @returns {IntegerValue}
+         */
+        'time': internals.typeFunction(': int', function () {
+            return clock.getUnixTimestamp();
+        })
     };
 };
