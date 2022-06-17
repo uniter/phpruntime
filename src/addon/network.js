@@ -9,12 +9,16 @@
 
 'use strict';
 
-var networkFunctions = require('../builtin/functions/network');
+var networkConstants = require('../builtin/constants/network'),
+    networkFunctions = require('../builtin/functions/network');
 
 /**
  * PHP networking support.
  */
 module.exports = {
+    constantGroups: [
+        networkConstants
+    ],
     functionGroups: [
         networkFunctions
     ]
