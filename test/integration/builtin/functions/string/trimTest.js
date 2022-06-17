@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "trim" builtin function integration', function () {
-    it('should be able to trim a string', function () {
+    it('should be able to trim a string', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -29,11 +29,10 @@ $result['relying on coercion'] = trim(true);
 return $result;
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal({
+        expect((await engine.execute()).getNative()).to.deep.equal({
             'with default character mask': 'middle',
             'with custom character mask': '\t\n\r\0\x0b    middle    ',
             'with character mask using regex special chars': ' my string ',

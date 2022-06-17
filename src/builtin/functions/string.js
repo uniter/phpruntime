@@ -445,21 +445,22 @@ module.exports = function (internals) {
          * @param {Variable|Value} characterMaskReference   Which characters to strip
          * @returns {StringValue}                           The trimmed string
          */
-        'trim': function (stringReference, characterMaskReference) {
-            var nativeString = stringReference.getValue().coerceToString().getNative(),
-                characterMask = characterMaskReference ?
-                    characterMaskReference.getValue().getNative() :
-                    ' \t\n\r\0\x0b',
-                characterMaskRegex = new RegExp(
-                    '^[' +
-                    _.escapeRegExp(characterMask) +
-                    ']+|[' +
-                    _.escapeRegExp(characterMask) +
-                    ']+$',
-                    'g'
-                );
+        'trim': internals.typeFunction(
+            'string $string, string $characters = " \\n\\r\\t\\u000b\\u0000": string',
+            function (stringValue, characterMaskValue) {
+                var nativeString = stringValue.getNative(),
+                    characterMask = characterMaskValue.getNative(),
+                    characterMaskRegex = new RegExp(
+                        '^[' +
+                        _.escapeRegExp(characterMask) +
+                        ']+|[' +
+                        _.escapeRegExp(characterMask) +
+                        ']+$',
+                        'g'
+                    );
 
-            return valueFactory.createString(nativeString.replace(characterMaskRegex, ''));
-        }
+                return valueFactory.createString(nativeString.replace(characterMaskRegex, ''));
+            }
+        )
     };
 };
