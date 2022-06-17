@@ -9,11 +9,8 @@
 
 'use strict';
 
-var PHPError = require('phpcommon').PHPError;
-
 module.exports = function (internals) {
-    var callStack = internals.callStack,
-        optionSet = internals.optionSet,
+    var optionSet = internals.optionSet,
         valueFactory = internals.valueFactory;
 
     function getPerformance() {
@@ -35,41 +32,28 @@ module.exports = function (internals) {
          * @param {Variable|Value} getAsFloatReference Whether to return a float with seconds + us
          * @returns {FloatValue|StringValue}
          */
-        'microtime': function (getAsFloatReference) {
-            var getAsFloat,
-                getAsFloatValue = getAsFloatReference ?
-                    getAsFloatReference.getValue() :
-                    null,
-                timeInSeconds;
+        'microtime': internals.typeFunction(
+            'bool $as_float = false',
+            function (getAsFloatValue) {
+                // FIXME: Add union return type above once supported.
 
-            if (getAsFloatValue && /^(array|object)$/.test(getAsFloatValue.getType())) {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'microtime() expects parameter 1 to be boolean, ' +
-                    getAsFloatValue.getType() +
-                    ' given'
+                var getAsFloat = getAsFloatValue.getNative(),
+                    // Convert microseconds to seconds (with decimal precision to maintain microsecond accuracy).
+                    timeInSeconds = getPerformance().getTimeInMicroseconds() / 1000000;
+
+                if (getAsFloat) {
+                    // Return the time since the Unix epoch in seconds, with microsecond accuracy
+                    // as a float
+                    return valueFactory.createFloat(timeInSeconds);
+                }
+
+                // Return the number of microseconds into the current second first, followed by
+                // the number of whole seconds since the Unix epoch
+                return valueFactory.createString(
+                    (timeInSeconds % 1).toFixed(6) + ' ' +
+                    Math.floor(timeInSeconds)
                 );
-                return valueFactory.createNull();
             }
-
-            // Default value (if argument is omitted) is `false`
-            getAsFloat = getAsFloatValue ? getAsFloatValue.coerceToBoolean().getNative() : false;
-
-            // Convert microseconds to seconds (with decimal precision to maintain microsecond accuracy)
-            timeInSeconds = getPerformance().getTimeInMicroseconds() / 1000000;
-
-            if (getAsFloat) {
-                // Return the time since the Unix epoch in seconds, with microsecond accuracy
-                // as a float
-                return valueFactory.createFloat(timeInSeconds);
-            }
-
-            // Return the number of microseconds into the current second first, followed by
-            // the number of whole seconds since the Unix epoch
-            return valueFactory.createString(
-                (timeInSeconds % 1).toFixed(6) + ' ' +
-                Math.floor(timeInSeconds)
-            );
-        }
+        )
     };
 };
