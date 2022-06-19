@@ -11,10 +11,10 @@
 'use strict';
 
 var _ = require('microdash'),
+    pcremu = require('pcremu').default,
     phpCommon = require('phpcommon'),
     FailureException = require('./Exception/FailureException'),
     KeyValuePair = require('phpcore/src/KeyValuePair'),
-    OffsetCapturingRegExp = require('regextend'),
     PHPError = phpCommon.PHPError;
 
 /**
@@ -35,15 +35,17 @@ module.exports = function (internals) {
      *
      * @param {string} functionName
      * @param {string} originalPattern
-     * @return {ExtendedRegExp}
+     * @return {Matcher}
      * @throws {FailureException}
      */
-    function buildNativeRegex(functionName, originalPattern) {
-        var invalidModifiers,
+    function buildPcremuMatcher(functionName, originalPattern) {
+        var delimiter,
+            flags = {},
+            invalidModifiers,
+            matcher,
             modifiers,
             pattern,
-            patternMatch = originalPattern.match(/^([\s\S])([\s\S]*)\1([\s\S]*)$/),
-            regex;
+            patternMatch = originalPattern.match(/^([\s\S])([\s\S]*)\1([\s\S]*)$/);
 
         if (!patternMatch) {
             callStack.raiseError(
@@ -53,6 +55,7 @@ module.exports = function (internals) {
             throw new FailureException();
         }
 
+        delimiter = patternMatch[1];
         pattern = patternMatch[2];
         modifiers = patternMatch[3];
 
@@ -62,7 +65,8 @@ module.exports = function (internals) {
         //     but we'll just support the recommended method via modifier for now
         modifiers = modifiers.replace(/u/g, '');
 
-        invalidModifiers = modifiers.replace(/[AiSsx]/g, '');
+        // Note the "study" modifier "S" is allowed but ignored.
+        invalidModifiers = modifiers.replace(/[AimSsx]/g, '');
 
         if (invalidModifiers !== '') {
             callStack.raiseError(
@@ -73,42 +77,32 @@ module.exports = function (internals) {
             throw new FailureException();
         }
 
-        // Support the implicit start-of-string anchor (sticky) modifier
-        if (modifiers.indexOf('A') > -1) {
-            modifiers = modifiers.replace(/A/g, 'y'); // Use ES6 "sticky" modifier "y"
-        }
+        // Unescape any escaped occurrences of the delimiter inside the pattern.
+        pattern = pattern.replaceAll('\\' + delimiter, delimiter);
 
-        // Ignore the "study" modifier
-        if (modifiers.indexOf('S') > -1) {
-            modifiers = modifiers.replace(/S/g, '');
-        }
-
-        // TODO: Shim `s` modifier for old browsers in the separate regextend lib instead
-        if (modifiers.indexOf('s') > -1) {
-            modifiers = modifiers.replace(/s/g, '');
-
-            pattern = pattern.replace(/\.(?=(?:[^\[\]]|\[.*?\])*$)/g, '[\\s\\S]');
-        }
+        flags.anchored = modifiers.indexOf('A') > -1;
+        flags.caseless = modifiers.indexOf('i') > -1;
+        flags.multiline = modifiers.indexOf('m') > -1;
+        flags.dotAll = modifiers.indexOf('s') > -1;
+        flags.extended = modifiers.indexOf('x') > -1;
 
         try {
-            // Always append the global "g" flag, so that we can use the .lastIndex
-            // property on the regex object to specify the start offset
-            regex = new OffsetCapturingRegExp(pattern, modifiers + 'g');
+            matcher = pcremu.compile(pattern, flags);
         } catch (error) {
             callStack.raiseError(
                 PHPError.E_WARNING,
                 functionName + '(): Compilation failed [Uniter]: only basic-level preg support is enabled, ' +
-                '"' + originalPattern + '" may be a valid but unsupported PCRE regex. JS RegExp error: ' + error
+                '"' + originalPattern + '" may be a valid but unsupported PCRE regex. PCREmu error: ' + error
             );
             throw new FailureException();
         }
 
-        return regex;
+        return matcher;
     }
 
     return {
         /**
-         * Perform a single regular expression match
+         * Perform a single regular expression match.
          *
          * @see {@link https://secure.php.net/manual/en/function.preg-match.php}
          *
@@ -119,96 +113,81 @@ module.exports = function (internals) {
          * @param {Reference|Variable|Value} offsetReference
          * @returns {IntegerValue|BooleanValue}
          */
-        'preg_match': function (patternReference, subjectReference, matchesReference, flagsReference, offsetReference) {
-            var flags,
-                match,
-                matched,
-                offset = 0,
-                pattern,
-                patternValue,
-                regex,
-                subject,
-                subjectValue;
+        'preg_match': internals.typeFunction(
+            'string $pattern, string $subject, array &$matches = null, int $flags = 0, int $offset = 0',
+            function (patternValue, subjectValue, matchesReference, flagsReference, offsetReference) {
+                // FIXME: Add union return type above once supported.
 
-            if (arguments.length < 2) {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'preg_match() expects at least 2 parameters, ' + arguments.length + ' given'
-                );
-                return valueFactory.createBoolean(false);
-            }
+                var flags,
+                    match,
+                    matcher,
+                    offset = 0,
+                    pattern,
+                    pcremuMatch,
+                    subject;
 
-            // Use PREG_PATTERN_ORDER as the default flag
-            flags = flagsReference ? flagsReference.coerceToInteger().getNative() : PREG_PATTERN_ORDER;
+                // Use PREG_PATTERN_ORDER as the default flag
+                flags = flagsReference ? flagsReference.coerceToInteger().getNative() : PREG_PATTERN_ORDER;
 
-            if (flags & PREG_SET_ORDER) {
-                // This flag is only supported by preg_match_all()
-                callStack.raiseError(PHPError.E_WARNING, 'preg_match(): Invalid flags specified');
-                return valueFactory.createBoolean(false);
-            }
-
-            if (offsetReference) {
-                offset = offsetReference.getNative();
-            }
-
-            patternValue = patternReference.getValue();
-            subjectValue = subjectReference.getValue();
-
-            if (patternValue.getType() !== 'string') {
-                throw new Error('preg_match(): Non-string pattern not yet supported');
-            }
-
-            if (subjectValue.getType() !== 'string') {
-                throw new Error('preg_match(): Non-string subject not yet supported');
-            }
-
-            pattern = patternValue.getNative();
-            subject = subjectValue.getNative();
-
-            try {
-                regex = buildNativeRegex('preg_match', pattern);
-            } catch (error) {
-                if (error instanceof FailureException) {
+                if (flags & PREG_SET_ORDER) {
+                    // This flag is only supported by preg_match_all()
+                    callStack.raiseError(PHPError.E_WARNING, 'preg_match(): Invalid flags specified');
                     return valueFactory.createBoolean(false);
                 }
 
-                throw error;
-            }
-
-            // Start the match from the specified offset - we'll have appended the 'g'
-            // flag even though this isn't a global match, so that `.lastIndex` will be respected
-            regex.lastIndex = offset;
-
-            if (matchesReference) {
-                match = regex.exec(subject);
-
-                if (match) {
-                    match = flags & PREG_OFFSET_CAPTURE ?
-                        // Offset capturing is enabled - record the offset at which each
-                        // capturing group was matched alongside the substring
-                        _.map(match, function (capturingGroup, capturingGroupIndex) {
-                            return [
-                                capturingGroup,
-                                match.offsets[capturingGroupIndex]
-                            ];
-                        }) :
-                        [].slice.call(match);
-                } else {
-                    match = [];
+                if (offsetReference) {
+                    offset = offsetReference.getNative();
                 }
 
-                matchesReference.setValue(valueFactory.coerce(match));
+                pattern = patternValue.getNative();
+                subject = subjectValue.getNative();
 
-                matched = match.length > 0;
-            } else {
-                matched = regex.test(subject);
+                try {
+                    matcher = buildPcremuMatcher('preg_match', pattern);
+                } catch (error) {
+                    if (error instanceof FailureException) {
+                        return valueFactory.createBoolean(false);
+                    }
+
+                    throw error;
+                }
+
+                pcremuMatch = matcher.matchOne(subject, offset);
+
+                if (matchesReference.getValue().getType() !== 'null') {
+                    if (pcremuMatch) {
+                        match = [];
+
+                        _.each(matcher.getCapturingGroupNames(), function (name) {
+                            var isNumberedCapture = typeof name === 'number',
+                                capture = isNumberedCapture ?
+                                    pcremuMatch.getNumberedCapture(name) :
+                                    pcremuMatch.getNamedCapture(name);
+
+                            match[name] = flags & PREG_OFFSET_CAPTURE ?
+                                [
+                                    capture,
+                                    // Offset capturing is enabled - record the offset at which each
+                                    // capturing group was matched alongside the substring.
+                                    isNumberedCapture ?
+                                        pcremuMatch.getNumberedCaptureStart(name) :
+                                        pcremuMatch.getNamedCaptureStart(name)
+                                ] :
+                                capture;
+                        });
+                    } else {
+                        match = [];
+                    }
+
+                    matchesReference.setValue(valueFactory.coerce(match));
+                }
+
+                return valueFactory.createInteger(pcremuMatch !== null ? 1 : 0);
             }
-
-            return valueFactory.createInteger(matched ? 1 : 0);
-        },
+        ),
 
         /**
-         * Perform a global regular expression match
+         * Perform a global regular expression match.
          *
          * @see {@link https://secure.php.net/manual/en/function.preg-match-all.php}
          *
@@ -219,131 +198,121 @@ module.exports = function (internals) {
          * @param {Variable|Value} offsetReference
          * @returns {IntegerValue|BooleanValue}
          */
-        'preg_match_all': function (patternReference, subjectReference, matchesReference, flagsReference, offsetReference) {
-            var flags,
-                match,
-                matches = [],
-                matchResult = [],
-                offset = 0,
-                offsetCaptureEnabled = false,
-                matchOrder = 'pattern', // Use PREG_PATTERN_ORDER as the default flag
-                pattern,
-                patternValue,
-                regex,
-                subject,
-                subjectValue;
+        'preg_match_all': internals.typeFunction(
+            'string $pattern, string $subject, array &$matches = null, int $flags = 0, int $offset = 0',
+            function (patternValue, subjectValue, matchesReference, flagsReference, offsetReference) {
+                // FIXME: Add union return type above once supported.
 
-            if (arguments.length < 2) {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'preg_match_all() expects at least 2 parameters, ' + arguments.length + ' given'
-                );
-                return valueFactory.createBoolean(false);
-            }
+                var flags,
+                    matchResult = [],
+                    offset = 0,
+                    offsetCaptureEnabled = false,
+                    matchOrder = 'pattern', // Use PREG_PATTERN_ORDER as the default flag
+                    matcher,
+                    pattern,
+                    pcremuMatches,
+                    subject;
 
-            if (flagsReference) {
-                flags = flagsReference.getValue().coerceToInteger().getNative();
+                if (flagsReference) {
+                    flags = flagsReference.getValue().coerceToInteger().getNative();
 
-                if (flags & PREG_OFFSET_CAPTURE) {
-                    offsetCaptureEnabled = true;
-                    flags ^= PREG_OFFSET_CAPTURE;
+                    if (flags & PREG_OFFSET_CAPTURE) {
+                        offsetCaptureEnabled = true;
+                        flags ^= PREG_OFFSET_CAPTURE;
+                    }
+
+                    if (flags & PREG_PATTERN_ORDER) {
+                        matchOrder = 'pattern';
+
+                        flags ^= PREG_PATTERN_ORDER; // Unset the relevant bits
+                    } else if (flags & PREG_SET_ORDER) {
+                        matchOrder = 'set';
+
+                        flags ^= PREG_SET_ORDER; // Unset the relevant bits
+                    }
+
+                    if (flags !== 0) {
+                        callStack.raiseError(PHPError.E_WARNING, 'preg_match_all(): Invalid flags specified');
+                        return valueFactory.createBoolean(false);
+                    }
                 }
 
-                if (flags & PREG_PATTERN_ORDER) {
-                    matchOrder = 'pattern';
-
-                    flags ^= PREG_PATTERN_ORDER; // Unset the relevant bits
-                } else if (flags & PREG_SET_ORDER) {
-                    matchOrder = 'set';
-
-                    flags ^= PREG_SET_ORDER; // Unset the relevant bits
+                if (offsetReference) {
+                    offset = offsetReference.getNative();
                 }
 
-                if (flags !== 0) {
-                    callStack.raiseError(PHPError.E_WARNING, 'preg_match_all(): Invalid flags specified');
-                    return valueFactory.createBoolean(false);
-                }
-            }
+                pattern = patternValue.getNative();
+                subject = subjectValue.getNative();
 
-            if (offsetReference) {
-                offset = offsetReference.getNative();
-            }
+                try {
+                    matcher = buildPcremuMatcher('preg_match_all', pattern);
+                } catch (error) {
+                    if (error instanceof FailureException) {
+                        return valueFactory.createBoolean(false);
+                    }
 
-            patternValue = patternReference.getValue();
-            subjectValue = subjectReference.getValue();
-
-            if (patternValue.getType() !== 'string') {
-                throw new Error('preg_match_all(): Non-string pattern not yet supported');
-            }
-
-            if (subjectValue.getType() !== 'string') {
-                throw new Error('preg_match_all(): Non-string subject not yet supported');
-            }
-
-            pattern = patternValue.getNative();
-            subject = subjectValue.getNative();
-
-            try {
-                regex = buildNativeRegex('preg_match_all', pattern);
-            } catch (error) {
-                if (error instanceof FailureException) {
-                    return valueFactory.createBoolean(false);
+                    throw error;
                 }
 
-                throw error;
-            }
+                pcremuMatches = matcher.matchAll(subject, offset);
 
-            // Start the match from the specified offset
-            regex.lastIndex = offset;
+                if (matchesReference.getValue().getType() !== 'null') {
+                    _.each(pcremuMatches, function (pcremuMatch, matchIndex) {
+                        if (matchOrder === 'pattern') {
+                            _.each(matcher.getCapturingGroupNames(), function (name, capturingGroupIndex) {
+                                var isNumberedCapture = typeof name === 'number',
+                                    capture = isNumberedCapture ?
+                                        pcremuMatch.getNumberedCapture(name) :
+                                        pcremuMatch.getNamedCapture(name);
 
-            while ((match = regex.exec(subject)) !== null) {
-                matches.push(match);
-            }
+                                if (matchResult.length <= capturingGroupIndex) {
+                                    matchResult[capturingGroupIndex] = [];
+                                }
 
-            if (matchesReference) {
-                _.each(matches, function (match, matchIndex) {
-                    if (matchOrder === 'pattern') {
-                        _.each(match, function (capturingGroup, capturingGroupIndex) {
-                            if (matchResult.length <= capturingGroupIndex) {
-                                matchResult[capturingGroupIndex] = [];
-                            }
-
-                            matchResult[capturingGroupIndex].push(
-                                offsetCaptureEnabled ?
-                                    // Offset capturing is enabled - record the offset at which each
-                                    // capturing group was matched alongside the substring
-                                    [
-                                        capturingGroup,
-                                        match.offsets[capturingGroupIndex]
-                                    ] :
-                                    capturingGroup
-                            );
-                        });
-                    } else if (matchOrder === 'set') {
-                        if (offsetCaptureEnabled) {
+                                matchResult[capturingGroupIndex].push(
+                                    offsetCaptureEnabled ?
+                                        // Offset capturing is enabled - record the offset at which each
+                                        // capturing group was matched alongside the substring
+                                        [
+                                            capture,
+                                            isNumberedCapture ?
+                                                pcremuMatch.getNumberedCaptureStart(name) :
+                                                pcremuMatch.getNamedCaptureStart(name)
+                                        ] :
+                                        capture
+                                );
+                            });
+                        } else if (matchOrder === 'set') {
                             if (matchResult.length <= matchIndex) {
                                 matchResult[matchIndex] = [];
                             }
 
-                            _.each(match, function (capturingGroup, capturingGroupIndex) {
-                                matchResult[matchIndex].push([
-                                    capturingGroup,
-                                    match.offsets[capturingGroupIndex]
-                                ]);
+                            _.each(matcher.getCapturingGroupNames(), function (name) {
+                                var isNumberedCapture = typeof name === 'number',
+                                    capture = isNumberedCapture ?
+                                        pcremuMatch.getNumberedCapture(name) :
+                                        pcremuMatch.getNamedCapture(name);
+
+                                matchResult[matchIndex][name] = offsetCaptureEnabled ?
+                                    [
+                                        capture,
+                                        isNumberedCapture ?
+                                            pcremuMatch.getNumberedCaptureStart(name) :
+                                            pcremuMatch.getNamedCaptureStart(name)
+                                    ] :
+                                    capture;
                             });
                         } else {
-                            matchResult.push([].slice.call(match));
+                            throw new phpCommon.Exception('preg_match_all() :: Unexpected flags');
                         }
-                    } else {
-                        throw new phpCommon.Exception('preg_match_all() :: Unexpected flags');
-                    }
-                });
+                    });
 
-                matchesReference.setValue(valueFactory.coerce(matchResult));
+                    matchesReference.setValue(valueFactory.coerce(matchResult));
+                }
+
+                return valueFactory.createInteger(pcremuMatches.length);
             }
-
-            return valueFactory.createInteger(matches.length);
-        },
+        ),
 
         /**
          * Perform a regular expression find and replace
