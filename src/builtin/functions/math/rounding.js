@@ -17,13 +17,9 @@ module.exports = function (internals) {
          * Rounds a fraction upwards.
          *
          * @see {@link https://secure.php.net/manual/en/function.ceil.php}
-         *
-         * @param {Variable|Value} numberReference
-         * @returns {FloatValue}
          */
         'ceil': internals.typeFunction(
-            // FIXME: Use union type "int|float" when supported.
-            'mixed $number: float',
+            'int|float $num : float',
             function (numberValue) {
                 var number = numberValue.getNative();
 

@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../../tools');
 
 describe('PHP "get_loaded_extensions" builtin function integration', function () {
-    it('should just return an empty array for now', function () {
+    it('should just return an empty array for now', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -26,10 +26,10 @@ return [
 ];
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal({
+        expect((await engine.execute()).getNative()).to.deep.equal({
             'is_array': true,
             'count': 0
         });

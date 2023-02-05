@@ -10,30 +10,45 @@
 'use strict';
 
 var expect = require('chai').expect,
-    sinon = require('sinon'),
     functionHandlingFunctionFactory = require('../../../../../src/builtin/functions/functionHandling'),
+    sinon = require('sinon'),
+    tools = require('../../../tools'),
     Call = require('phpcore/src/Call'),
     CallStack = require('phpcore/src/CallStack'),
-    Namespace = require('phpcore/src/Namespace').sync(),
-    PHPError = require('phpcommon').PHPError,
-    ValueFactory = require('phpcore/src/ValueFactory').sync();
+    PHPError = require('phpcommon').PHPError;
 
 describe('PHP "func_num_args" builtin function', function () {
-    beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.valueFactory = new ValueFactory();
-        this.globalNamespace = sinon.createStubInstance(Namespace);
-        this.internals = {
-            callStack: this.callStack,
-            globalNamespace: this.globalNamespace,
-            valueFactory: this.valueFactory
-        };
-        this.functionHandlingFunctions = functionHandlingFunctionFactory(this.internals);
-        this.func_num_args = this.functionHandlingFunctions.func_num_args;
+    var callFactory,
+        callStack,
+        func_num_args,
+        state,
+        valueFactory,
+        variableFactory;
 
-        this.callFuncNumArgs = function () {
-            return this.func_num_args.apply(null, []);
-        }.bind(this);
+    beforeEach(function () {
+        callStack = sinon.createStubInstance(CallStack);
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                functionGroups: [
+                    functionHandlingFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
+        valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
+
+        // We need a call on the stack for any isolated scope evaluation.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
+
+        func_num_args = state.getFunction('func_num_args');
     });
 
     describe('when called from a function scope', function () {
@@ -41,14 +56,14 @@ describe('PHP "func_num_args" builtin function', function () {
             var callerCall = sinon.createStubInstance(Call);
 
             callerCall.getFunctionArgs.returns([
-                this.valueFactory.createString('first'),
-                this.valueFactory.createString('second')
+                valueFactory.createString('first'),
+                valueFactory.createString('second')
             ]);
-            this.callStack.getCaller.returns(callerCall);
+            callStack.getCaller.returns(callerCall);
         });
 
-        it('should return the number of args passed to the caller as an integer', function () {
-            var resultValue = this.callFuncNumArgs();
+        it('should return the number of args passed to the caller as an integer', async function () {
+            var resultValue = await func_num_args().toPromise();
 
             expect(resultValue.getType()).to.equal('int');
             expect(resultValue.getNative()).to.equal(2);
@@ -57,21 +72,21 @@ describe('PHP "func_num_args" builtin function', function () {
 
     describe('when called from the global scope', function () {
         beforeEach(function () {
-            this.callStack.getCaller.returns(null);
+            callStack.getCaller.returns(null);
         });
 
-        it('should raise a warning', function () {
-            this.callFuncNumArgs();
+        it('should raise a warning', async function () {
+            await func_num_args().toPromise();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 PHPError.E_WARNING,
                 'func_num_args(): Called from the global scope - no function context'
             );
         });
 
-        it('should return -1', function () {
-            var resultValue = this.callFuncNumArgs();
+        it('should return -1', async function () {
+            var resultValue = await func_num_args().toPromise();
 
             expect(resultValue.getType()).to.equal('int');
             expect(resultValue.getNative()).to.equal(-1);

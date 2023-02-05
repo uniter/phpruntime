@@ -11,59 +11,86 @@
 
 var expect = require('chai').expect,
     sinon = require('sinon'),
+    stringBindingFactory = require('../../../../../src/builtin/bindings/string'),
     stringFunctionFactory = require('../../../../../src/builtin/functions/string'),
-    BooleanValue = require('phpcore/src/Value/Boolean').sync(),
-    CallStack = require('phpcore/src/CallStack'),
-    IntegerValue = require('phpcore/src/Value/Integer').sync(),
-    ValueFactory = require('phpcore/src/ValueFactory').sync(),
-    Variable = require('phpcore/src/Variable').sync();
+    tools = require('../../../tools'),
+    CallStack = require('phpcore/src/CallStack');
 
 describe('PHP "strpos" builtin function', function () {
+    var callFactory,
+        callStack,
+        haystackVariable,
+        needleVariable,
+        offsetVariable,
+        state,
+        strpos,
+        valueFactory,
+        variableFactory;
+
     beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.getBinding = sinon.stub();
-        this.valueFactory = new ValueFactory();
-        this.internals = {
-            callStack: this.callStack,
-            getBinding: this.getBinding,
-            valueFactory: this.valueFactory
-        };
-        this.stringFunctions = stringFunctionFactory(this.internals);
-        this.strpos = this.stringFunctions.strpos;
+        callStack = sinon.createStubInstance(CallStack);
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                bindingGroups: [
+                    stringBindingFactory
+                ],
+                functionGroups: [
+                    stringFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
+        valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
 
-        this.haystackReference = sinon.createStubInstance(Variable);
-        this.needleReference = sinon.createStubInstance(Variable);
-        this.offsetReference = sinon.createStubInstance(Variable);
+        // We need a call on the stack for any isolated scope evaluation.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
 
-        this.callStrpos = function () {
-            return this.strpos(this.haystackReference, this.needleReference, this.offsetReference);
-        }.bind(this);
+        strpos = state.getFunction('strpos');
+
+        haystackVariable = variableFactory.createVariable('myHaystack');
+        needleVariable = variableFactory.createVariable('myNeedle');
+        offsetVariable = variableFactory.createVariable('myOffset');
     });
 
-    it('should return 6 when looking for "world" in "hello world out there!" with no offset', function () {
-        this.haystackReference.getNative.returns('hello world, out there world!');
-        this.needleReference.getNative.returns('world');
-        this.offsetReference = null;
+    it('should return 6 when looking for "world" in "hello world out there!" with no offset', async function () {
+        var result;
+        haystackVariable.setValue(valueFactory.createString('hello world, out there world!'));
+        needleVariable.setValue(valueFactory.createString('world'));
 
-        expect(this.callStrpos()).to.be.an.instanceOf(IntegerValue);
-        expect(this.callStrpos().getNative()).to.equal(6);
+        result = await strpos(haystackVariable, needleVariable).toPromise();
+
+        expect(result.getType()).to.equal('int');
+        expect(result.getNative()).to.equal(6);
     });
 
-    it('should return 21 when looking for "you" in "hello you, where are you?" with offset 10', function () {
-        this.haystackReference.getNative.returns('hello you, where are you?');
-        this.needleReference.getNative.returns('you');
-        this.offsetReference.getNative.returns(10);
+    it('should return 21 when looking for "you" in "hello you, where are you?" with offset 10', async function () {
+        var result;
+        haystackVariable.setValue(valueFactory.createString('hello you, where are you?'));
+        needleVariable.setValue(valueFactory.createString('you'));
+        offsetVariable.setValue(valueFactory.createInteger(10));
 
-        expect(this.callStrpos()).to.be.an.instanceOf(IntegerValue);
-        expect(this.callStrpos().getNative()).to.equal(21);
+        result = await strpos(haystackVariable, needleVariable, offsetVariable).toPromise();
+
+        expect(result.getType()).to.equal('int');
+        expect(result.getNative()).to.equal(21);
     });
 
-    it('should return boolean false when the needle is not found in the haystack', function () {
-        this.haystackReference.getNative.returns('This is a string.');
-        this.needleReference.getNative.returns('random');
-        this.offsetReference = null;
+    it('should return boolean false when the needle is not found in the haystack', async function () {
+        var result;
+        haystackVariable.setValue(valueFactory.createString('This is a string.'));
+        needleVariable.setValue(valueFactory.createString('random'));
 
-        expect(this.callStrpos()).to.be.an.instanceOf(BooleanValue);
-        expect(this.callStrpos().getNative()).to.be.false;
+        result = await strpos(haystackVariable, needleVariable).toPromise();
+
+        expect(result.getType()).to.equal('boolean');
+        expect(result.getNative()).to.be.false;
     });
 });

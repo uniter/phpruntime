@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../../tools');
 
 describe('PHP "getenv" builtin function integration', function () {
-    it('should just return an empty array for now when trying to fetch all environment variables', function () {
+    it('should just return an empty array for now when trying to fetch all environment variables', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -26,16 +26,16 @@ return [
 ];
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal({
+        expect((await engine.execute()).getNative()).to.deep.equal({
             'is_array': true,
             'count': 0
         });
     });
 
-    it('should just return false for now when trying to fetch any specific environment variable', function () {
+    it('should just return false for now when trying to fetch any specific environment variable', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -47,11 +47,11 @@ $result[] = getenv($name);
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            false // No environment variables are supported for now
+        expect((await engine.execute()).getNative()).to.deep.equal([
+            false // No environment variables are supported for now.
         ]);
     });
 });

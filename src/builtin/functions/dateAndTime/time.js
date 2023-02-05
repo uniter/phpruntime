@@ -26,7 +26,7 @@ module.exports = function (internals) {
 
     return {
         /**
-         * Fetches the current Unix timestamp with microseconds
+         * Fetches the current Unix timestamp with microseconds.
          *
          * @see {@link https://secure.php.net/manual/en/function.microtime.php}
          *
@@ -44,12 +44,12 @@ module.exports = function (internals) {
 
                 if (getAsFloat) {
                     // Return the time since the Unix epoch in seconds, with microsecond accuracy
-                    // as a float
+                    // as a float.
                     return valueFactory.createFloat(timeInSeconds);
                 }
 
                 // Return the number of microseconds into the current second first, followed by
-                // the number of whole seconds since the Unix epoch
+                // the number of whole seconds since the Unix epoch.
                 return valueFactory.createString(
                     (timeInSeconds % 1).toFixed(6) + ' ' +
                     Math.floor(timeInSeconds)

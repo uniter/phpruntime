@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "strrchr" builtin function integration', function () {
-    it('should be able to extract the portion of haystack after the last occurrence of needle', function () {
+    it('should be able to extract the portion of haystack after the last occurrence of needle', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -27,14 +27,13 @@ $result[] = strrchr('hello', 'x');
 return $result;
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             'ing',
             'bcd',
-            false // Needle not found
+            false // Needle not found.
         ]);
     });
 });

@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "array_map" builtin function integration', function () {
-    it('should be able to map one array to another', function () {
+    it('should be able to map one array to another', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -30,12 +30,12 @@ $result[] = array_map('strtoupper', ['first', 'SEcond', 'thIRD']);
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile(null, php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            [42, 54, 202], // Using a closure as the callback
-            ['FIRST', 'SECOND', 'THIRD'] // Using a normal function as the callback
+        expect((await engine.execute()).getNative()).to.deep.equal([
+            [42, 54, 202], // Using a closure as the callback.
+            ['FIRST', 'SECOND', 'THIRD'] // Using a normal function as the callback.
         ]);
     });
 });

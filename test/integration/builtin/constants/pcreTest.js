@@ -14,23 +14,23 @@ var expect = require('chai').expect,
     tools = require('../../tools');
 
 describe('PHP PCRE constants integration', function () {
-    it('should support all the PCRE constants', function () {
+    it('should support all the PCRE constants', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 return [
-    PREG_OFFSET_CAPTURE,
-    PREG_PATTERN_ORDER,
-    PREG_SET_ORDER
+    'PREG_OFFSET_CAPTURE' => PREG_OFFSET_CAPTURE,
+    'PREG_PATTERN_ORDER' => PREG_PATTERN_ORDER,
+    'PREG_SET_ORDER' => PREG_SET_ORDER
 ];
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            256, // PREG_OFFSET_CAPTURE
-            1,   // PREG_PATTERN_ORDER
-            2    // PREG_SET_ORDER
-        ]);
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            'PREG_OFFSET_CAPTURE': 256,
+            'PREG_PATTERN_ORDER': 1,
+            'PREG_SET_ORDER': 2
+        });
     });
 });

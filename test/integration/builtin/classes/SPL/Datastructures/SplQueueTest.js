@@ -17,7 +17,7 @@ var expect = require('chai').expect,
 
 describe('PHP "SplQueue" builtin class integration', function () {
     describe('count()', function () {
-        it('should fetch a count of all items in the queue', function () {
+        it('should fetch a count of all items in the queue', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 $result = [];
@@ -33,10 +33,10 @@ $result['count with 2'] = count($queue);
 return $result;
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(engine.execute().getNative()).to.deep.equal({
+            expect((await engine.execute()).getNative()).to.deep.equal({
                 'count with 1': 1,
                 'count with 2': 2
             });
@@ -45,7 +45,7 @@ EOS
     });
 
     describe('dequeue()', function () {
-        it('should dequeue items previously pushed onto the queue', function () {
+        it('should dequeue items previously pushed onto the queue', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 $result = [];
@@ -63,10 +63,10 @@ $result['third dequeue'] = $queue->dequeue();
 return $result;
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(engine.execute().getNative()).to.deep.equal({
+            expect((await engine.execute()).getNative()).to.deep.equal({
                 'first dequeue': 'first',
                 'second dequeue': 'second',
                 'third dequeue': 'third'
@@ -74,7 +74,7 @@ EOS
             expect(engine.getStderr().readAll()).to.equal('');
         });
 
-        it('should raise a fatal error when the queue is empty', function () {
+        it('should raise a fatal error when the queue is empty', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -83,12 +83,10 @@ $queue = new SplQueue;
 $queue->dequeue();
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(function () {
-                engine.execute();
-            }).to.throw(
+            await expect(engine.execute()).to.eventually.be.rejectedWith(
                 PHPFatalError,
                 'PHP Fatal error: Uncaught Error: Can\'t shift from an empty datastructure ' +
                 'in /path/to/my_module.php on line 5'
@@ -97,7 +95,7 @@ EOS
     });
 
     describe('enqueue()', function () {
-        it('should enqueue items in the queue', function () {
+        it('should enqueue items in the queue', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 $result = [];
@@ -115,10 +113,10 @@ $result['third dequeue'] = $queue[2];
 return $result;
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(engine.execute().getNative()).to.deep.equal({
+            expect((await engine.execute()).getNative()).to.deep.equal({
                 'first dequeue': 'first',
                 'second dequeue': 'second',
                 'third dequeue': 'third'

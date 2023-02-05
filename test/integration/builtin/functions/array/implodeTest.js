@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "implode" builtin function integration', function () {
-    it('should be able to join strings together', function () {
+    it('should be able to join strings together', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -37,10 +37,10 @@ $result['with array of string, stringifiable object and delimiter'] = implode(' 
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile('/path/to/my_module.php', php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal({
+        expect((await engine.execute()).getNative()).to.deep.equal({
             'with array of strings and delimiter': 'first@second@third',
             // Note that this legacy signature was deprecated as of PHP v7.4.0 and removed as of PHP v8.0.0.
             'with array of strings, delimiter and args in reverse order': 'first@second@third',

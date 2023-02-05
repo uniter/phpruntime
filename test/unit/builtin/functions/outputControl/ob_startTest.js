@@ -10,44 +10,71 @@
 'use strict';
 
 var expect = require('chai').expect,
+    outputControlConstantFactory = require('../../../../../src/builtin/constants/outputControl'),
+    outputControlFunctionFactory = require('../../../../../src/builtin/functions/outputControl'),
     phpCommon = require('phpcommon'),
     sinon = require('sinon'),
-    outputControlFunctionFactory = require('../../../../../src/builtin/functions/outputControl'),
+    tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
     Class = require('phpcore/src/Class').sync(),
     Exception = phpCommon.Exception,
-    Output = require('phpcore/src/Output/Output'),
-    ValueFactory = require('phpcore/src/ValueFactory').sync();
+    Output = require('phpcore/src/Output/Output');
 
 describe('PHP "ob_start" builtin function', function () {
+    var callFactory,
+        callStack,
+        ob_start,
+        output,
+        state,
+        valueFactory;
+
     beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.output = sinon.createStubInstance(Output);
-        this.valueFactory = new ValueFactory();
-        this.internals = {
-            callStack: this.callStack,
-            output: this.output,
-            valueFactory: this.valueFactory
-        };
-        this.outputControlFunctions = outputControlFunctionFactory(this.internals);
-        this.ob_start = this.outputControlFunctions.ob_start;
+        callStack = sinon.createStubInstance(CallStack);
+        output = sinon.createStubInstance(Output);
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack,
+            'output': output
+        }, {}, [
+            {
+                constantGroups: [
+                    outputControlConstantFactory
+                ],
+                functionGroups: [
+                    outputControlFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
+        valueFactory = state.getValueFactory();
+
+        // We need a call on the stack for the isolated scope evaluation of the default argument to $flags.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
+
+        ob_start = state.getFunction('ob_start');
     });
 
     describe('when no arguments are given', function () {
-        it('should push a buffer onto the stack', function () {
-            this.ob_start();
+        it('should push a buffer onto the stack', async function () {
+            await ob_start().toPromise();
 
-            expect(this.output.pushBuffer).to.have.been.calledOnce;
+            expect(output.pushBuffer).to.have.been.calledOnce;
         });
     });
 
     describe('when a callback argument is given', function () {
-        it('should throw an exception as there is no support for now', function () {
+        it('should throw an exception as there is no support for now', async function () {
             var classObject = sinon.createStubInstance(Class);
 
-            expect(function () {
-                this.ob_start(this.valueFactory.createObject({}, classObject));
-            }.bind(this)).to.throw(Exception, 'ob_start() :: No arguments are supported yet');
+            await expect(ob_start(valueFactory.createObject({}, classObject)).toPromise())
+                .to.eventually.be.rejectedWith(
+                    Exception,
+                    'ob_start() :: No arguments are supported yet'
+                );
         });
     });
 });

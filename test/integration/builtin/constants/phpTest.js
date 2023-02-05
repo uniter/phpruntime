@@ -11,36 +11,28 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../sync');
+    tools = require('../../tools');
 
 describe('PHP runtime constants integration', function () {
-    it('should support all the PHP constants', function () {
+    it('should support all the PHP constants', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 return [
-    PHP_OS,
-    PHP_SAPI,
-    PHP_VERSION,
-    PHP_VERSION_ID
+    'PHP_OS' => PHP_OS,
+    'PHP_SAPI' => PHP_SAPI,
+    'PHP_VERSION' => PHP_VERSION,
+    'PHP_VERSION_ID' => PHP_VERSION_ID
 ];
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            'Uniter',  // PHP_OS
-            'cli',     // PHP_SAPI
-            '5.4.0',   // PHP_VERSION
-            50400      // PHP_VERSION_ID
-        ]);
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            'PHP_OS': 'Uniter',
+            'PHP_SAPI': 'cli',
+            'PHP_VERSION': '5.4.0',
+            'PHP_VERSION_ID': 50400
+        });
     });
 });

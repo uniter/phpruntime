@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "count" builtin function integration', function () {
-    it('should be able to count normal arrays and objects that implement the Countable interface', function () {
+    it('should be able to count normal arrays and objects that implement the Countable interface', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 class MyClass implements Countable
@@ -32,10 +32,10 @@ var_dump(count($myArray));
 var_dump(count($myObject));
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile('/path/to/my_module.php', php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        engine.execute();
+        await engine.execute();
 
         expect(engine.getStdout().readAll()).to.equal(
             nowdoc(function () {/*<<<EOS

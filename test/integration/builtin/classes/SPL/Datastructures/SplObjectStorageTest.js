@@ -15,7 +15,7 @@ var expect = require('chai').expect,
 
 describe('PHP "SplObjectStorage" builtin class integration', function () {
     describe('attach()', function () {
-        it('should allow objects to be attached', function () {
+        it('should allow objects to be attached', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 $result = [];
@@ -30,10 +30,10 @@ $result['fetching value via offsetGet'] = $storage[$myKey];
 return $result;
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(engine.execute().getNative()).to.deep.equal({
+            expect((await engine.execute()).getNative()).to.deep.equal({
                 'fetching value via offsetGet': 'my value'
             });
             expect(engine.getStderr().readAll()).to.equal('');
@@ -41,7 +41,7 @@ EOS
     });
 
     describe('count()', function () {
-        it('should fetch a count of all objects in the storage', function () {
+        it('should fetch a count of all objects in the storage', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 $result = [];
@@ -59,10 +59,10 @@ $result['count with 2'] = count($storage);
 return $result;
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(engine.execute().getNative()).to.deep.equal({
+            expect((await engine.execute()).getNative()).to.deep.equal({
                 'count with 1': 1,
                 'count with 2': 2
             });
@@ -71,7 +71,7 @@ EOS
     });
 
     describe('offsetExists()', function () {
-        it('should determine whether the object exists in the storage', function () {
+        it('should determine whether the object exists in the storage', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 $result = [];
@@ -88,10 +88,10 @@ $result['with invalid key'] = isset($storage[$notMyKey]);
 return $result;
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(engine.execute().getNative()).to.deep.equal({
+            expect((await engine.execute()).getNative()).to.deep.equal({
                 'with valid key': true,
                 'with invalid key': false
             });
@@ -100,7 +100,7 @@ EOS
     });
 
     describe('offsetGet()', function () {
-        it('should fetch the value from the storage', function () {
+        it('should fetch the value from the storage', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 $result = [];
@@ -118,10 +118,10 @@ $result['with second key'] = $storage[$mySecondKey];
 return $result;
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(engine.execute().getNative()).to.deep.equal({
+            expect((await engine.execute()).getNative()).to.deep.equal({
                 'with first key': 'my first value',
                 'with second key': 'my second value'
             });

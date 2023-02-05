@@ -11,12 +11,10 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../../sync');
+    tools = require('../../../tools');
 
 describe('PHP "array_shift" builtin function integration', function () {
-    it('should remove and return the first element in the array', function () {
+    it('should remove and return the first element in the array', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -38,21 +36,15 @@ return $result;
 
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            'first', // Shifted element from first array
-            ['second', 'third', 'fourth'], // First (numerically indexed) array after shift
-            'one', // Shifted element from second array
-            {yours: 'two', theirs: 'three'}, // Second (associative) array after shift
-            'second' // Value of new first element of first array after shift
+        expect((await engine.execute()).getNative()).to.deep.equal([
+            'first', // Shifted element from first array.
+            ['second', 'third', 'fourth'], // First (numerically indexed) array after shift.
+            'one', // Shifted element from second array.
+            {yours: 'two', theirs: 'three'}, // Second (associative) array after shift.
+            'second' // Value of new first element of first array after shift.
         ]);
     });
 });

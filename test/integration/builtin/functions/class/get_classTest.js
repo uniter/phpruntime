@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "get_class" builtin function integration', function () {
-    it('should be able to fetch both the current class and the class of a specified object', function () {
+    it('should be able to fetch both the current class and the class of a specified object', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -27,7 +27,7 @@ namespace My\Space
     {
         public function getItsClass()
         {
-            return get_class(); // With no arguments, should fetch the current FQCN
+            return get_class(); // With no arguments, should fetch the current FQCN.
         }
     }
 }
@@ -44,11 +44,10 @@ namespace {
 }
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             'My\\Space\\FirstClass',
             'My\\Space\\SecondClass'
         ]);

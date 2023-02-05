@@ -9,52 +9,40 @@
 
 'use strict';
 
-var REGEX_SPECIAL_CHAR_PATTERN = /[.\\+*?[^\]$(){}=!<>|:#-]/g,
-    phpCommon = require('phpcommon'),
-    PHPError = phpCommon.PHPError;
+var REGEX_SPECIAL_CHAR_PATTERN = /[.\\+*?[^\]$(){}=!<>|:#-]/g;
 
 /**
- * Basic-level PCRE support module. JavaScript's own RegExp implementation is used,
- * meaning that only the JavaScript-compliant subset of regular expression is supported.
+ * Common PCRE functions.
  */
 module.exports = function (internals) {
-    var callStack = internals.callStack,
-        valueFactory = internals.valueFactory;
+    var valueFactory = internals.valueFactory;
 
     return {
         /**
-         * Quote (escape) regular expression characters
+         * Quote (escape) regular expression characters.
          *
          * @see {@link https://secure.php.net/manual/en/function.preg-quote.php}
-         *
-         * @param {Reference|Variable|Value} stringReference
-         * @param {Reference|Variable|Value} delimiterReference
-         * @returns {StringValue}
          */
-        'preg_quote': function (stringReference, delimiterReference) {
-            var delimiter,
-                quoted,
-                string;
+        'preg_quote': internals.typeFunction(
+            'string $str, ?string $delimiter = null : string',
+            function (stringValue, delimiterValue) {
+                var delimiter,
+                    quoted,
+                    string = stringValue.getNative();
 
-            if (!stringReference) {
-                callStack.raiseError(PHPError.E_WARNING, 'preg_quote() expects at least 1 parameter, 0 given');
-                return valueFactory.createNull();
-            }
+                quoted = string.replace(REGEX_SPECIAL_CHAR_PATTERN, '\\$&');
 
-            string = stringReference.getNative();
+                if (delimiterValue.getType() !== 'null') {
+                    delimiter = delimiterValue.getNative().charAt(0); // We only consider the first char of delimiter.
+                    delimiter = delimiter.replace(REGEX_SPECIAL_CHAR_PATTERN, '');
 
-            quoted = string.replace(REGEX_SPECIAL_CHAR_PATTERN, '\\$&');
-
-            if (delimiterReference) {
-                delimiter = delimiterReference.getNative().charAt(0); // We only consider the first char of delimiter
-                delimiter = delimiter.replace(REGEX_SPECIAL_CHAR_PATTERN, '');
-
-                if (delimiter !== '') {
-                    quoted = quoted.replace(new RegExp('\\' + delimiter, 'g'), '\\$&');
+                    if (delimiter !== '') {
+                        quoted = quoted.replace(new RegExp('\\' + delimiter, 'g'), '\\$&');
+                    }
                 }
-            }
 
-            return valueFactory.createString(quoted);
-        }
+                return valueFactory.createString(quoted);
+            }
+        )
     };
 };

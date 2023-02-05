@@ -14,7 +14,6 @@ var _ = require('microdash'),
     CANNOT_POP_FROM_EMPTY_DATASTRUCTURE = 'core.cannot_pop_from_empty_datastructure',
     CANNOT_SHIFT_FROM_EMPTY_DATASTRUCTURE = 'core.cannot_shift_from_empty_datastructure',
     OFFSET_OUT_OF_RANGE = 'core.offset_out_of_range',
-    Exception = phpCommon.Exception,
     PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {

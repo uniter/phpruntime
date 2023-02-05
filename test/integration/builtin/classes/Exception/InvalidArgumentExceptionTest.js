@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "InvalidArgumentException" builtin class integration', function () {
-    it('should extend the LogicException base class', function () {
+    it('should extend the LogicException base class', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 $exception = new InvalidArgumentException('Oops');
@@ -22,13 +22,13 @@ $exception = new InvalidArgumentException('Oops');
 return $exception instanceof LogicException;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.be.true;
+        expect((await engine.execute()).getNative()).to.be.true;
     });
 
-    it('should set the message on the Exception', function () {
+    it('should set the message on the Exception', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 $exception = new InvalidArgumentException('Oops');
@@ -36,9 +36,9 @@ $exception = new InvalidArgumentException('Oops');
 return $exception->getMessage();
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.equal('Oops');
+        expect((await engine.execute()).getNative()).to.equal('Oops');
     });
 });

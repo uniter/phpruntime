@@ -10,53 +10,72 @@
 'use strict';
 
 var expect = require('chai').expect,
-    basicSupportExtension = require('../../../../../../src/builtin/functions/pcre/basicSupport'),
+    basicSupportFunctionFactory = require('../../../../../../src/builtin/functions/pcre/basicSupport'),
+    pcreConstantFactory = require('../../../../../../src/builtin/constants/pcre'),
+    phpCommon = require('phpcommon'),
     sinon = require('sinon'),
     tools = require('../../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    Variable = require('phpcore/src/Variable').sync();
+    PHPError = phpCommon.PHPError;
 
 describe('PHP "preg_match_all" basic-level builtin function', function () {
-    var callStack,
-        getConstant,
+    var callFactory,
+        callStack,
         preg_match_all,
-        valueFactory;
+        state,
+        valueFactory,
+        variableFactory,
+        PREG_OFFSET_CAPTURE;
 
     beforeEach(function () {
         callStack = sinon.createStubInstance(CallStack);
-        getConstant = sinon.stub();
-        valueFactory = tools.createIsolatedState().getValueFactory();
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                constantGroups: [
+                    pcreConstantFactory
+                ],
+                functionGroups: [
+                    basicSupportFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
+        valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
+        PREG_OFFSET_CAPTURE = state.getConstantValue('PREG_OFFSET_CAPTURE');
 
-        getConstant.withArgs('PREG_OFFSET_CAPTURE').returns(256);
-        getConstant.withArgs('PREG_PATTERN_ORDER').returns(1);
-        getConstant.withArgs('PREG_SET_ORDER').returns(2);
+        // We need a call on the stack for any isolated scope evaluation.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
 
-        preg_match_all = basicSupportExtension({
-            callStack: callStack,
-            getConstant: getConstant,
-            valueFactory: valueFactory
-        }).preg_match_all;
+        preg_match_all = state.getFunction('preg_match_all');
     });
 
     describe('on a successful match', function () {
-        it('should return the number of matches', function () {
-            var result = preg_match_all(
+        it('should return the number of matches', async function () {
+            var result = await preg_match_all(
                 valueFactory.createString('/hel{2}o/'),
                 valueFactory.createString('hello hello hello')
-            );
+            ).toPromise();
 
             expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(3);
         });
 
-        it('should populate the matches variable when using implied PREG_PATTERN_ORDER', function () {
-            var matchesVariable = new Variable(callStack, valueFactory, 'matches');
+        it('should populate the matches variable when using implied PREG_PATTERN_ORDER', async function () {
+            var matchesVariable = variableFactory.createVariable('matches');
 
-            preg_match_all(
+            await preg_match_all(
                 valueFactory.createString('/h(el{2})o/'),
                 valueFactory.createString('hello there, hello'),
                 matchesVariable
-            );
+            ).toPromise();
 
             expect(matchesVariable.getValue().getType()).to.equal('array');
             expect(matchesVariable.getValue().getNative()).to.deep.equal([
@@ -71,14 +90,14 @@ describe('PHP "preg_match_all" basic-level builtin function', function () {
             ]);
         });
 
-        it('should populate the matches variable for a unicode string given /u[tf8] modifier (with implied PREG_PATTERN_ORDER)', function () {
-            var matchesVariable = new Variable(callStack, valueFactory, 'matches');
+        it('should populate the matches variable for a unicode string given /u[tf8] modifier (with implied PREG_PATTERN_ORDER)', async function () {
+            var matchesVariable = variableFactory.createVariable('matches');
 
-            preg_match_all(
+            await preg_match_all(
                 valueFactory.createString('/./u'),
-                valueFactory.createString('こんにちは世界'), // "hello world" in Japanese
+                valueFactory.createString('こんにちは世界'), // "hello world" in Japanese.
                 matchesVariable
-            );
+            ).toPromise();
 
             expect(matchesVariable.getValue().getType()).to.equal('array');
             expect(matchesVariable.getValue().getNative()).to.deep.equal([
@@ -94,15 +113,15 @@ describe('PHP "preg_match_all" basic-level builtin function', function () {
             ]);
         });
 
-        it('should capture offsets when PREG_OFFSET_CAPTURE is specified (with implied PREG_PATTERN_ORDER)', function () {
-            var matchesVariable = new Variable(callStack, valueFactory, 'matches');
+        it('should capture offsets when PREG_OFFSET_CAPTURE is specified (with implied PREG_PATTERN_ORDER)', async function () {
+            var matchesVariable = variableFactory.createVariable('matches');
 
-            preg_match_all(
+            await preg_match_all(
                 valueFactory.createString('/h(el{2})o/'),
                 valueFactory.createString('well hello there, hello!'),
                 matchesVariable,
-                valueFactory.createInteger(256) // PREG_OFFSET_CAPTURE
-            );
+                PREG_OFFSET_CAPTURE
+            ).toPromise();
 
             expect(matchesVariable.getValue().getType()).to.equal('array');
             expect(matchesVariable.getValue().getNative()).to.deep.equal([
@@ -129,16 +148,16 @@ describe('PHP "preg_match_all" basic-level builtin function', function () {
             ]);
         });
 
-        it('should capture offsets when PREG_OFFSET_CAPTURE is specified with explicit PREG_SET_ORDER', function () {
+        it('should capture offsets when PREG_OFFSET_CAPTURE is specified with explicit PREG_SET_ORDER', async function () {
             /*jshint bitwise: false */
-            var matchesVariable = new Variable(callStack, valueFactory, 'matches');
+            var matchesVariable = variableFactory.createVariable('matches');
 
-            preg_match_all(
+            await preg_match_all(
                 valueFactory.createString('/h(el{2})o/'),
                 valueFactory.createString('well hello there, hello!'),
                 matchesVariable,
                 valueFactory.createInteger(256 | 2) // PREG_OFFSET_CAPTURE
-            );
+            ).toPromise();
 
             expect(matchesVariable.getValue().getType()).to.equal('array');
             expect(matchesVariable.getValue().getNative()).to.deep.equal([
@@ -167,81 +186,27 @@ describe('PHP "preg_match_all" basic-level builtin function', function () {
     });
 
     describe('on a failed match', function () {
-        it('should return 0', function () {
-            var result = preg_match_all(
+        it('should return 0', async function () {
+            var result = await preg_match_all(
                 valueFactory.createString('/regexp?/'),
                 valueFactory.createString('this will not match')
-            );
+            ).toPromise();
 
             expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(0);
         });
 
-        it('should populate the matches variable with an empty array', function () {
-            var matchesVariable = new Variable(callStack, valueFactory, 'matches');
+        it('should populate the matches variable with an empty array', async function () {
+            var matchesVariable = variableFactory.createVariable('matches');
 
-            preg_match_all(
+            await preg_match_all(
                 valueFactory.createString('/regexp?/'),
                 valueFactory.createString('this will not match'),
                 matchesVariable
-            );
+            ).toPromise();
 
             expect(matchesVariable.getValue().getType()).to.equal('array');
             expect(matchesVariable.getValue().getNative()).to.deep.equal([]);
-        });
-    });
-
-    describe('when not enough args are given', function () {
-        var doCall,
-            resultValue;
-
-        beforeEach(function () {
-            doCall = function () {
-                resultValue = preg_match_all(
-                    valueFactory.createString('/only a regex is given/')
-                );
-            };
-        });
-
-        it('should raise a warning', function () {
-            doCall();
-
-            expect(callStack.raiseError).to.have.been.calledOnce;
-            expect(callStack.raiseError).to.have.been.calledWith(
-                'Warning',
-                'preg_match_all() expects at least 2 parameters, 1 given'
-            );
-        });
-
-        it('should return false', function () {
-            doCall();
-
-            expect(resultValue.getType()).to.equal('boolean');
-            expect(resultValue.getNative()).to.be.false;
-        });
-    });
-
-    describe('when a non-string pattern is given', function () {
-        it('should throw an error (coercion not yet supported here)', function () {
-            expect(function () {
-                preg_match_all(
-                    valueFactory.createInteger(1001),
-                    valueFactory.createString('my subject'),
-                    sinon.createStubInstance(Variable)
-                );
-            }).to.throw('preg_match_all(): Non-string pattern not yet supported');
-        });
-    });
-
-    describe('when a non-string subject is given', function () {
-        it('should throw an error (coercion not yet supported here)', function () {
-            expect(function () {
-                preg_match_all(
-                    valueFactory.createString('/my pattern/'),
-                    valueFactory.createInteger(1001),
-                    sinon.createStubInstance(Variable)
-                );
-            }).to.throw('preg_match_all(): Non-string subject not yet supported');
         });
     });
 
@@ -250,28 +215,28 @@ describe('PHP "preg_match_all" basic-level builtin function', function () {
             resultValue;
 
         beforeEach(function () {
-            doCall = function () {
-                resultValue = preg_match_all(
+            doCall = async function () {
+                resultValue = await preg_match_all(
                     valueFactory.createString('/? invalid regex/'),
                     valueFactory.createString('anything')
-                );
+                ).toPromise();
             };
         });
 
-        it('should raise a warning', function () {
-            doCall();
+        it('should raise a warning', async function () {
+            await doCall();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
-                'Warning',
+                PHPError.E_WARNING,
                 'preg_match_all(): Compilation failed [Uniter]: only basic-level preg support is enabled, ' +
                 '"/? invalid regex/" may be a valid but unsupported PCRE regex. ' +
-                'JS RegExp error: SyntaxError: Invalid regular expression: /? invalid regex/: Nothing to repeat'
+                'PCREmu error: Error: Parser.parse() :: No match'
             );
         });
 
-        it('should return false', function () {
-            doCall();
+        it('should return false', async function () {
+            await doCall();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;
@@ -283,26 +248,26 @@ describe('PHP "preg_match_all" basic-level builtin function', function () {
             resultValue;
 
         beforeEach(function () {
-            doCall = function () {
-                resultValue = preg_match_all(
+            doCall = async function () {
+                resultValue = await preg_match_all(
                     valueFactory.createString('@invalid preg pattern'),
                     valueFactory.createString('anything')
-                );
+                ).toPromise();
             };
         });
 
-        it('should raise a warning', function () {
-            doCall();
+        it('should raise a warning', async function () {
+            await doCall();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
-                'Warning',
+                PHPError.E_WARNING,
                 'preg_match_all(): No ending delimiter \'@\' found'
             );
         });
 
-        it('should return false', function () {
-            doCall();
+        it('should return false', async function () {
+            await doCall();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;
@@ -314,26 +279,26 @@ describe('PHP "preg_match_all" basic-level builtin function', function () {
             resultValue;
 
         beforeEach(function () {
-            doCall = function () {
-                resultValue = preg_match_all(
+            doCall = async function () {
+                resultValue = await preg_match_all(
                     valueFactory.createString('/invalid preg modifier/a'),
                     valueFactory.createString('anything')
-                );
+                ).toPromise();
             };
         });
 
-        it('should raise a warning', function () {
-            doCall();
+        it('should raise a warning', async function () {
+            await doCall();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
-                'Warning',
+                PHPError.E_WARNING,
                 'preg_match_all(): Unknown modifier \'a\''
             );
         });
 
-        it('should return false', function () {
-            doCall();
+        it('should return false', async function () {
+            await doCall();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;
@@ -342,35 +307,35 @@ describe('PHP "preg_match_all" basic-level builtin function', function () {
 
     describe('when the invalid, implicit global match modifier "g" is given', function () {
         var doCall,
-            patternReference,
+            patternVariable,
             resultValue,
-            subjectReference;
+            subjectVariable;
 
-        // NB: preg_match_all(...) always does a global match, preg_match(...) always does a single match
+        // NB: preg_match_all(...) always does a global match, preg_match(...) always does a single match.
 
         beforeEach(function () {
-            patternReference = sinon.createStubInstance(Variable);
-            subjectReference = sinon.createStubInstance(Variable);
-            patternReference.getValue.returns(valueFactory.createString('/invalid preg modifier/g'));
-            subjectReference.getValue.returns(valueFactory.createString('some subject'));
+            patternVariable = variableFactory.createVariable('myPattern');
+            subjectVariable = variableFactory.createVariable('mySubject');
+            patternVariable.setValue(valueFactory.createString('/invalid preg modifier/g'));
+            subjectVariable.setValue(valueFactory.createString('some subject'));
 
-            doCall = function () {
-                resultValue = preg_match_all(patternReference, subjectReference);
+            doCall = async function () {
+                resultValue = await preg_match_all(patternVariable, subjectVariable).toPromise();
             };
         });
 
-        it('should raise a warning', function () {
-            doCall();
+        it('should raise a warning', async function () {
+            await doCall();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
-                'Warning',
+                PHPError.E_WARNING,
                 'preg_match_all(): Unknown modifier \'g\''
             );
         });
 
-        it('should return false', function () {
-            doCall();
+        it('should return false', async function () {
+            await doCall();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;
@@ -380,43 +345,43 @@ describe('PHP "preg_match_all" basic-level builtin function', function () {
     describe('when invalid flags are given', function () {
         var doCall,
             flagsReference,
-            matchesReference,
-            patternReference,
+            matchesVariable,
+            patternVariable,
             resultValue,
-            subjectReference;
+            subjectVariable;
 
         beforeEach(function () {
-            patternReference = sinon.createStubInstance(Variable);
-            subjectReference = sinon.createStubInstance(Variable);
-            matchesReference = sinon.createStubInstance(Variable);
-            flagsReference = sinon.createStubInstance(Variable);
-            patternReference.getValue.returns(valueFactory.createString('/some regex/'));
-            subjectReference.getValue.returns(valueFactory.createString('some subject'));
-            matchesReference.getValue.returns(valueFactory.createNull());
-            flagsReference.getValue.returns(valueFactory.createInteger(8));
+            patternVariable = variableFactory.createVariable('myPattern');
+            subjectVariable = variableFactory.createVariable('mySubject');
+            matchesVariable = variableFactory.createVariable('myMatches');
+            flagsReference = variableFactory.createVariable('myFlags');
+            patternVariable.setValue(valueFactory.createString('/some regex/'));
+            subjectVariable.setValue(valueFactory.createString('some subject'));
+            matchesVariable.setValue(valueFactory.createNull());
+            flagsReference.setValue(valueFactory.createInteger(8));
 
-            doCall = function () {
-                resultValue = preg_match_all(
-                    patternReference,
-                    subjectReference,
-                    matchesReference,
+            doCall = async function () {
+                resultValue = await preg_match_all(
+                    patternVariable,
+                    subjectVariable,
+                    matchesVariable,
                     flagsReference
-                );
+                ).toPromise();
             };
         });
 
-        it('should raise a warning', function () {
-            doCall();
+        it('should raise a warning', async function () {
+            await doCall();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
-                'Warning',
+                PHPError.E_WARNING,
                 'preg_match_all(): Invalid flags specified'
             );
         });
 
-        it('should return false', function () {
-            doCall();
+        it('should return false', async function () {
+            await doCall();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;

@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "func_get_args" builtin function integration', function () {
-    it('should be able to fetch three arguments passed to a function with no formal ones', function () {
+    it('should be able to fetch three arguments passed to a function with no formal ones', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 function doubleAll()
@@ -31,13 +31,13 @@ function doubleAll()
 return doubleAll(10, 26, 200);
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([20, 52, 400]);
+        expect((await engine.execute()).getNative()).to.deep.equal([20, 52, 400]);
     });
 
-    it('should be able to fetch three arguments passed to a function with two formal ones', function () {
+    it('should be able to fetch three arguments passed to a function with two formal ones', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 function doubleAll($first, $second)
@@ -54,10 +54,10 @@ function doubleAll($first, $second)
 return doubleAll(10, 26, 200);
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal(
+        expect((await engine.execute()).getNative()).to.deep.equal(
             [10, 26, 'and then', 20, 52, 400]
         );
     });

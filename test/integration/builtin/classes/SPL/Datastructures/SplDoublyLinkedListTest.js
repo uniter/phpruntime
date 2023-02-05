@@ -17,7 +17,7 @@ var expect = require('chai').expect,
 
 describe('PHP "SplDoublyLinkedList" builtin class integration', function () {
     describe('count()', function () {
-        it('should fetch a count of all items in the list', function () {
+        it('should fetch a count of all items in the list', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 $result = [];
@@ -33,10 +33,10 @@ $result['count with 2'] = count($list);
 return $result;
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(engine.execute().getNative()).to.deep.equal({
+            expect((await engine.execute()).getNative()).to.deep.equal({
                 'count with 1': 1,
                 'count with 2': 2
             });
@@ -45,7 +45,7 @@ EOS
     });
 
     describe('isEmpty()', function () {
-        it('should return true only when the list is empty', function () {
+        it('should return true only when the list is empty', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 $result = [];
@@ -60,10 +60,10 @@ $result['with one item'] = $list->isEmpty();
 return $result;
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(engine.execute().getNative()).to.deep.equal({
+            expect((await engine.execute()).getNative()).to.deep.equal({
                 'when empty': true,
                 'with one item': false
             });
@@ -72,7 +72,7 @@ EOS
     });
 
     describe('pop()', function () {
-        it('should pop items from the end of the list', function () {
+        it('should pop items from the end of the list', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 $result = [];
@@ -90,10 +90,10 @@ $result['third item'] = $list->pop();
 return $result;
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(engine.execute().getNative()).to.deep.equal({
+            expect((await engine.execute()).getNative()).to.deep.equal({
                 'first item': 'third',
                 'second item': 'second',
                 'third item': 'first'
@@ -101,7 +101,7 @@ EOS
             expect(engine.getStderr().readAll()).to.equal('');
         });
 
-        it('should raise a fatal error when the list is empty', function () {
+        it('should raise a fatal error when the list is empty', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -110,12 +110,10 @@ $list = new SplDoublyLinkedList;
 $list->pop();
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(function () {
-                engine.execute();
-            }).to.throw(
+            await expect(engine.execute()).to.eventually.be.rejectedWith(
                 PHPFatalError,
                 'PHP Fatal error: Uncaught Error: Can\'t pop from an empty datastructure ' +
                 'in /path/to/my_module.php on line 5'
@@ -124,7 +122,7 @@ EOS
     });
 
     describe('push()', function () {
-        it('should push items onto the list', function () {
+        it('should push items onto the list', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 $result = [];
@@ -142,10 +140,10 @@ $result['third item'] = $list[2];
 return $result;
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(engine.execute().getNative()).to.deep.equal({
+            expect((await engine.execute()).getNative()).to.deep.equal({
                 'first item': 'first',
                 'second item': 'second',
                 'third item': 'third'
@@ -155,7 +153,7 @@ EOS
     });
 
     describe('shift()', function () {
-        it('should shift items from the beginning of the list', function () {
+        it('should shift items from the beginning of the list', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 $result = [];
@@ -173,10 +171,10 @@ $result['third item'] = $list->shift();
 return $result;
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(engine.execute().getNative()).to.deep.equal({
+            expect((await engine.execute()).getNative()).to.deep.equal({
                 'first item': 'first',
                 'second item': 'second',
                 'third item': 'third'
@@ -184,7 +182,7 @@ EOS
             expect(engine.getStderr().readAll()).to.equal('');
         });
 
-        it('should raise a fatal error when the list is empty', function () {
+        it('should raise a fatal error when the list is empty', async function () {
             var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -193,12 +191,10 @@ $list = new SplDoublyLinkedList;
 $list->shift();
 EOS
 */;}), //jshint ignore:line
-                module = tools.syncTranspile('/path/to/my_module.php', php),
+                module = tools.asyncTranspile('/path/to/my_module.php', php),
                 engine = module();
 
-            expect(function () {
-                engine.execute();
-            }).to.throw(
+            await expect(engine.execute()).to.eventually.be.rejectedWith(
                 PHPFatalError,
                 'PHP Fatal error: Uncaught Error: Can\'t shift from an empty datastructure ' +
                 'in /path/to/my_module.php on line 5'

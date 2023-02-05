@@ -42,4 +42,33 @@ EOS
         });
         expect(engine.getStderr().readAll()).to.equal('');
     });
+
+    it('should be able to reset and return the first element of an object', async function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+$result = [];
+
+$myObject = (object)['first', 'a_key' => 'second', 'third'];
+
+$result['current #1'] = current($myObject);
+$result['next #1'] = next($myObject);
+$result['next #2'] = next($myObject);
+$result['reset'] = reset($myObject);
+$result['next #3'] = next($myObject);
+
+return $result;
+EOS
+*/;}), //jshint ignore:line
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module();
+
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            'current #1': 'first',
+            'next #1': 'second',
+            'next #2': 'third',
+            'reset': 'first',
+            'next #3': 'second'
+        });
+        expect(engine.getStderr().readAll()).to.equal('');
+    });
 });

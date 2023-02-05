@@ -27,6 +27,7 @@ var arrayConstants = require('./constants/array'),
     htmlStringFunctions = require('./functions/string/html'),
     InvalidArgumentException = require('./classes/Exception/InvalidArgumentException'),
     LogicException = require('./classes/Exception/LogicException'),
+    outputControlConstants = require('./constants/outputControl'),
     outputControlFunctions = require('./functions/outputControl'),
     pcreCommonFunctions = require('./functions/pcre/common'),
     pcreConstants = require('./constants/pcre'),
@@ -44,7 +45,8 @@ var arrayConstants = require('./constants/array'),
     timeDateAndTimeFunctions = require('./functions/dateAndTime/time'),
     timeFunctions = require('./functions/misc/time'),
     urlFunctions = require('./functions/url'),
-    variableHandlingFunctions = require('./functions/variableHandling');
+    variableHandlingFunctions = require('./functions/variableHandling'),
+    warningMessages = require('./messages/warning.en_GB');
 
 module.exports = {
     bindingGroups: [
@@ -74,6 +76,7 @@ module.exports = {
     constantGroups: [
         arrayConstants,
         filesystemConstants,
+        outputControlConstants,
         pcreConstants,
         phpConstants,
         stringConstants
@@ -105,6 +108,7 @@ module.exports = {
         clockServices
     ],
     translationCatalogues: [
-        errorMessages
+        errorMessages,
+        warningMessages
     ]
 };

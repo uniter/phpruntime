@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "array_key_exists" builtin function integration', function () {
-    it('should be able to determine whether an array defines an element with the given key', function () {
+    it('should be able to determine whether an array defines an element with the given key', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -25,24 +25,24 @@ $myArray = [
 ];
 
 $result = [];
-$result[] = array_key_exists(0, $myArray);
-$result[] = array_key_exists('my_element', $myArray);
-$result[] = array_key_exists('my_null_element', $myArray);
-$result[] = array_key_exists('not_my_key', $myArray);
-$result[] = array_key_exists(123, $myArray);
+$result['numeric key'] = array_key_exists(0, $myArray);
+$result['string key'] = array_key_exists('my_element', $myArray);
+$result['null value element'] = array_key_exists('my_null_element', $myArray);
+$result['undefined string key'] = array_key_exists('not_my_key', $myArray);
+$result['undefined numeric key'] = array_key_exists(123, $myArray);
 
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            true, // Should work for numeric keys too
-            true,
-            true, // Unlike isset(...), should return true even for elements with a value of NULL
-            false,
-            false
-        ]);
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            'numeric key': true, // Should work for numeric keys too.
+            'string key': true,
+            'null value element': true, // Unlike isset(...), should return true even for elements with a value of NULL.
+            'undefined string key': false,
+            'undefined numeric key': false
+        });
     });
 });

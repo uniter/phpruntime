@@ -16,24 +16,27 @@ var expect = require('chai').expect,
     PHPFatalError = phpCommon.PHPFatalError;
 
 describe('PHP "trigger_error" builtin function integration', function () {
+    var doRun,
+        outputLog;
+
     beforeEach(function () {
-        this.outputLog = [];
-        this.doRun = function (engine) {
+        outputLog = [];
+        doRun = function (engine) {
             // Capture the standard streams, prefixing each write with its name
             // so that we can ensure that what is written to each of them is in the correct order
-            // with respect to one another
+            // with respect to one another.
             engine.getStdout().on('data', function (data) {
-                this.outputLog.push('[stdout]' + data);
-            }.bind(this));
+                outputLog.push('[stdout]' + data);
+            });
             engine.getStderr().on('data', function (data) {
-                this.outputLog.push('[stderr]' + data);
-            }.bind(this));
+                outputLog.push('[stderr]' + data);
+            });
 
-            engine.execute();
-        }.bind(this);
+            return engine.execute();
+        };
     });
 
-    it('should be able to trigger E_USER_*-level errors', function () {
+    it('should be able to trigger E_USER_*-level errors', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 ini_set('error_reporting', E_ALL);
@@ -48,14 +51,15 @@ trigger_error('A user-level error', E_USER_ERROR);
 return 'I should not be reached';
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile('/path/to/my_module.php', php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        // E_USER_ERROR should stop execution as a fatal error
-        expect(function () {
-            this.doRun(engine);
-        }.bind(this)).to.throw(PHPFatalError, 'A user-level error');
-        expect(this.outputLog).to.deep.equal([
+        // E_USER_ERROR should stop execution as a fatal error.
+        await expect(doRun(engine)).to.eventually.be.rejectedWith(
+            PHPFatalError,
+            'A user-level error'
+        );
+        expect(outputLog).to.deep.equal([
 '[stderr]PHP Notice:  Without an explicit error type specified (defaults to E_USER_NOTICE) in /path/to/my_module.php on line 5\n',
 // NB: Stdout should have a leading newline written out just before the message
 '[stdout]\nNotice: Without an explicit error type specified (defaults to E_USER_NOTICE) in /path/to/my_module.php on line 5\n',

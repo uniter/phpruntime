@@ -10,65 +10,80 @@
 'use strict';
 
 var expect = require('chai').expect,
-    sinon = require('sinon'),
+    outputControlConstantFactory = require('../../../../../src/builtin/constants/outputControl'),
     outputControlFunctionFactory = require('../../../../../src/builtin/functions/outputControl'),
+    sinon = require('sinon'),
+    tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    Output = require('phpcore/src/Output/Output'),
-    ValueFactory = require('phpcore/src/ValueFactory').sync();
+    Output = require('phpcore/src/Output/Output');
 
 describe('PHP "ob_get_clean" builtin function', function () {
+    var callStack,
+        ob_get_clean,
+        output,
+        state,
+        valueFactory;
+
     beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.output = sinon.createStubInstance(Output);
-        this.valueFactory = new ValueFactory();
-        this.internals = {
-            callStack: this.callStack,
-            output: this.output,
-            valueFactory: this.valueFactory
-        };
-        this.outputControlFunctions = outputControlFunctionFactory(this.internals);
-        this.ob_get_clean = this.outputControlFunctions.ob_get_clean;
+        callStack = sinon.createStubInstance(CallStack);
+        output = sinon.createStubInstance(Output);
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack,
+            'output': output
+        }, {}, [
+            {
+                constantGroups: [
+                    outputControlConstantFactory
+                ],
+                functionGroups: [
+                    outputControlFunctionFactory
+                ]
+            }
+        ]);
+        valueFactory = state.getValueFactory();
+
+        ob_get_clean = state.getFunction('ob_get_clean');
     });
 
     describe('on success', function () {
         beforeEach(function () {
-            this.output.getDepth.returns(4);
+            output.getDepth.returns(4);
         });
 
-        it('should clean and then return the current output buffer', function () {
+        it('should clean and then return the current output buffer', async function () {
             var resultValue;
-            this.output.getCurrentBufferContents.returns('my buffered output');
-            this.output.popBuffer.callsFake(function () {
-                this.output.getCurrentBufferContents.returns('');
-            }.bind(this));
+            output.getCurrentBufferContents.returns('my buffered output');
+            output.popBuffer.callsFake(function () {
+                output.getCurrentBufferContents.returns('');
+            });
 
-            resultValue = this.ob_get_clean();
+            resultValue = await ob_get_clean().toPromise();
 
             expect(resultValue.getType()).to.equal('string');
             expect(resultValue.getNative()).to.equal('my buffered output');
-            expect(this.output.popBuffer).to.have.been.calledOnce;
+            expect(output.popBuffer).to.have.been.calledOnce;
         });
 
-        it('should not raise any error', function () {
-            this.ob_get_clean();
+        it('should not raise any error', async function () {
+            await ob_get_clean().toPromise();
 
-            expect(this.callStack.raiseError).not.to.have.been.called;
+            expect(callStack.raiseError).not.to.have.been.called;
         });
     });
 
     describe('on failure', function () {
         beforeEach(function () {
-            this.output.getDepth.returns(0);
+            output.getDepth.returns(0);
         });
 
-        it('should STILL not raise a notice (unlike some other ob_* functions)', function () {
-            this.ob_get_clean();
+        it('should STILL not raise a notice (unlike some other ob_* functions)', async function () {
+            await ob_get_clean().toPromise();
 
-            expect(this.callStack.raiseError).not.to.have.been.calledOnce;
+            expect(callStack.raiseError).not.to.have.been.calledOnce;
         });
 
-        it('should return bool(false)', function () {
-            var resultValue = this.ob_get_clean();
+        it('should return bool(false)', async function () {
+            var resultValue = await ob_get_clean().toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;

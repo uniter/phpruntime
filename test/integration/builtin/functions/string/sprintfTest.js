@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "sprintf" builtin function integration', function () {
-    it('should be able to format a string', function () {
+    it('should be able to format a string', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -28,11 +28,10 @@ $result[] = sprintf('A padded number: %\'~5d and a string: %s in here', 21, '(he
 return $result;
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             'I contain no conversion % specifications',
             'I contain string conversion specifications inside',
             'A padded number: ~~~21 and a string: (hello!) in here'

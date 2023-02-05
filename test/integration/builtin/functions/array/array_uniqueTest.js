@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "array_unique" builtin function integration', function () {
-    it('should be able to fetch only the unique values of an array', function () {
+    it('should be able to fetch only the unique values of an array', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -24,10 +24,10 @@ $result[] = array_unique(['a' => 'green', 'red', 'b' => 'green', 'blue', 'red'])
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             {
                 'a': 'green',
                 '0': 'red',

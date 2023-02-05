@@ -14,7 +14,7 @@ var _ = require('microdash'),
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
-        characterRegexCache = {}, // For caching the regexes used to do entity replacements, for speed
+        characterRegexCache = {}, // For caching the regexes used to do entity replacements, for speed.
         hasOwn = {}.hasOwnProperty,
         valueFactory = internals.valueFactory,
         PHPError = phpCommon.PHPError,
@@ -30,7 +30,7 @@ module.exports = function (internals) {
                 '<': '&lt;',
                 '>': '&gt;',
 
-                '£': '&pound;' // TODO: Support adding remaining entities via addons
+                '£': '&pound;' // TODO: Support adding remaining entities via addons.
             },
             HTML_SPECIALCHARS: {
                 '&': '&amp;',
@@ -40,7 +40,7 @@ module.exports = function (internals) {
         };
 
     /**
-     * Fetches a translation table
+     * Fetches a translation table.
      *
      * @param {string} functionName
      * @param {number} tableID
@@ -74,23 +74,25 @@ module.exports = function (internals) {
 
         switch (quotesMode) {
             case 'double':
-                tableData = Object.assign({}, tableData, { // Don't edit the original table object
+                // Don't edit the original table object.
+                tableData = Object.assign({}, tableData, {
                     '"': '&quot;'
                 });
                 break;
             case 'both':
-                tableData = Object.assign({}, tableData, { // Don't edit the original table object
+                // Don't edit the original table object.
+                tableData = Object.assign({}, tableData, {
                     '"': '&quot;',
                     '\'': '&#039;'
                 });
                 break;
             default:
             case 'none':
-            // Do nothing
+                // Do nothing.
         }
 
         if (encoding.toLowerCase() !== 'utf-8') {
-            // Only UTF-8 is supported for now
+            // Only UTF-8 is supported for now.
             callStack.raiseError(
                 PHPError.E_WARNING,
                 functionName + '(): charset `' + encoding + '\' not supported, assuming utf-8'
@@ -101,7 +103,7 @@ module.exports = function (internals) {
     }
 
     /**
-     * Performs the actual HTML-encoding of a string using a given translation table
+     * Performs the actual HTML-encoding of a string using a given translation table.
      *
      * @param {string} string String to encode
      * @param {object} translationTable Translation table (as returned from getTranslationTable())
@@ -118,7 +120,7 @@ module.exports = function (internals) {
 
                 if (character === '&' && !doubleEncode) {
                     // Ensure we don't double-encode any entities in the two possible formats
-                    // "&lt;" or "&#012"
+                    // "&lt;" or "&#012".
                     pattern += '(?!\\w+;|#\\d+;)';
                 }
 
@@ -137,7 +139,7 @@ module.exports = function (internals) {
 
     return {
         /**
-         * Fetches the translation table used by htmlspecialchars(...) or htmlentities(...)
+         * Fetches the translation table used by htmlspecialchars(...) or htmlentities(...).
          *
          * @see {@link https://secure.php.net/manual/en/function.get-html-translation-table.php}
          *
@@ -165,7 +167,7 @@ module.exports = function (internals) {
         },
 
         /**
-         * Converts all applicable characters to HTML entities
+         * Converts all applicable characters to HTML entities.
          *
          * @see {@link https://secure.php.net/manual/en/function.htmlentities.php}
          *
@@ -214,7 +216,7 @@ module.exports = function (internals) {
         },
 
         /**
-         * Converts all special characters to HTML entities
+         * Converts all special characters to HTML entities.
          *
          * @see {@link https://secure.php.net/manual/en/function.htmlspecialchars.php}
          *

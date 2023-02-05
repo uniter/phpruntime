@@ -27,5 +27,5 @@
     "undef": true,
     "unused": true,
     "strict": true,
-    "esversion": 8
+    "esversion": 9
 }

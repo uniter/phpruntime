@@ -9,6 +9,9 @@
 
 'use strict';
 
+var phpCommon = require('phpcommon'),
+    Exception = phpCommon.Exception;
+
 module.exports = function (internals) {
     var valueFactory = internals.valueFactory;
 
@@ -18,22 +21,22 @@ module.exports = function (internals) {
          * Any changes made at runtime (eg. with ini_set(...)) will _not_ be taken into account.
          *
          * @see {@link https://secure.php.net/manual/en/function.get-cfg-var.php}
-         *
-         * @param {Reference|Value|Variable} optionNameReference
-         * @return {Value}
          */
-        'get_cfg_var': function (optionNameReference) {
-            var optionName = optionNameReference ?
-                optionNameReference.getValue().getNative() :
-                null;
+        'get_cfg_var': internals.typeFunction(
+            'string $option : mixed',
+            function (optionNameValue) {
+                // TODO: Use union return type above once supported.
 
-            if (optionName === 'cfg_file_path') {
-                return valueFactory.createString('/pseudo/uniter/php.ini');
+                var optionName = optionNameValue.getNative();
+
+                if (optionName === 'cfg_file_path') {
+                    return valueFactory.createString('/pseudo/uniter/php.ini');
+                }
+
+                throw new Exception(
+                    'Cannot fetch option "' + optionName + '" - only cfg_file_path config option is currently supported'
+                );
             }
-
-            throw new Error(
-                'Cannot fetch option "' + optionName + '" - only cfg_file_path config option is currently supported'
-            );
-        }
+        )
     };
 };

@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "set_include_path" builtin function integration', function () {
-    it('should be able to change the current configured include path', function () {
+    it('should be able to change the current configured include path', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 set_include_path('/some/include/path');
@@ -26,12 +26,12 @@ $result[] = get_include_path();
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            '/some/include/path',   // Previous include path should be returned
-            '.:/usr/include/php'    // Path should be changed
+        expect((await engine.execute()).getNative()).to.deep.equal([
+            '/some/include/path',   // Previous include path should be returned.
+            '.:/usr/include/php'    // Path should be changed.
         ]);
     });
 });

@@ -21,37 +21,40 @@ describe('PHP "preg_match_all" basic-level builtin function integration', functi
         environment = tools.createAsyncEnvironment({}, [basicSupportAddon]);
     });
 
-    it('should be able to search using regexes compatible with both the JS and PCRE formats', async function () {
+    it('should be able to search using regexes supported by PCREmu', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 $result = [];
 
-// With default flags (PREG_PATTERN_ORDER)
+// With matches not captured.
+$result[] = preg_match_all('/a(.)c/', 'start abc axc middle aac end');
+
+// With default flags (PREG_PATTERN_ORDER).
 $result[] = preg_match_all('/a(.)c/', 'start abc axc middle aac end', $matches);
 $result[] = $matches;
-// Use start-of-string anchor to make sure the offset is not applied by simply stripping off some leading chars
+// Use start-of-string anchor to make sure the offset is not applied by simply stripping off some leading chars.
 $result[] = preg_match_all('/((?:^1234.*?)?)a(..)d/', 'abcd 1234 axyd then auud', $matches, PREG_PATTERN_ORDER, 5);
 $result[] = $matches;
 
-// Test case-insensitive modifier
+// Test case-insensitive modifier.
 $result[] = preg_match_all('/m(.n)e/i', 'maNe mInE MynE', $matches);
 $result[] = $matches;
 
-// With PREG_SET_ORDER
+// With PREG_SET_ORDER.
 $result[] = preg_match_all('/a(.)c/', 'start abc axc middle aac end', $matches, PREG_SET_ORDER);
 $result[] = $matches;
 
-// With PREG_OFFSET_CAPTURE (and PREG_PATTERN_ORDER, implicitly)
+// With PREG_OFFSET_CAPTURE (and PREG_PATTERN_ORDER, implicitly).
 $result[] = preg_match_all('/a(.)c/', 'start abc axc middle aac end', $matches, PREG_OFFSET_CAPTURE);
 $result[] = $matches;
 
-// With both PREG_SET_ORDER _and_ PREG_OFFSET_CAPTURE
+// With both PREG_SET_ORDER _and_ PREG_OFFSET_CAPTURE.
 $result[] = preg_match_all('/a(.)c/', 'start abc axc middle aac end', $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
 $result[] = $matches;
 
 // Test named capturing groups.
-$result[] = preg_match('/h(?<firstGroup>[el]+)o (?<secondGroup>world)/', "hello world and then heeeello world", $matches);
+$result[] = preg_match_all('/h(?<firstGroup>[el]+)o (?<secondGroup>world)/', "hello world and then heeeello world", $matches);
 $result[] = $matches;
 
 return $result;
@@ -63,16 +66,19 @@ EOS
         expect((await engine.execute()).getNative()).to.deep.equal([
             // PREG_PATTERN_ORDER:
 
+            // With matches not captured.
             3,
-            // First regex (/a(.)c/)
+
+            3,
+            // First regex (/a(.)c/).
             [
-                // Full matches (&0)
+                // Full matches (&0).
                 [
                     'abc',
                     'axc',
                     'aac'
                 ],
-                // First capturing group (&1)
+                // First capturing group (&1).
                 [
                     'b',
                     'x',
@@ -80,13 +86,13 @@ EOS
                 ]
             ],
             2,
-            // Second regex (/((?:^1234.*?)?)a(..)d/)
+            // Second regex (/((?:^1234.*?)?)a(..)d/).
             [
                 [
                     'axyd',
                     'auud'
                 ],
-                // 1234-capturing group that shouldn't match anything
+                // 1234-capturing group that shouldn't match anything.
                 [
                     '',
                     ''
@@ -97,7 +103,7 @@ EOS
                 ]
             ],
             3,
-            // Third regex (/m(.n)e/i)
+            // Third regex (/m(.n)e/i).
             [
                 [
                     'maNe',
@@ -129,7 +135,7 @@ EOS
                 ]
             ],
 
-            // PREG_OFFSET_CAPTURE
+            // PREG_OFFSET_CAPTURE.
 
             3,
             [
@@ -145,7 +151,7 @@ EOS
                 ]
             ],
 
-            // PREG_SET_ORDER | PREG_OFFSET_CAPTURE
+            // PREG_SET_ORDER | PREG_OFFSET_CAPTURE.
 
             3,
             [
@@ -164,13 +170,28 @@ EOS
             ],
 
             // Named capturing groups.
-            1,
+            2,
             {
-                '0': 'hello world',
-                'firstGroup': 'ell',
-                '1': 'ell',
-                'secondGroup': 'world',
-                '2': 'world'
+                0: [
+                    'hello world',
+                    'heeeello world'
+                ],
+                firstGroup: [
+                    'ell',
+                    'eeeell'
+                ],
+                1: [
+                    'ell',
+                    'eeeell'
+                ],
+                secondGroup: [
+                    'world',
+                    'world'
+                ],
+                2: [
+                    'world',
+                    'world'
+                ]
             }
         ]);
     });

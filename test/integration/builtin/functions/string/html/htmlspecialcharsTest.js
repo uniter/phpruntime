@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../../tools');
 
 describe('PHP "htmlspecialchars" builtin function integration', function () {
-    it('should be able to encode a string', function () {
+    it('should be able to encode a string', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -30,16 +30,16 @@ $result[] = htmlspecialchars('My £10 <strong>HTML</strong> &lt; string &amp; \'
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            // NB: Unlike htmlentities(...), the pound £ symbol should be left untouched
+        expect((await engine.execute()).getNative()).to.deep.equal([
+            // NB: Unlike htmlentities(...), the pound £ symbol should be left untouched.
             'My £10 &lt;strong&gt;HTML&lt;/strong&gt; string &amp; \'then\' &quot;some&quot;',
             'My £10 &lt;strong&gt;HTML&lt;/strong&gt; string &amp; &#039;then&#039; &quot;some&quot;',
             'My £10 &lt;strong&gt;HTML&lt;/strong&gt; string &amp; \'then\' "some"',
 
-            // Testing double_encode parameter
+            // Testing double_encode parameter.
             'My £10 &lt;strong&gt;HTML&lt;/strong&gt; &amp;lt; string &amp;amp; &#039;then&#039; &quot;some&quot;',
             'My £10 &lt;strong&gt;HTML&lt;/strong&gt; &lt; string &amp; &#039;then&#039; &quot;some&quot;'
         ]);

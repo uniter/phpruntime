@@ -15,7 +15,15 @@ var expect = require('chai').expect,
     evalAddon = require('../../../src/addon/eval');
 
 describe('PHP eval(...) construct integration', function () {
-    it('should allow evaluating expressions with access to the calling scope', function () {
+    var environment;
+
+    beforeEach(function () {
+        environment = tools.createAsyncEnvironment({}, [
+            evalAddon
+        ]);
+    });
+
+    it('should allow evaluating expressions with access to the calling scope', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -23,30 +31,26 @@ $myVar = 'out here';
 
 $result = [];
 
-// Check a simple scalar value can be returned
+// Check a simple scalar value can be returned.
 $result[] = eval('return 21;');
 
-// Check that variables in the calling scope can be read from
+// Check that variables in the calling scope can be read from.
 $result[] = eval('return "and " . $myVar;');
 
-// Check that NULL is returned when `return` is not used
+// Check that NULL is returned when `return` is not used.
 $result[] = eval('new stdClass;');
 
-// Check that variables in the calling scope may be written to
+// Check that variables in the calling scope may be written to.
 eval('$myVar = "from in here";');
 $result[] = $myVar;
 
 return $result;
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php),
-            engine;
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module({}, environment);
 
-        syncRuntime.install(evalAddon);
-        engine = module();
-
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             21,
             'and out here',
             null,
@@ -55,7 +59,7 @@ EOS
         expect(engine.getStderr().readAll()).to.equal('');
     });
 
-    it('should correctly raise a ParseError when invalid syntax is given', function () {
+    it('should correctly raise a ParseError when invalid syntax is given', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -80,27 +84,23 @@ myFunction();
 return $result;
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, '/path/to/my_module.php', php),
-            engine;
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module({}, environment);
 
-        syncRuntime.install(evalAddon);
-        engine = module();
-
-        expect(engine.execute().getNative()).to.deep.equal([
-            // Error class name
+        expect((await engine.execute()).getNative()).to.deep.equal([
+            // Error class name.
             'ParseError',
 
-            // Message
+            // Message.
             'syntax error, unexpected \'@\'',
 
-            // File
+            // File.
             '/path/to/my_module.php(9) : eval()\'d code',
 
-            // Line number
+            // Line number.
             3,
 
-            // Trace
+            // Trace.
             '#0 /path/to/my_module.php(19): myFunction()\n#1 {main}'
         ]);
         expect(engine.getStderr().readAll()).to.equal('');

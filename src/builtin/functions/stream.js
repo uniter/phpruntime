@@ -29,7 +29,7 @@ module.exports = function (internals) {
          * @returns {ResourceValue}
          */
         'stream_context_create': internals.typeFunction(
-            // FIXME: Add resource return type once supported.
+            // TODO: Add resource return type once supported.
             '?array $options = null, ?array $params = null',
             function () {
                 // TODO: Implement me - currently just a stub.
@@ -45,7 +45,7 @@ module.exports = function (internals) {
          * @returns {BooleanValue|StringValue}
          */
         'stream_get_contents': internals.typeFunction(
-            // FIXME: Correct signature once resource, constant & union types supported.
+            // TODO: Correct signature once resource, constant & union types supported.
             'mixed $stream, ?int $length = null, int $offset = -1',
             function (streamValue, lengthValue, offsetValue) {
                 // TODO: Fix signature: "resource $socket"
@@ -54,7 +54,7 @@ module.exports = function (internals) {
                     offset = offsetValue.getNative();
 
                 if (streamValue.getType() !== 'resource') {
-                    throw new Error('stream_get_contents() :: Non-resource given - FIXME add parameter type');
+                    throw new Error('stream_get_contents() :: Non-resource given - TODO add parameter type');
                 }
 
                 if (streamValue.getResourceType() !== 'stream') {
@@ -71,24 +71,22 @@ module.exports = function (internals) {
          * Fetches the metadata for a stream.
          *
          * @see {@link https://secure.php.net/manual/en/function.stream-get-meta-data.php}
-         *
-         * @returns {ArrayValue}
          */
         'stream_get_meta_data': internals.typeFunction(
-            // FIXME: Add resource parameter type once supported.
-            'mixed $stream',
+            // TODO: Add resource parameter type once supported.
+            'mixed $stream : array',
             function (streamValue) {
                 var metadata = [];
 
                 if (streamValue.getType() !== 'resource') {
-                    throw new Error('stream_select() :: Non-resource given - FIXME add parameter type');
+                    throw new Error('stream_select() :: Non-resource given - TODO add parameter type');
                 }
 
                 if (streamValue.getResourceType() !== 'stream') {
                     throw new Error('stream_select() :: Non-stream resource given');
                 }
 
-                // FIXME: Implement these correctly!
+                // TODO: Implement these correctly!
                 metadata.timed_out = false;
                 metadata.blocked = false;
                 metadata.eof = false;
@@ -110,12 +108,12 @@ module.exports = function (internals) {
          */
         'stream_select': internals.typeFunction(
             '?array &$read, ?array &$write, ?array &$except, ?int $seconds, ?int $microseconds = null',
-            function (readReference, writeReference, exceptReference, secondsValue, microsecondsValue) {
+            function (readSnapshot, writeSnapshot, exceptSnapshot/*, secondsValue, microsecondsValue*/) {
                 // TODO: Add return type above once supported.
 
-                var readArrayValue = readReference.getValue(),
-                    writeArrayValue = writeReference.getValue(),
-                    exceptArrayValue = exceptReference.getValue();
+                var readArrayValue = readSnapshot.getValue(),
+                    writeArrayValue = writeSnapshot.getValue(),
+                    exceptArrayValue = exceptSnapshot.getValue();
 
                 return flow.eachAsync(readArrayValue.getKeys(), function (keyValue) {
                     var element = readArrayValue.getElementByKey(keyValue);
@@ -125,7 +123,7 @@ module.exports = function (internals) {
                             stream;
 
                         if (elementValue.getType() !== 'resource') {
-                            throw new Error('stream_select() :: Non-resource given - FIXME add parameter type');
+                            throw new Error('stream_select() :: Non-resource given - TODO add parameter type');
                         }
 
                         if (elementValue.getResourceType() !== 'stream') {
@@ -136,7 +134,7 @@ module.exports = function (internals) {
                         stream = resource.stream;
 
                         if (!stream.isReadable()) {
-                            // FIXME: ElementReference.unset() is not decrementing the array length
+                            // TODO: ElementReference.unset() is not decrementing the array length
                             return element.unset();
                         }
                     });
@@ -159,33 +157,54 @@ module.exports = function (internals) {
                         return valueFactory.createFuture(function (resolve) {
                             setTimeout(function () {
                                 resolve(streamsWithActivity);
-                            }, 5); // FIXME: Use timeout instead of this artificial delay!
+                            }, 5); // TODO: Use timeout instead of this artificial delay!
                         });
                     })
                     .asValue();
             }
         ),
 
+        /**
+         * Sets a stream as either blocking or non-blocking.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.stream-set-blocking.php}
+         */
         'stream_set_blocking': internals.typeFunction(
             'mixed $stream, bool $enable',
-            function () {
+            function (socketValue) {
                 // TODO: Fix signature: "resource $stream"
 
-                // FIXME: Actually set the stream's blocking mode!
+                if (socketValue.getType() !== 'resource') {
+                    throw new Error('stream_set_blocking() :: Non-resource given - TODO add parameter type');
+                }
+
+                if (socketValue.getResourceType() !== 'stream') {
+                    throw new Error('stream_set_blocking() :: Non-stream resource given');
+                }
+
+                // TODO: Actually set the stream's blocking mode!
 
                 return true;
             }
         ),
 
+        /**
+         * Accepts a connection on a socket created by stream_socket_server().
+         *
+         * @see {@link https://secure.php.net/manual/en/function.stream-socket-accept.php}
+         *
+         * @returns {BooleanValue|ResourceValue}
+         */
         'stream_socket_accept': internals.typeFunction(
             'mixed $socket, ?float $timeout = null, string &$peer_name = null',
-            function (socketValue, timeoutValue) {
-                // TODO: Fix signature: "resource $socket"
-                var resource,
-                    timeout = timeoutValue.getNative();
+            function (socketValue) {
+                // TODO: Fix signature: "resource $socket" and union "|false" return type once supported.
+
+                // TODO: Use timeout and write back peer name.
+                var resource;
 
                 if (socketValue.getType() !== 'resource') {
-                    throw new Error('stream_socket_accept() :: Non-resource given - FIXME add parameter type');
+                    throw new Error('stream_socket_accept() :: Non-resource given - TODO add parameter type');
                 }
 
                 if (socketValue.getResourceType() !== 'stream') {
@@ -204,8 +223,7 @@ module.exports = function (internals) {
                             type: 'connection',
                             stream: connectionStream
                         });
-                    })
-                    .asValue();
+                    });
             }
         ),
 
@@ -217,7 +235,7 @@ module.exports = function (internals) {
          * @returns {BooleanValue|StringValue}
          */
         'stream_socket_get_name': internals.typeFunction(
-            // FIXME: Correct signature once supported.
+            // TODO: Correct signature once supported.
             'mixed $socket, bool $remote',
             function (socketValue, remoteValue) {
                 var name,
@@ -226,7 +244,7 @@ module.exports = function (internals) {
                     stream;
 
                 if (socketValue.getType() !== 'resource') {
-                    throw new Error('stream_socket_get_name() :: Non-resource given - FIXME add parameter type');
+                    throw new Error('stream_socket_get_name() :: Non-resource given - TODO add parameter type');
                 }
 
                 if (socketValue.getResourceType() !== 'stream') {
@@ -254,8 +272,7 @@ module.exports = function (internals) {
                             type: 'server',
                             stream: serverStream
                         });
-                    })
-                    .asValue();
+                    });
             }
         )
     };

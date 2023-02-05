@@ -10,69 +10,70 @@
 'use strict';
 
 var expect = require('chai').expect,
-    phpCommon = require('phpcommon'),
     sinon = require('sinon'),
-    stringFunctionFactory = require('../../../../../src/builtin/functions/spl'),
+    splFunctionFactory = require('../../../../../src/builtin/functions/spl'),
+    tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    PHPError = phpCommon.PHPError,
-    ObjectValue = require('phpcore/src/Value/Object').sync(),
-    ValueFactory = require('phpcore/src/ValueFactory').sync(),
-    Variable = require('phpcore/src/Variable').sync();
+    ObjectValue = require('phpcore/src/Value/Object').sync();
 
 describe('PHP "spl_object_hash" builtin function', function () {
-    beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.valueFactory = new ValueFactory();
-        this.internals = {
-            callStack: this.callStack,
-            valueFactory: this.valueFactory
-        };
-        this.splFunctions = stringFunctionFactory(this.internals);
-        this.spl_object_hash = this.splFunctions.spl_object_hash;
+    var callFactory,
+        callStack,
+        objectValue,
+        objectVariable,
+        spl_object_hash,
+        state,
+        valueFactory,
+        variableFactory;
 
-        this.objectValue = sinon.createStubInstance(ObjectValue);
-        this.objectValue.getID.returns(21);
-        this.objectValue.getType.returns('object');
-        this.objectReference = sinon.createStubInstance(Variable);
-        this.objectReference.getValue.returns(this.objectValue);
+    beforeEach(function () {
+        callStack = sinon.createStubInstance(CallStack);
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                functionGroups: [
+                    splFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
+        valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
+
+        // We need a call on the stack for any isolated scope evaluation.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
+
+        spl_object_hash = state.getFunction('spl_object_hash');
+
+        objectVariable = variableFactory.createVariable('myObject');
+        objectValue = sinon.createStubInstance(ObjectValue);
+        objectValue.getForAssignment.returns(objectValue);
+        objectValue.getID.returns(21);
+        objectValue.getType.returns('object');
+        objectValue.next.callsArgWith(0, objectValue);
+        objectVariable.setValue(objectValue);
     });
 
-    it('should return a 32-byte 0-padded hash with the object\'s ID when 2 digits long', function () {
-        var resultValue = this.spl_object_hash(this.objectReference);
+    it('should return a 32-byte 0-padded hash with the object\'s ID when 2 digits long', async function () {
+        var resultValue = await spl_object_hash(objectVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('00000000000000000000000000000021');
     });
 
-    it('should return a 32-byte 0-padded hash with the object\'s ID when 4 digits long', function () {
+    it('should return a 32-byte 0-padded hash with the object\'s ID when 4 digits long', async function () {
         var resultValue;
-        this.objectValue.getID.returns(4532);
+        objectValue.getID.returns(4532);
 
-        resultValue = this.spl_object_hash(this.objectReference);
+        resultValue = await spl_object_hash(objectVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('00000000000000000000000000004532');
-    });
-
-    describe('when a non-object value is given', function () {
-        it('should raise a warning', function () {
-            this.objectReference.getValue.returns(this.valueFactory.createString('not an object'));
-            this.spl_object_hash(this.objectReference);
-
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
-                PHPError.E_WARNING,
-                'spl_object_hash() expects parameter 1 to be object, string given'
-            );
-        });
-
-        it('should return NULL', function () {
-            var resultValue;
-            this.objectReference.getValue.returns(this.valueFactory.createString('not an object'));
-
-            resultValue = this.spl_object_hash(this.objectReference);
-
-            expect(resultValue.getType()).to.equal('null');
-        });
     });
 });

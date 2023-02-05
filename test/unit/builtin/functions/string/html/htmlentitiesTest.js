@@ -10,227 +10,246 @@
 'use strict';
 
 var expect = require('chai').expect,
-    sinon = require('sinon'),
     htmlStringFunctionFactory = require('../../../../../../src/builtin/functions/string/html'),
+    phpCommon = require('phpcommon'),
+    sinon = require('sinon'),
+    stringConstantFactory = require('../../../../../../src/builtin/constants/string'),
+    tools = require('../../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    ValueFactory = require('phpcore/src/ValueFactory').sync(),
-    Variable = require('phpcore/src/Variable').sync(),
-
-    HTML_SPECIALCHARS = 0,
-    HTML_ENTITIES = 1,
-    ENT_NOQUOTES = 0,
-    ENT_COMPAT = 2,
-    ENT_QUOTES = 3,
-    ENT_HTML401 = 0,
-    ENT_SUBSTITUTE = 8;
+    PHPError = phpCommon.PHPError;
 
 describe('PHP "htmlentities" builtin function', function () {
+    var callFactory,
+        callStack,
+        doubleEncodeVariable,
+        encodingVariable,
+        flagsVariable,
+        htmlentities,
+        state,
+        stringVariable,
+        valueFactory,
+        variableFactory,
+
+        HTML_SPECIALCHARS,
+        HTML_ENTITIES,
+        ENT_NOQUOTES,
+        ENT_COMPAT,
+        ENT_QUOTES,
+        ENT_HTML401,
+        ENT_SUBSTITUTE;
+
     beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.getBinding = sinon.stub();
-        this.getConstant = sinon.stub();
-        this.valueFactory = new ValueFactory();
-        this.internals = {
-            callStack: this.callStack,
-            getBinding: this.getBinding,
-            getConstant: this.getConstant,
-            valueFactory: this.valueFactory
-        };
+        callStack = sinon.createStubInstance(CallStack);
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                constantGroups: [
+                    stringConstantFactory
+                ],
+                functionGroups: [
+                    htmlStringFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
+        valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
 
-        this.getConstant.withArgs('HTML_SPECIALCHARS').returns(HTML_SPECIALCHARS);
-        this.getConstant.withArgs('HTML_ENTITIES').returns(HTML_ENTITIES);
-        this.getConstant.withArgs('ENT_NOQUOTES').returns(ENT_NOQUOTES);
-        this.getConstant.withArgs('ENT_COMPAT').returns(ENT_COMPAT);
-        this.getConstant.withArgs('ENT_QUOTES').returns(ENT_QUOTES);
-        this.getConstant.withArgs('ENT_HTML401').returns(ENT_HTML401);
+        HTML_SPECIALCHARS = state.getConstantValue('HTML_SPECIALCHARS');
+        HTML_ENTITIES = state.getConstantValue('HTML_ENTITIES');
+        ENT_NOQUOTES = state.getConstantValue('ENT_NOQUOTES');
+        ENT_COMPAT = state.getConstantValue('ENT_COMPAT');
+        ENT_QUOTES = state.getConstantValue('ENT_QUOTES');
+        ENT_HTML401 = state.getConstantValue('ENT_HTML401');
+        ENT_SUBSTITUTE = state.getConstantValue('ENT_SUBSTITUTE');
 
-        this.stringFunctions = htmlStringFunctionFactory(this.internals);
-        this.htmlentities = this.stringFunctions.htmlentities;
+        // We need a call on the stack for any isolated scope evaluation.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
 
-        this.stringReference = sinon.createStubInstance(Variable);
-        this.flagsReference = sinon.createStubInstance(Variable);
-        this.encodingReference = sinon.createStubInstance(Variable);
-        this.doubleEncodeReference = sinon.createStubInstance(Variable);
+        htmlentities = state.getFunction('htmlentities');
+
+        stringVariable = variableFactory.createVariable('myString');
+        flagsVariable = variableFactory.createVariable('myFlags');
+        encodingVariable = variableFactory.createVariable('myEncoding');
+        doubleEncodeVariable = variableFactory.createVariable('myDoubleEncode');
     });
 
-    it('should return a string with only alphanumeric characters unmodified', function () {
+    it('should return a string with only alphanumeric characters unmodified', async function () {
         var resultValue;
-        this.stringReference.getValue.returns(this.valueFactory.createString('hello world'));
+        stringVariable.setValue(valueFactory.createString('hello world'));
 
-        resultValue = this.htmlentities(this.stringReference);
+        resultValue = await htmlentities(stringVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello world');
     });
 
-    it('should encode the supported entities when only a string is given', function () {
+    it('should encode the supported entities when only a string is given', async function () {
         var resultValue;
-        this.stringReference.getValue
-            .returns(this.valueFactory.createString('hello <there> \'world\' & "planet", it costs £45 & 7p'));
+        stringVariable.setValue(
+            valueFactory.createString('hello <there> \'world\' & "planet", it costs £45 & 7p')
+        );
 
-        resultValue = this.htmlentities(this.stringReference);
+        resultValue = await htmlentities(stringVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
-        // Note that single-quotes should be left untouched with the default flags
-        expect(resultValue.getNative()).to.equal('hello &lt;there&gt; \'world\' &amp; &quot;planet&quot;, it costs &pound;45 &amp; 7p');
+        // Note that single-quotes should be left untouched with the default flags.
+        expect(resultValue.getNative()).to.equal(
+            'hello &lt;there&gt; \'world\' &amp; &quot;planet&quot;, it costs &pound;45 &amp; 7p'
+        );
     });
 
-    it('should encode the supported entities when a string is given with default flags ENT_COMPAT | ENT_HTML401', function () {
+    it('should encode the supported entities when a string is given with default flags ENT_COMPAT | ENT_HTML401', async function () {
         /*jshint bitwise: false */
         var resultValue;
-        this.stringReference.getValue
-            .returns(this.valueFactory.createString('hello <there> \'world\' & "planet", it costs £45 & 7p'));
-        this.flagsReference.getValue
-            .returns(this.valueFactory.createInteger(ENT_COMPAT | ENT_HTML401));
+        stringVariable.setValue(
+            valueFactory.createString('hello <there> \'world\' & "planet", it costs £45 & 7p')
+        );
+        flagsVariable.setValue(ENT_COMPAT.bitwiseOr(ENT_HTML401));
 
-        resultValue = this.htmlentities(this.stringReference, this.flagsReference);
+        resultValue = await htmlentities(stringVariable, flagsVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
-        // Note that single-quotes should be left untouched with ENT_COMPAT
-        expect(resultValue.getNative()).to.equal('hello &lt;there&gt; \'world\' &amp; &quot;planet&quot;, it costs &pound;45 &amp; 7p');
+        // Note that single-quotes should be left untouched with ENT_COMPAT.
+        expect(resultValue.getNative()).to.equal(
+            'hello &lt;there&gt; \'world\' &amp; &quot;planet&quot;, it costs &pound;45 &amp; 7p'
+        );
     });
 
-    it('should also encode single quotes with ENT_QUOTES', function () {
+    it('should also encode single quotes with ENT_QUOTES', async function () {
         /*jshint bitwise: false */
         var resultValue;
-        this.stringReference.getValue
-            .returns(this.valueFactory.createString('hello <there> \'world\' & "planet"'));
-        this.flagsReference.getValue
-            .returns(this.valueFactory.createInteger(ENT_QUOTES));
+        stringVariable.setValue(valueFactory.createString('hello <there> \'world\' & "planet"'));
+        flagsVariable.setValue(ENT_QUOTES);
 
-        resultValue = this.htmlentities(this.stringReference, this.flagsReference);
+        resultValue = await htmlentities(stringVariable, flagsVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
-        expect(resultValue.getNative()).to.equal('hello &lt;there&gt; &#039;world&#039; &amp; &quot;planet&quot;');
+        expect(resultValue.getNative()).to.equal(
+            'hello &lt;there&gt; &#039;world&#039; &amp; &quot;planet&quot;'
+        );
     });
 
-    it('should not encode any quotes with ENT_NOQUOTES', function () {
+    it('should not encode any quotes with ENT_NOQUOTES', async function () {
         /*jshint bitwise: false */
         var resultValue;
-        this.stringReference.getValue
-            .returns(this.valueFactory.createString('hello <there> \'world\' & "planet"'));
-        this.flagsReference.getValue
-            .returns(this.valueFactory.createInteger(ENT_NOQUOTES));
+        stringVariable.setValue(valueFactory.createString('hello <there> \'world\' & "planet"'));
+        flagsVariable.setValue(ENT_NOQUOTES);
 
-        resultValue = this.htmlentities(this.stringReference, this.flagsReference);
+        resultValue = await htmlentities(stringVariable, flagsVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello &lt;there&gt; \'world\' &amp; "planet"');
     });
 
-    it('should accept the ENT_SUBSTITUTE flag (not applicable)', function () {
+    it('should accept the ENT_SUBSTITUTE flag (not applicable)', async function () {
         /*jshint bitwise: false */
         var resultValue;
-        this.stringReference.getValue
-            .returns(this.valueFactory.createString('hello <there> \'world\' & "planet"'));
-        this.flagsReference.getValue
-            .returns(this.valueFactory.createInteger(ENT_SUBSTITUTE));
+        stringVariable.setValue(valueFactory.createString('hello <there> \'world\' & "planet"'));
+        flagsVariable.setValue(ENT_SUBSTITUTE);
 
-        resultValue = this.htmlentities(this.stringReference, this.flagsReference);
+        resultValue = await htmlentities(stringVariable, flagsVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello &lt;there&gt; \'world\' &amp; "planet"');
     });
 
-    it('should support the UTF-8 encoding', function () {
+    it('should support the UTF-8 encoding', async function () {
         /*jshint bitwise: false */
         var resultValue;
-        this.stringReference.getValue
-            .returns(this.valueFactory.createString('hello <there> \'world\' & "planet", it costs £45 & 7p'));
-        this.flagsReference.getValue
-            .returns(this.valueFactory.createInteger(ENT_COMPAT | ENT_HTML401));
-        this.encodingReference.getValue.returns(this.valueFactory.createString('UTF-8'));
+        stringVariable.setValue(valueFactory.createString('hello <there> \'world\' & "planet", it costs £45 & 7p'));
+        flagsVariable.setValue(ENT_COMPAT.bitwiseOr(ENT_HTML401));
+        encodingVariable.setValue(valueFactory.createString('UTF-8'));
 
-        resultValue = this.htmlentities(this.stringReference, this.flagsReference, this.encodingReference);
+        resultValue = await htmlentities(stringVariable, flagsVariable, encodingVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
-        // Note that single-quotes should be left untouched with ENT_COMPAT
-        expect(resultValue.getNative()).to.equal('hello &lt;there&gt; \'world\' &amp; &quot;planet&quot;, it costs &pound;45 &amp; 7p');
+        // Note that single-quotes should be left untouched with ENT_COMPAT.
+        expect(resultValue.getNative()).to.equal(
+            'hello &lt;there&gt; \'world\' &amp; &quot;planet&quot;, it costs &pound;45 &amp; 7p'
+        );
     });
 
     describe('when the UTF-8 encoding is given with different case', function () {
         beforeEach(function () {
             /*jshint bitwise: false */
-            this.stringReference.getValue
-                .returns(this.valueFactory.createString('hello <there> \'world\' & "planet", it costs £45 & 7p'));
-            this.flagsReference.getValue
-                .returns(this.valueFactory.createInteger(ENT_COMPAT | ENT_HTML401));
-            this.encodingReference.getValue.returns(this.valueFactory.createString('uTf-8'));
+            stringVariable.setValue(
+                valueFactory.createString('hello <there> \'world\' & "planet", it costs £45 & 7p')
+            );
+            flagsVariable.setValue(ENT_COMPAT.bitwiseOr(ENT_HTML401));
+            encodingVariable.setValue(valueFactory.createString('uTf-8'));
         });
 
-        it('should not raise a warning', function () {
-            this.htmlentities(this.stringReference, this.flagsReference, this.encodingReference);
+        it('should not raise a warning', async function () {
+            await htmlentities(stringVariable, flagsVariable, encodingVariable).toPromise();
 
-            expect(this.callStack.raiseError).not.to.have.been.called;
+            expect(callStack.raiseError).not.to.have.been.called;
         });
 
-        it('should use UTF-8', function () {
-            var resultValue = this.htmlentities(this.stringReference, this.flagsReference, this.encodingReference);
+        it('should use UTF-8', async function () {
+            var resultValue = await htmlentities(stringVariable, flagsVariable, encodingVariable).toPromise();
 
             expect(resultValue.getType()).to.equal('string');
-            // Note that single-quotes should be left untouched with ENT_COMPAT
-            expect(resultValue.getNative()).to.equal('hello &lt;there&gt; \'world\' &amp; &quot;planet&quot;, it costs &pound;45 &amp; 7p');
+            // Note that single-quotes should be left untouched with ENT_COMPAT.
+            expect(resultValue.getNative()).to.equal(
+                'hello &lt;there&gt; \'world\' &amp; &quot;planet&quot;, it costs &pound;45 &amp; 7p'
+            );
         });
     });
 
     describe('when the ISO-8859-1 encoding is given', function () {
         beforeEach(function () {
             /*jshint bitwise: false */
-            this.stringReference.getValue
-                .returns(this.valueFactory.createString('hello <there> \'world\' & "planet", it costs £45 & 7p'));
-            this.flagsReference.getValue
-                .returns(this.valueFactory.createInteger(ENT_COMPAT | ENT_HTML401));
-            this.encodingReference.getValue.returns(this.valueFactory.createString('ISO-8859-1'));
+            stringVariable.setValue(
+                valueFactory.createString('hello <there> \'world\' & "planet", it costs £45 & 7p')
+            );
+            flagsVariable.setValue(ENT_COMPAT.bitwiseOr(ENT_HTML401));
+            encodingVariable.setValue(valueFactory.createString('ISO-8859-1'));
         });
 
-        it('should raise a warning', function () {
-            this.htmlentities(this.stringReference, this.flagsReference, this.encodingReference);
+        it('should raise a warning', async function () {
+            await htmlentities(stringVariable, flagsVariable, encodingVariable).toPromise();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
-                'Warning',
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
+                PHPError.E_WARNING,
                 'htmlentities(): charset `ISO-8859-1\' not supported, assuming utf-8'
             );
         });
 
-        it('should assume UTF-8', function () {
-            var resultValue = this.htmlentities(this.stringReference, this.flagsReference, this.encodingReference);
+        it('should assume UTF-8', async function () {
+            var resultValue = await htmlentities(stringVariable, flagsVariable, encodingVariable).toPromise();
 
             expect(resultValue.getType()).to.equal('string');
-            // Note that single-quotes should be left untouched with ENT_COMPAT
-            expect(resultValue.getNative()).to.equal('hello &lt;there&gt; \'world\' &amp; &quot;planet&quot;, it costs &pound;45 &amp; 7p');
-        });
-    });
-
-    it('should allow double_encode to be disabled', function () {
-        var resultValue;
-        /*jshint bitwise: false */
-        this.stringReference.getValue
-            .returns(this.valueFactory.createString('My &#039; <strong>HTML</strong> &lt; string &amp; \'then\' "some"'));
-        this.flagsReference.getValue
-            .returns(this.valueFactory.createInteger(ENT_QUOTES));
-        this.encodingReference.getValue.returns(this.valueFactory.createString('UTF-8'));
-        this.doubleEncodeReference.getValue.returns(this.valueFactory.createBoolean(false));
-
-        resultValue = this.htmlentities(this.stringReference, this.flagsReference, this.encodingReference, this.doubleEncodeReference);
-
-        expect(resultValue.getType()).to.equal('string');
-        expect(resultValue.getNative()).to.equal('My &#039; &lt;strong&gt;HTML&lt;/strong&gt; &lt; string &amp; &#039;then&#039; &quot;some&quot;');
-    });
-
-    describe('when no arguments are given', function () {
-        it('should raise a warning', function () {
-            this.htmlentities();
-
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
-                'Warning',
-                'htmlentities() expects at least 1 parameter, 0 given'
+            // Note that single-quotes should be left untouched with ENT_COMPAT.
+            expect(resultValue.getNative()).to.equal(
+                'hello &lt;there&gt; \'world\' &amp; &quot;planet&quot;, it costs &pound;45 &amp; 7p'
             );
         });
+    });
 
-        it('should return null', function () {
-            expect(this.htmlentities().getType()).to.equal('null');
-        });
+    it('should allow double_encode to be disabled', async function () {
+        var resultValue;
+        /*jshint bitwise: false */
+        stringVariable.setValue(
+            valueFactory.createString('My &#039; <strong>HTML</strong> &lt; string &amp; \'then\' "some"')
+        );
+        flagsVariable.setValue(ENT_QUOTES);
+        encodingVariable.setValue(valueFactory.createString('UTF-8'));
+        doubleEncodeVariable.setValue(valueFactory.createBoolean(false));
+
+        resultValue = await htmlentities(stringVariable, flagsVariable, encodingVariable, doubleEncodeVariable)
+            .toPromise();
+
+        expect(resultValue.getType()).to.equal('string');
+        expect(resultValue.getNative()).to.equal(
+            'My &#039; &lt;strong&gt;HTML&lt;/strong&gt; &lt; string &amp; &#039;then&#039; &quot;some&quot;'
+        );
     });
 });

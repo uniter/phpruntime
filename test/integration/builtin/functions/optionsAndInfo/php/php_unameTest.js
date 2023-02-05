@@ -11,41 +11,35 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../../../sync');
+    tools = require('../../../../tools');
 
 describe('PHP "php_uname" builtin function integration', function () {
-    it('should return the correct string for each mode', function () {
+    it('should return the correct string for each mode', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 return [
-    php_uname(),
-    php_uname('s'),
-    php_uname('n'),
-    php_uname('r'),
-    php_uname('v'),
-    php_uname('m')
+    'default (a)' => php_uname(),
+    'a' => php_uname('a'),
+    's' => php_uname('s'),
+    'n' => php_uname('n'),
+    'r' => php_uname('r'),
+    'v' => php_uname('v'),
+    'm' => php_uname('m')
 ];
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            'Uniter localhost 1.0.0 (Generic) JavaScript', // 'a' - All modes in the sequence "s n r v m"
-            'Uniter',    // 's' - Operating system name. eg. FreeBSD
-            'localhost', // 'n' - Host name. eg. localhost.example.com
-            '1.0.0',     // 'r' - Release name. eg. 5.1.2-RELEASE
-            '(Generic)', // 'v' - Version information. Varies a lot between operating systems
-            'JavaScript' // 'm' - Machine type. eg. i386
-        ]);
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            'default (a)': 'Uniter localhost 1.0.0 (Generic) JavaScript', // 'a' - All modes in the sequence "s n r v m".
+            'a': 'Uniter localhost 1.0.0 (Generic) JavaScript', // As above, but explicitly.
+            's': 'Uniter',    // 's' - Operating system name. eg. FreeBSD.
+            'n': 'localhost', // 'n' - Host name. eg. localhost.example.com.
+            'r': '1.0.0',     // 'r' - Release name. eg. 5.1.2-RELEASE.
+            'v': '(Generic)', // 'v' - Version information. Varies a lot between operating systems.
+            'm': 'JavaScript' // 'm' - Machine type. eg. i386.
+        });
     });
 });

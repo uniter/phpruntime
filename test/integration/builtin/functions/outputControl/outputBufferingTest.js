@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP output buffering integration', function () {
-    it('should be able to capture, flush and clear nested output buffers', function () {
+    it('should be able to capture, flush and clear nested output buffers', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -49,11 +49,10 @@ ob_end_flush();
 return $result;
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             'One - First\nOne - Second',
             'Two - Second\n',
             'Flushing - Second\n & Flushing - Second\n',

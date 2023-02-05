@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "array_pop" builtin function integration', function () {
-    it('should be able to pop an element off of the end of an indexed array', function () {
+    it('should be able to pop an element off of the end of an indexed array', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -36,10 +36,10 @@ $result[] = $myArray;
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile(null, php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             'third',                // Last element is popped off first
             ['first', 'second'],    // Only the first two elements are left
             'first',                // [From current(...)] - Internal array pointer should be reset

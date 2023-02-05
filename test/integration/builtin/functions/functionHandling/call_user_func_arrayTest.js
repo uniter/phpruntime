@@ -11,12 +11,10 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../../sync');
+    tools = require('../../../tools');
 
 describe('PHP "call_user_func_array" builtin function integration', function () {
-    it('should be able to call a function with three arguments that returns a value', function () {
+    it('should be able to call a function with three arguments that returns a value', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 function sayHello($name, $age, $location)
@@ -29,16 +27,10 @@ function sayHello($name, $age, $location)
 return call_user_func_array('sayHello', ['Frank', 27, 'Cardiff, UK']);
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.equal('done');
+        expect((await engine.execute()).getNative()).to.equal('done');
         expect(engine.getStdout().readAll()).to.equal(
             nowdoc(function () {/*<<<EOS
 Hi Frank - 27 from Cardiff, UK!
@@ -47,7 +39,7 @@ EOS
         );
     });
 
-    it('should be able to call a namespaced function when the second argument is passed by reference', function () {
+    it('should be able to call a namespaced function when the second argument is passed by reference', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 namespace My\Awesome\Tools
@@ -78,19 +70,13 @@ namespace Some\Other\Place
 }
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            23, // $byVal + 2
-            21, // $myVar1 (unaffected)
-            42  // $myVar2 (modified by-reference in doStuff(...))
+        expect((await engine.execute()).getNative()).to.deep.equal([
+            23, // $byVal + 2.
+            21, // $myVar1 (unaffected).
+            42  // $myVar2 (modified by-reference in doStuff(...)).
         ]);
     });
 });

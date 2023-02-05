@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "strtoupper" builtin function integration', function () {
-    it('should be able to uppercase a string', function () {
+    it('should be able to uppercase a string', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -27,11 +27,10 @@ $result[] = strtoupper($myString['my_el']);
 return $result;
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             'THIS IS MY STRING',
             'THIS IS MY OTHER STRING'
         ]);

@@ -18,8 +18,7 @@ var _ = require('microdash'),
     PHPError = phpCommon.PHPError;
 
 /**
- * Basic-level PCRE support module. JavaScript's own RegExp implementation is used,
- * meaning that only the JavaScript-compliant subset of regular expression is supported.
+ * PCRE support using the PCREmu library.
  */
 module.exports = function (internals) {
     var callStack = internals.callStack,
@@ -106,38 +105,33 @@ module.exports = function (internals) {
          *
          * @see {@link https://secure.php.net/manual/en/function.preg-match.php}
          *
-         * @param {Reference|Variable|Value} patternReference
-         * @param {Reference|Variable|Value} subjectReference
-         * @param {Reference|Variable|Value} matchesReference
-         * @param {Reference|Variable|Value} flagsReference
-         * @param {Reference|Variable|Value} offsetReference
          * @returns {IntegerValue|BooleanValue}
          */
         'preg_match': internals.typeFunction(
             'string $pattern, string $subject, array &$matches = null, int $flags = 0, int $offset = 0',
-            function (patternValue, subjectValue, matchesReference, flagsReference, offsetReference) {
+            function (patternValue, subjectValue, matchesSnapshot, flagsValue, offsetValue) {
                 // FIXME: Add union return type above once supported.
 
-                var flags,
+                var flags = flagsValue.getNative(),
                     match,
                     matcher,
-                    offset = 0,
+                    offset,
                     pattern,
                     pcremuMatch,
                     subject;
 
-                // Use PREG_PATTERN_ORDER as the default flag
-                flags = flagsReference ? flagsReference.coerceToInteger().getNative() : PREG_PATTERN_ORDER;
+                // Use PREG_PATTERN_ORDER as the default flag.
+                if (flags === 0) {
+                    flags = PREG_PATTERN_ORDER;
+                }
 
                 if (flags & PREG_SET_ORDER) {
-                    // This flag is only supported by preg_match_all()
+                    // This flag is only supported by preg_match_all().
                     callStack.raiseError(PHPError.E_WARNING, 'preg_match(): Invalid flags specified');
                     return valueFactory.createBoolean(false);
                 }
 
-                if (offsetReference) {
-                    offset = offsetReference.getNative();
-                }
+                offset = offsetValue.getNative();
 
                 pattern = patternValue.getNative();
                 subject = subjectValue.getNative();
@@ -154,7 +148,8 @@ module.exports = function (internals) {
 
                 pcremuMatch = matcher.matchOne(subject, offset);
 
-                if (matchesReference.getValue().getType() !== 'null') {
+                if (matchesSnapshot.isReferenceable()) {
+                    // $matches was provided so let's store the matches as requested.
                     if (pcremuMatch) {
                         match = [];
 
@@ -179,7 +174,7 @@ module.exports = function (internals) {
                         match = [];
                     }
 
-                    matchesReference.setValue(valueFactory.coerce(match));
+                    matchesSnapshot.setValue(valueFactory.coerce(match));
                 }
 
                 return valueFactory.createInteger(pcremuMatch !== null ? 1 : 0);
@@ -190,51 +185,40 @@ module.exports = function (internals) {
          * Perform a global regular expression match.
          *
          * @see {@link https://secure.php.net/manual/en/function.preg-match-all.php}
-         *
-         * @param {Variable|Value} patternReference
-         * @param {Variable|Value} subjectReference
-         * @param {Variable|Value} matchesReference
-         * @param {Variable|Value} flagsReference
-         * @param {Variable|Value} offsetReference
-         * @returns {IntegerValue|BooleanValue}
          */
         'preg_match_all': internals.typeFunction(
             'string $pattern, string $subject, array &$matches = null, int $flags = 0, int $offset = 0',
-            function (patternValue, subjectValue, matchesReference, flagsReference, offsetReference) {
-                // FIXME: Add union return type above once supported.
+            function (patternValue, subjectValue, matchesSnapshot, flagsValue, offsetReference) {
+                // FIXME: Add union "|false" return type above once supported.
 
-                var flags,
+                var flags = flagsValue.getNative(),
                     matchResult = [],
                     offset = 0,
                     offsetCaptureEnabled = false,
-                    matchOrder = 'pattern', // Use PREG_PATTERN_ORDER as the default flag
+                    matchOrder = 'pattern', // Use PREG_PATTERN_ORDER as the default flag.
                     matcher,
                     pattern,
                     pcremuMatches,
                     subject;
 
-                if (flagsReference) {
-                    flags = flagsReference.getValue().coerceToInteger().getNative();
+                if (flags & PREG_OFFSET_CAPTURE) {
+                    offsetCaptureEnabled = true;
+                    flags ^= PREG_OFFSET_CAPTURE;
+                }
 
-                    if (flags & PREG_OFFSET_CAPTURE) {
-                        offsetCaptureEnabled = true;
-                        flags ^= PREG_OFFSET_CAPTURE;
-                    }
+                if (flags & PREG_PATTERN_ORDER) {
+                    matchOrder = 'pattern';
 
-                    if (flags & PREG_PATTERN_ORDER) {
-                        matchOrder = 'pattern';
+                    flags ^= PREG_PATTERN_ORDER; // Unset the relevant bits.
+                } else if (flags & PREG_SET_ORDER) {
+                    matchOrder = 'set';
 
-                        flags ^= PREG_PATTERN_ORDER; // Unset the relevant bits
-                    } else if (flags & PREG_SET_ORDER) {
-                        matchOrder = 'set';
+                    flags ^= PREG_SET_ORDER; // Unset the relevant bits.
+                }
 
-                        flags ^= PREG_SET_ORDER; // Unset the relevant bits
-                    }
-
-                    if (flags !== 0) {
-                        callStack.raiseError(PHPError.E_WARNING, 'preg_match_all(): Invalid flags specified');
-                        return valueFactory.createBoolean(false);
-                    }
+                if (flags !== 0) {
+                    callStack.raiseError(PHPError.E_WARNING, 'preg_match_all(): Invalid flags specified');
+                    return valueFactory.createBoolean(false);
                 }
 
                 if (offsetReference) {
@@ -256,23 +240,23 @@ module.exports = function (internals) {
 
                 pcremuMatches = matcher.matchAll(subject, offset);
 
-                if (matchesReference.getValue().getType() !== 'null') {
+                if (matchesSnapshot.isReferenceable()) {
                     _.each(pcremuMatches, function (pcremuMatch, matchIndex) {
                         if (matchOrder === 'pattern') {
-                            _.each(matcher.getCapturingGroupNames(), function (name, capturingGroupIndex) {
+                            _.each(matcher.getCapturingGroupNames(), function (name) {
                                 var isNumberedCapture = typeof name === 'number',
                                     capture = isNumberedCapture ?
                                         pcremuMatch.getNumberedCapture(name) :
                                         pcremuMatch.getNamedCapture(name);
 
-                                if (matchResult.length <= capturingGroupIndex) {
-                                    matchResult[capturingGroupIndex] = [];
+                                if (!matchResult[name]) {
+                                    matchResult[name] = [];
                                 }
 
-                                matchResult[capturingGroupIndex].push(
+                                matchResult[name].push(
                                     offsetCaptureEnabled ?
                                         // Offset capturing is enabled - record the offset at which each
-                                        // capturing group was matched alongside the substring
+                                        // capturing group was matched alongside the substring.
                                         [
                                             capture,
                                             isNumberedCapture ?
@@ -307,7 +291,7 @@ module.exports = function (internals) {
                         }
                     });
 
-                    matchesReference.setValue(valueFactory.coerce(matchResult));
+                    matchesSnapshot.setValue(valueFactory.coerce(matchResult));
                 }
 
                 return valueFactory.createInteger(pcremuMatches.length);
@@ -315,139 +299,121 @@ module.exports = function (internals) {
         ),
 
         /**
-         * Perform a regular expression find and replace
+         * Perform a find and replace using one or more regular expressions.
          *
          * @see {@link https://secure.php.net/manual/en/function.preg-replace.php}
-         *
-         * @param {Reference|Variable|Value} patternReference
-         * @param {Reference|Variable|Value} replacementReference
-         * @param {Reference|Variable|Value} subjectReference
-         * @param {Reference|Variable|Value} limitReference
-         * @param {Reference|Variable|Value} countReference
-         * @returns {ArrayValue|NullValue|StringValue}
          */
-        'preg_replace': function (patternReference, replacementReference, subjectReference, limitReference, countReference) {
-            var count = 0,
-                limit = -1,
-                patterns = [],
-                patternValue,
-                replacements = [],
-                replacementValue,
-                singleReplacement,
-                singleSubject,
-                subjects = [],
-                subjectValue;
+        'preg_replace': internals.typeFunction(
+            'string|array $pattern, string|array $replacement, ' +
+            'string|array $subject, int $limit = -1, int &$count = null : string|array|null',
+            function (patternValue, replacementValue, subjectValue, limitValue, countSnapshot) {
+                var count = 0,
+                    limit = limitValue.getNative(),
+                    patterns = [],
+                    replacements = [],
+                    singleReplacement,
+                    singleSubject,
+                    subjects = [];
 
-            if (arguments.length < 3) {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'preg_replace() expects at least 3 parameters, 1 given'
-                );
-                return valueFactory.createNull();
-            }
-
-            patternValue = patternReference.getValue();
-            replacementValue = replacementReference.getValue();
-            subjectValue = subjectReference.getValue();
-
-            if (patternValue.getType() === 'array') {
-                _.each(patternValue.getValues(), function (patternValue) {
+                if (patternValue.getType() === 'array') {
+                    _.each(patternValue.getValues(), function (patternValue) {
+                        patterns.push(patternValue.getNative());
+                    });
+                } else if (patternValue.getType() === 'string') {
                     patterns.push(patternValue.getNative());
-                });
-            } else if (patternValue.getType() === 'string') {
-                patterns.push(patternValue.getNative());
-            } else {
-                throw new Error('preg_replace(): Non-array/string pattern not yet supported'); // TODO: Coerce/raise PHP error
-            }
+                }
 
-            if (replacementValue.getType() === 'array') {
-                _.each(replacementValue.getValues(), function (replacementValue) {
+                if (replacementValue.getType() === 'array') {
+                    _.each(replacementValue.getValues(), function (replacementValue) {
+                        replacements.push(replacementValue.getNative());
+                    });
+                    singleReplacement = false;
+                } else if (replacementValue.getType() === 'string') {
                     replacements.push(replacementValue.getNative());
-                });
-                singleReplacement = false;
-            } else if (replacementValue.getType() === 'string') {
-                replacements.push(replacementValue.getNative());
-                singleReplacement = true;
-            } else {
-                throw new Error('preg_replace(): Non-array/string replacement not yet supported'); // TODO: Coerce/raise PHP error
-            }
+                    singleReplacement = true;
+                }
 
-            if (limitReference) {
-                limit = limitReference.getNative();
-            }
+                /**
+                 * Performs find/replace of all pattern & replacement pairs for one specific subject.
+                 *
+                 * @param {string} subject
+                 * @return {string}
+                 */
+                function replaceSubject(subject) {
+                    _.each(patterns, function (pattern, index) {
+                        var patternAttemptIndex = 0,
+                            leftString,
+                            matcher,
+                            offset = 0,
+                            pcremuMatch,
+                            replacement = singleReplacement ?
+                                replacements[0] :
+                                (index < replacements.length ? replacements[index] : '');
 
-            /**
-             * Performs find/replace of all pattern & replacement pairs for one specific subject
-             *
-             * @param {string} subject
-             * @return {string}
-             */
-            function replaceSubject(subject) {
-                _.each(patterns, function (pattern, index) {
-                    var countWithinPatternForSubject = 0,
-                        regex,
-                        replacement = singleReplacement ?
-                            replacements[0] :
-                            (index < replacements.length ? replacements[index] : '');
+                        // May throw FailureExceptions.
+                        matcher = buildPcremuMatcher('preg_replace', pattern);
 
-                    // May throw FailureExceptions
-                    regex = buildNativeRegex('preg_replace', pattern);
+                        // Ensure we only make the max. number of replacements for the pattern.
+                        while (limit === -1 || patternAttemptIndex < limit) {
+                            pcremuMatch = matcher.matchOne(subject, offset);
 
-                    if (countReference || limit > -1) {
-                        // Caller wants to either record the total number of replacements done
-                        // or limit the no. of replacements for each subject string
-                        subject = regex.replace(subject, function (all) {
-                            countWithinPatternForSubject++;
-
-                            if (limit > -1 && countWithinPatternForSubject > limit) {
-                                return all;
+                            if (pcremuMatch === null) {
+                                break; // No more matches.
                             }
 
-                            count++; // Only include replacements that were actually done in the count
+                            // Extract the portion of subject up to the beginning of this match.
+                            leftString = subject.substring(0, pcremuMatch.getStart());
 
-                            return replacement;
-                        });
-                    } else {
-                        subject = regex.replace(subject, replacement);
-                    }
-                });
+                            // Perform this replacement inside the subject.
+                            subject = leftString + replacement + subject.substring(pcremuMatch.getEnd());
 
-                return subject;
-            }
+                            // Position the next match attempt just after the end of this replacement.
+                            offset = leftString.length + replacement.length;
 
-            try {
-                if (subjectValue.getType() === 'array') {
-                    singleSubject = false;
+                            patternAttemptIndex++;
 
-                    _.each(subjectValue.getKeys(), function (subjectKey) {
-                        var subject = subjectValue.getElementByKey(subjectKey).getNative();
-
-                        subjects.push(
-                            new KeyValuePair(
-                                subjectKey,
-                                valueFactory.createString(replaceSubject(subject))
-                            )
-                        );
+                            // Only include replacements that were actually done in the count.
+                            // Note that this tracks all replacements made across all patterns.
+                            count++;
+                        }
                     });
-                } else if (subjectValue.getType() === 'string') {
-                    singleSubject = true;
-                    subjects[0] = valueFactory.createString(replaceSubject(subjectValue.getNative()));
-                } else {
-                    throw new Error('preg_replace(): Non-array/string subject not yet supported'); // TODO: Coerce/raise PHP error
-                }
-            } catch (error) {
-                if (error instanceof FailureException) {
-                    return valueFactory.createNull();
+
+                    return subject;
                 }
 
-                throw error;
-            }
+                try {
+                    if (subjectValue.getType() === 'array') {
+                        singleSubject = false;
 
-            if (countReference) {
-                countReference.setValue(valueFactory.createInteger(count));
-            }
+                        _.each(subjectValue.getKeys(), function (subjectKey) {
+                            var subject = subjectValue.getElementByKey(subjectKey).getNative();
 
-            return singleSubject ? subjects[0] : valueFactory.createArray(subjects);
-        }
+                            subjects.push(
+                                new KeyValuePair(
+                                    subjectKey,
+                                    valueFactory.createString(replaceSubject(subject))
+                                )
+                            );
+                        });
+                    } else if (subjectValue.getType() === 'string') {
+                        singleSubject = true;
+                        subjects[0] = valueFactory.createString(replaceSubject(subjectValue.getNative()));
+                    }
+                } catch (error) {
+                    if (error instanceof FailureException) {
+                        return valueFactory.createNull();
+                    }
+
+                    throw error;
+                }
+
+                if (countSnapshot.isReferenceable()) {
+                    // A reference was provided for $count, so write it back.
+                    countSnapshot.setValue(valueFactory.createInteger(count));
+                }
+
+                return singleSubject ? subjects[0] : valueFactory.createArray(subjects);
+            }
+        )
     };
 };

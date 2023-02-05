@@ -11,12 +11,10 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../../sync');
+    tools = require('../../../tools');
 
 describe('PHP "krsort" builtin function integration', function () {
-    it('should be able to sort an associative array by key in reverse order', function () {
+    it('should be able to sort an associative array by key in reverse order', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 $array = [
@@ -31,16 +29,10 @@ krsort($array);
 var_dump($array);
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        engine.execute();
+        await engine.execute();
 
         expect(engine.getStdout().readAll()).to.equal(
             nowdoc(function () {/*<<<EOS

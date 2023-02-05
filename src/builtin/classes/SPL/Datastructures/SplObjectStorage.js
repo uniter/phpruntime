@@ -73,17 +73,13 @@ module.exports = function (internals) {
          * Fetches the number of objects in the storage.
          *
          * @see {@link https://secure.php.net/manual/en/splobjectstorage.count.php}
-         *
-         * @param {IntegerValue} modeValue
-         * @returns {IntegerValue}
          */
         'count': internals.typeInstanceMethod(
-            'int $mode = null: int',
+            'int $mode = COUNT_NORMAL : int',
             function (modeValue) {
-                // TODO: Set the default argument for parameter $mode once supported.
                 var mode = modeValue.getNative();
 
-                if (mode !== null && mode !== COUNT_NORMAL) {
+                if (mode !== COUNT_NORMAL) {
                     throw new Error('Unsupported mode for SplObjectStorage->count(...) :: ' + mode);
                 }
 
@@ -120,7 +116,7 @@ module.exports = function (internals) {
          * @returns {Value}
          */
         'offsetGet': internals.typeInstanceMethod(
-            'object $object: mixed',
+            'object $object : mixed',
             function (objectValue) {
                 var storageValue = this,
                     objectMap = storageValue.getInternalProperty('objects'),

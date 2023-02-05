@@ -20,7 +20,7 @@ module.exports = function (internals) {
 
     return {
         /**
-         * Calls the specified function, returning its result
+         * Calls the specified function, returning its result.
          *
          * @see {@link https://secure.php.net/manual/en/function.call-user-func.php}
          *
@@ -49,7 +49,7 @@ module.exports = function (internals) {
 
             return callbackValue.call(argumentValues, globalNamespace)
                 .catch(function (error) {
-                    // Allow any other errors through
+                    // Allow any other errors through.
                     if (error !== expectedReferenceError) {
                         throw error;
                     }
@@ -64,22 +64,20 @@ module.exports = function (internals) {
                     return valueFactory.createNull();
                 });
         },
+
         /**
-         * Calls the specified function, returning its result
+         * Calls the specified function, returning its result.
          *
          * @see {@link https://secure.php.net/manual/en/function.call-user-func-array.php}
-         *
-         * @param {Variable|Value} callbackReference      The function or callable to call
-         * @param {Variable|Value} argumentArrayReference An array of arguments to pass to the callable
-         * @returns {Value}
          */
-        'call_user_func_array': function (callbackReference, argumentArrayReference) {
-            var callbackValue = callbackReference.getValue(),
-                argumentArrayValue = argumentArrayReference.getValue(),
-                argumentValues = argumentArrayValue.getValueReferences();
+        'call_user_func_array': internals.typeFunction(
+            'callable $callback, array $args : mixed',
+            function (callbackValue, argumentArrayValue) {
+                var argumentValues = argumentArrayValue.getValueReferences();
 
-            return callbackValue.call(argumentValues, globalNamespace);
-        },
+                return callbackValue.call(argumentValues, globalNamespace);
+            }
+        ),
 
         /**
          * Fetches an array containing all arguments passed to the function.

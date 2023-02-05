@@ -11,10 +11,12 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    tools = require('../../../tools');
+    phpCommon = require('phpcommon'),
+    tools = require('../../../tools'),
+    Exception = phpCommon.Exception;
 
 describe('PHP "var_dump" builtin function integration', function () {
-    it('should be able to dump a complex object defined in PHP-land', function () {
+    it('should be able to dump a complex object defined in PHP-land', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 $myObject = (object)[
@@ -33,10 +35,10 @@ $myObject->myRecursiveObject = (object)[
 var_dump($myObject);
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile('/my/module.php', php),
+            module = tools.asyncTranspile('/my/module.php', php),
             engine = module();
 
-        engine.execute();
+        await engine.execute();
 
         expect(engine.getStdout().readAll()).to.equal(
             nowdoc(function () {/*<<<EOS
@@ -66,7 +68,7 @@ EOS
         );
     });
 
-    it('should be able to dump a complex array defined in PHP-land', function () {
+    it('should be able to dump a complex array defined in PHP-land', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 $myArray = [
@@ -85,10 +87,10 @@ $myArray['myRecursiveElement'] = [
 var_dump($myArray);
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile('/my/module.php', php),
+            module = tools.asyncTranspile('/my/module.php', php),
             engine = module();
 
-        engine.execute();
+        await engine.execute();
 
         expect(engine.getStdout().readAll()).to.equal(
             nowdoc(function () {/*<<<EOS
@@ -132,13 +134,46 @@ EOS
         );
     });
 
-    it('should be able to dump a complex object imported from JS-land as a JSObject (due to having a method)', function () {
+    it('should be able to dump an array containing a resource defined in PHP-land', async function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+$myArray = [
+    'myBoolean' => true,
+    'myResource' => create_my_resource()
+];
+
+var_dump($myArray);
+EOS
+*/;}), //jshint ignore:line
+            module = tools.asyncTranspile('/my/module.php', php),
+            engine = module();
+        engine.defineCoercingFunction('create_my_resource', function () {
+            return this.valueFactory.createResource('my_resource_type', {});
+        });
+
+        await engine.execute();
+
+        expect(engine.getStdout().readAll()).to.equal(
+            nowdoc(function () {/*<<<EOS
+array(2) {
+  ["myBoolean"]=>
+  bool(true)
+  ["myResource"]=>
+  resource(1) of type (my_resource_type)
+}
+
+EOS
+*/;}) //jshint ignore:line
+        );
+    });
+
+    it('should be able to dump a complex object imported from JS-land as a JSObject (due to having a method)', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 var_dump($myObject);
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile('/my/module.php', php),
+            module = tools.asyncTranspile('/my/module.php', php),
             engine = module(),
             myObject = {
                 myBoolean: true,
@@ -156,7 +191,7 @@ EOS
 
         engine.expose(myObject, 'myObject');
 
-        engine.execute();
+        await engine.execute();
 
         expect(engine.getStdout().readAll()).to.equal(
             nowdoc(function () {/*<<<EOS
@@ -186,6 +221,24 @@ object(JSObject)#1 (6) {
 
 EOS
 */;}) //jshint ignore:line
+        );
+    });
+
+    it('should throw when multiple variables are given (for now)', async function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+$myArray = ['my' => 'array'];
+$myNumber = 21;
+
+var_dump($myArray, $myNumber);
+EOS
+*/;}), //jshint ignore:line
+            module = tools.asyncTranspile('/my/module.php', php),
+            engine = module();
+
+        await expect(engine.execute()).to.eventually.be.rejectedWith(
+            Exception,
+            'var_dump() :: Only one argument is currently supported, 2 given'
         );
     });
 });

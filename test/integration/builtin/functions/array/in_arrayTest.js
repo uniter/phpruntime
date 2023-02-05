@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "in_array" builtin function integration', function () {
-    it('should be able to determine whether an array contains a value', function () {
+    it('should be able to determine whether an array contains a value', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -29,11 +29,10 @@ $result[] = in_array(1001, $myArray, true);
 return $result;
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             true,
             true,
             false, // Strict matching enabled, but types differ

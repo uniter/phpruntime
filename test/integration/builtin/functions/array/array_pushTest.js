@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "array_push" builtin function integration', function () {
-    it('should be able to push one or more elements onto the end of an array', function () {
+    it('should be able to push one or more elements onto the end of an array', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -28,10 +28,10 @@ $result[] = $myArray; // Check the eventual array value
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             4, // Return value should be the new no. of elements in the array
             6, // Same as above, after pushing a further two elements onto the array
             {

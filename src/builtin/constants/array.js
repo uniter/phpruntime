@@ -12,6 +12,8 @@
 module.exports = function () {
     return {
         'COUNT_NORMAL': 0,
-        'COUNT_RECURSIVE': 1
+        'COUNT_RECURSIVE': 1,
+
+        'SORT_REGULAR': 0
     };
 };
