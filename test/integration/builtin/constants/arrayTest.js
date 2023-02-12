@@ -21,7 +21,9 @@ return [
     'COUNT_NORMAL' => COUNT_NORMAL,
     'COUNT_RECURSIVE' => COUNT_RECURSIVE,
 
-    'SORT_REGULAR' => SORT_REGULAR
+    'SORT_REGULAR' => SORT_REGULAR,
+    'SORT_STRING' => SORT_STRING,
+    'SORT_NATURAL' => SORT_NATURAL
 ];
 EOS
 */;}), //jshint ignore:line
@@ -32,7 +34,9 @@ EOS
             'COUNT_NORMAL': 0,
             'COUNT_RECURSIVE': 1,
 
-            'SORT_REGULAR': 0
+            'SORT_REGULAR': 0,
+            'SORT_STRING': 2,
+            'SORT_NATURAL': 6
         });
     });
 });

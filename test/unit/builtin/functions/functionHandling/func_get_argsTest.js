@@ -15,33 +15,40 @@ var expect = require('chai').expect,
     tools = require('../../../tools'),
     Call = require('phpcore/src/Call'),
     CallStack = require('phpcore/src/CallStack'),
-    Namespace = require('phpcore/src/Namespace').sync(),
     PHPError = require('phpcommon').PHPError;
 
 describe('PHP "func_get_args" builtin function', function () {
-    var callFuncGetArgs,
+    var callFactory,
         callStack,
         func_get_args,
-        functionHandlingFunctions,
-        globalNamespace,
-        internals,
-        valueFactory;
+        state,
+        valueFactory,
+        variableFactory;
 
     beforeEach(function () {
         callStack = sinon.createStubInstance(CallStack);
-        valueFactory = tools.createIsolatedState().getValueFactory();
-        globalNamespace = sinon.createStubInstance(Namespace);
-        internals = {
-            callStack: callStack,
-            globalNamespace: globalNamespace,
-            valueFactory: valueFactory
-        };
-        functionHandlingFunctions = functionHandlingFunctionFactory(internals);
-        func_get_args = functionHandlingFunctions.func_get_args;
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                functionGroups: [
+                    functionHandlingFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
+        valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
 
-        callFuncGetArgs = function () {
-            return func_get_args.apply(null, []);
-        };
+        // We need a call on the stack for any isolated scope evaluation.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
+
+        func_get_args = state.getFunction('func_get_args');
     });
 
     describe('when called from a function scope', function () {
@@ -55,8 +62,8 @@ describe('PHP "func_get_args" builtin function', function () {
             callStack.getCaller.returns(callerCall);
         });
 
-        it('should return an array of the args passed to the caller', function () {
-            var resultValue = callFuncGetArgs();
+        it('should return an array of the args passed to the caller', async function () {
+            var resultValue = await func_get_args().toPromise();
 
             expect(resultValue.getType()).to.equal('array');
         });
@@ -67,8 +74,8 @@ describe('PHP "func_get_args" builtin function', function () {
             callStack.getCaller.returns(null);
         });
 
-        it('should raise a warning', function () {
-            callFuncGetArgs();
+        it('should raise a warning', async function () {
+            await func_get_args().toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
@@ -77,8 +84,8 @@ describe('PHP "func_get_args" builtin function', function () {
             );
         });
 
-        it('should return false', function () {
-            var resultValue = callFuncGetArgs();
+        it('should return false', async function () {
+            var resultValue = await func_get_args().toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;

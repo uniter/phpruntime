@@ -10,7 +10,9 @@
 'use strict';
 
 var phpCommon = require('phpcommon'),
-    PHPError = phpCommon.PHPError;
+    PHPError = phpCommon.PHPError,
+    GET_CLASS_WITHOUT_ARGS_OUTSIDE_CLASS = 'core.get_class_without_args_outside_class',
+    INVALID_VALUE_FOR_TYPE_BUILTIN = 'core.invalid_value_for_type_builtin';
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
@@ -45,12 +47,14 @@ module.exports = function (internals) {
         ),
 
         /**
-         * Fetches the name of either the current class or the class of a specified object
+         * Fetches the name of either the current class or the class of a specified object.
+         *
+         * TODO: Add the ability to specify multiple signatures so that .typeFunction(...) may be used here.
          *
          * @see {@link https://secure.php.net/manual/en/function.get-class.php}
          *
          * @param {Variable|Value} objectReference
-         * @returns {StringValue|BooleanValue}
+         * @returns {StringValue}
          */
         'get_class': function (objectReference) {
             var currentClass,
@@ -60,12 +64,10 @@ module.exports = function (internals) {
                 currentClass = callStack.getCallerScope().getCurrentClass();
 
                 if (!currentClass) {
-                    callStack.raiseError(
-                        PHPError.E_WARNING,
-                        'get_class() called without object from outside a class'
+                    callStack.raiseTranslatedError(
+                        PHPError.E_ERROR,
+                        GET_CLASS_WITHOUT_ARGS_OUTSIDE_CLASS
                     );
-
-                    return valueFactory.createBoolean(false);
                 }
 
                 return valueFactory.createString(currentClass.getName());
@@ -74,13 +76,20 @@ module.exports = function (internals) {
             objectValue = objectReference.getValue();
 
             if (objectValue.getType() !== 'object') {
-                // If specified, the value must be an object
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'get_class() expects parameter 1 to be object, ' + objectValue.getType() + ' given'
+                // If specified, the value must be an object.
+                // Null cannot be specified, the argument must instead be omitted.
+                callStack.raiseTranslatedError(
+                    PHPError.E_ERROR,
+                    INVALID_VALUE_FOR_TYPE_BUILTIN,
+                    {
+                        func: 'get_class',
+                        index: 1,
+                        name: 'object',
+                        expectedType: 'of type object',
+                        actualType: objectValue.getType()
+                    },
+                    'TypeError'
                 );
-
-                return valueFactory.createBoolean(false);
             }
 
             return valueFactory.createString(objectValue.getClassName());

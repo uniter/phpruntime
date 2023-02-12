@@ -20,7 +20,7 @@ describe('PHP "array_pop" builtin function integration', function () {
 
 $myArray = ['first', 'second', 'third'];
 
-end($myArray); // Move to end so we can test internal array pointer handling
+end($myArray); // Move to end so we can test internal array pointer handling.
 
 $result = [];
 $result[] = array_pop($myArray);
@@ -36,19 +36,19 @@ $result[] = $myArray;
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.asyncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
         expect((await engine.execute()).getNative()).to.deep.equal([
-            'third',                // Last element is popped off first
-            ['first', 'second'],    // Only the first two elements are left
-            'first',                // [From current(...)] - Internal array pointer should be reset
-            'second',               // Then, second element is popped off
-            ['first'],              // No elements are left
-            'first',                // Then, first element is popped off as it is now the last one
-            [],                     // No elements are left
-            null,                   // Array is empty, so NULL is returned as there is nothing to pop off
-            []                      // Array is empty
+            'third',                // Last element is popped off first.
+            ['first', 'second'],    // Only the first two elements are left.
+            'first',                // [From current(...)] - Internal array pointer should be reset.
+            'second',               // Then, second element is popped off.
+            ['first'],              // No elements are left.
+            'first',                // Then, first element is popped off as it is now the last one.
+            [],                     // No elements are left.
+            null,                   // Array is empty, so NULL is returned as there is nothing to pop off.
+            []                      // Array is empty.
         ]);
     });
 });

@@ -10,44 +10,72 @@
 'use strict';
 
 var expect = require('chai').expect,
-    arrayExtension = require('../../../../../src/builtin/functions/array'),
+    arrayConstantFactory = require('../../../../../src/builtin/constants/array'),
+    arrayFunctionFactory = require('../../../../../src/builtin/functions/array'),
     sinon = require('sinon'),
     tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    KeyValuePair = require('phpcore/src/KeyValuePair'),
-    Variable = require('phpcore/src/Variable').sync();
+    KeyValuePair = require('phpcore/src/KeyValuePair');
 
 describe('PHP "array_pop" builtin function', function () {
     var array_pop,
-        arrayReference,
+        arrayVariable,
+        callFactory,
         callStack,
-        valueFactory;
+        futureFactory,
+        globalNamespace,
+        state,
+        valueFactory,
+        variableFactory;
 
     beforeEach(function () {
-        arrayReference = sinon.createStubInstance(Variable);
         callStack = sinon.createStubInstance(CallStack);
-        valueFactory = tools.createIsolatedState().getValueFactory();
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                constantGroups: [
+                    arrayConstantFactory
+                ],
+                functionGroups: [
+                    arrayFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
+        futureFactory = state.getFutureFactory();
+        globalNamespace = state.getGlobalNamespace();
+        valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
 
-        array_pop = arrayExtension({
-            callStack: callStack,
-            valueFactory: valueFactory
-        }).array_pop;
+        // We need a call on the stack for any isolated scope evaluation.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
+
+        array_pop = state.getFunction('array_pop');
+
+        arrayVariable = variableFactory.createVariable('myArray');
     });
 
     describe('for an indexed array', function () {
         var arrayValue;
 
         beforeEach(function () {
-            arrayValue = valueFactory.createArray([
+            arrayVariable.setValue(valueFactory.createArray([
                 valueFactory.createString('my first element'),
                 valueFactory.createString('my second element'),
                 valueFactory.createString('my last element')
-            ]);
-            arrayReference.getValue.returns(arrayValue);
+            ]));
+            // Fetch the clone of the array that will have been taken on assignment.
+            arrayValue = arrayVariable.getValue();
         });
 
-        it('should remove the last element', function () {
-            array_pop(arrayReference);
+        it('should remove the last element', async function () {
+            await array_pop(arrayVariable).toPromise();
 
             expect(arrayValue.getNative()).to.deep.equal([
                 'my first element',
@@ -56,8 +84,8 @@ describe('PHP "array_pop" builtin function', function () {
             expect(arrayValue.getLength()).to.equal(2);
         });
 
-        it('should return the last element', function () {
-            var result = array_pop(arrayReference);
+        it('should return the last element', async function () {
+            var result = await array_pop(arrayVariable).toPromise();
 
             expect(result.getType()).to.equal('string');
             expect(result.getNative()).to.equal('my last element');
@@ -65,8 +93,10 @@ describe('PHP "array_pop" builtin function', function () {
     });
 
     describe('for an associative array', function () {
-        it('should remove the last element, leaving the remaining elements\' keys untouched', function () {
-            var arrayValue = valueFactory.createArray([
+        var arrayValue;
+
+        beforeEach(function () {
+            arrayVariable.setValue(valueFactory.createArray([
                 new KeyValuePair(
                     valueFactory.createString('my_first_key'),
                     valueFactory.createString('my first element')
@@ -79,10 +109,13 @@ describe('PHP "array_pop" builtin function', function () {
                     valueFactory.createString('my_last_key'),
                     valueFactory.createString('my last element')
                 )
-            ]);
-            arrayReference.getValue.returns(arrayValue);
+            ]));
+            // Fetch the clone of the array that will have been taken on assignment.
+            arrayValue = arrayVariable.getValue();
+        });
 
-            array_pop(arrayReference);
+        it('should remove the last element, leaving the remaining elements\' keys untouched', async function () {
+            await array_pop(arrayVariable).toPromise();
 
             expect(arrayValue.getNative()).to.deep.equal({
                 'my_first_key': 'my first element',
@@ -91,25 +124,8 @@ describe('PHP "array_pop" builtin function', function () {
             expect(arrayValue.getLength()).to.equal(2);
         });
 
-        it('should return the last element\'s value, discarding the key', function () {
-            var arrayValue = valueFactory.createArray([
-                new KeyValuePair(
-                    valueFactory.createString('my_first_key'),
-                    valueFactory.createString('my first element')
-                ),
-                new KeyValuePair(
-                    valueFactory.createString('my_second_key'),
-                    valueFactory.createString('my second element')
-                ),
-                new KeyValuePair(
-                    valueFactory.createString('my_last_key'),
-                    valueFactory.createString('my last element')
-                )
-            ]),
-                result;
-            arrayReference.getValue.returns(arrayValue);
-
-            result = array_pop(arrayReference);
+        it('should return the last element\'s value, discarding the key', async function () {
+            var result = await array_pop(arrayVariable).toPromise();
 
             expect(result.getType()).to.equal('string');
             expect(result.getNative()).to.equal('my last element');
@@ -117,11 +133,11 @@ describe('PHP "array_pop" builtin function', function () {
     });
 
     describe('for an empty array', function () {
-        it('should return null', function () {
+        it('should return null', async function () {
             var result;
-            arrayReference.getValue.returns(valueFactory.createArray([]));
+            arrayVariable.setValue(valueFactory.createArray([]));
 
-            result = array_pop(arrayReference);
+            result = await array_pop(arrayVariable).toPromise();
 
             expect(result.getType()).to.equal('null');
         });

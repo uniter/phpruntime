@@ -9,7 +9,9 @@
 
 'use strict';
 
-var INCLUDE_PATH_INI = 'include_path';
+var phpCommon = require('phpcommon'),
+    Exception = phpCommon.Exception,
+    INCLUDE_PATH_INI = 'include_path';
 
 module.exports = function (internals) {
     var iniState = internals.iniState,
@@ -20,7 +22,7 @@ module.exports = function (internals) {
         var fileSystem = optionSet.getOption('fileSystem');
 
         if (!fileSystem) {
-            throw new Error('filesystem :: No `fileSystem` option is configured');
+            throw new Exception('filesystem :: No `fileSystem` option is configured');
         }
 
         return fileSystem;
@@ -72,11 +74,11 @@ module.exports = function (internals) {
                     stream;
 
                 if (streamValue.getType() !== 'resource') {
-                    throw new Error('fclose() :: Non-resource given - TODO add parameter type');
+                    throw new Exception('fclose() :: Non-resource given - TODO add parameter type');
                 }
 
                 if (streamValue.getResourceType() !== 'stream') {
-                    throw new Error('fclose() :: Non-stream resource given');
+                    throw new Exception('fclose() :: Non-stream resource given');
                 }
 
                 resource = streamValue.getResource();
@@ -99,11 +101,11 @@ module.exports = function (internals) {
                 var eof;
 
                 if (streamValue.getType() !== 'resource') {
-                    throw new Error('fclose() :: Non-resource given - TODO add parameter type');
+                    throw new Exception('fclose() :: Non-resource given - TODO add parameter type');
                 }
 
                 if (streamValue.getResourceType() !== 'stream') {
-                    throw new Error('fclose() :: Non-stream resource given');
+                    throw new Exception('fclose() :: Non-stream resource given');
                 }
 
                 eof = streamValue.getResource().stream.isEof();
@@ -147,11 +149,11 @@ module.exports = function (internals) {
                     writtenLength;
 
                 if (streamValue.getType() !== 'resource') {
-                    throw new Error('fwrite() :: Non-resource given - TODO add parameter type');
+                    throw new Exception('fwrite() :: Non-resource given - TODO add parameter type');
                 }
 
                 if (streamValue.getResourceType() !== 'stream') {
-                    throw new Error('fwrite() :: Non-stream resource given');
+                    throw new Exception('fwrite() :: Non-stream resource given');
                 }
 
                 resource = streamValue.getResource();

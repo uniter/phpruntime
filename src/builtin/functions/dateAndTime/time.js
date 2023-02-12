@@ -9,6 +9,9 @@
 
 'use strict';
 
+var phpCommon = require('phpcommon'),
+    Exception = phpCommon.Exception;
+
 module.exports = function (internals) {
     var clock = internals.getService('clock'),
         optionSet = internals.optionSet,
@@ -18,7 +21,7 @@ module.exports = function (internals) {
         var performance = optionSet.getOption('performance');
 
         if (!performance) {
-            throw new Error('performance :: No `performance` option is configured');
+            throw new Exception('performance :: No `performance` option is configured');
         }
 
         return performance;

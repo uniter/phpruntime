@@ -11,7 +11,9 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    tools = require('../../../tools');
+    phpCommon = require('phpcommon'),
+    tools = require('../../../tools'),
+    Exception = phpCommon.Exception;
 
 describe('PHP "count" builtin function integration', function () {
     it('should be able to count normal arrays and objects that implement the Countable interface', async function () {
@@ -28,22 +30,38 @@ class MyClass implements Countable
 $myArray = [21, 27, 'hello'];
 $myObject = new MyClass();
 
-var_dump(count($myArray));
-var_dump(count($myObject));
+$result = [];
+
+$result['indexed array'] = count($myArray);
+$result['object implementing Countable'] = count($myObject);
+
+return $result;
 EOS
 */;}), //jshint ignore:line
             module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        await engine.execute();
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            'indexed array': 3,
+            'object implementing Countable': 1280
+        });
+    });
 
-        expect(engine.getStdout().readAll()).to.equal(
-            nowdoc(function () {/*<<<EOS
-int(3)
-int(1280)
+    it('should throw a meaningful error when COUNT_RECURSIVE is provided as mode', async function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
 
+$myArray = ['first' => 1, 'second' => 2];
+
+count($myArray, COUNT_RECURSIVE);
 EOS
-*/;}) //jshint ignore:line
+*/;}), //jshint ignore:line
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module();
+
+        await expect(engine.execute()).to.eventually.be.rejectedWith(
+            Exception,
+            'count() :: Only COUNT_NORMAL (0) is supported, 1 given'
         );
     });
 });

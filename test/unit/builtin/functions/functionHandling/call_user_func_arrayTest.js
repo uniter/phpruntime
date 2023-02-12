@@ -10,73 +10,100 @@
 'use strict';
 
 var expect = require('chai').expect,
-    sinon = require('sinon'),
     functionHandlingFunctionFactory = require('../../../../../src/builtin/functions/functionHandling'),
-    ArrayValue = require('phpcore/src/Value/Array').sync(),
+    sinon = require('sinon'),
+    tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    IntegerValue = require('phpcore/src/Value/Integer').sync(),
-    Namespace = require('phpcore/src/Namespace').sync(),
-    ObjectValue = require('phpcore/src/Value/Object').sync(),
-    ValueFactory = require('phpcore/src/ValueFactory').sync(),
-    Variable = require('phpcore/src/Variable').sync();
+    ObjectValue = require('phpcore/src/Value/Object').sync();
 
 describe('PHP "call_user_func_array" builtin function', function () {
+    var argumentArrayVariable,
+        callbackValue,
+        callbackVariable,
+        callFactory,
+        callStack,
+        call_user_func_array,
+        futureFactory,
+        globalNamespace,
+        state,
+        valueFactory,
+        variableFactory;
+
     beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.valueFactory = new ValueFactory();
-        this.globalNamespace = sinon.createStubInstance(Namespace);
-        this.internals = {
-            callStack: this.callStack,
-            globalNamespace: this.globalNamespace,
-            valueFactory: this.valueFactory
-        };
-        this.functionHandlingFunctions = functionHandlingFunctionFactory(this.internals);
-        this.call_user_func_array = this.functionHandlingFunctions.call_user_func_array;
-        this.callbackReference = sinon.createStubInstance(Variable);
-        this.callbackValue = sinon.createStubInstance(ObjectValue);
-        this.argumentArrayReference = sinon.createStubInstance(Variable);
-        this.argumentArrayValue = sinon.createStubInstance(ArrayValue);
+        callStack = sinon.createStubInstance(CallStack);
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                functionGroups: [
+                    functionHandlingFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
+        futureFactory = state.getFutureFactory();
+        globalNamespace = state.getGlobalNamespace();
+        valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
 
-        this.callbackReference.getValue.returns(this.callbackValue);
-        this.argumentArrayReference.getValue.returns(this.argumentArrayValue);
+        // We need a call on the stack for any isolated scope evaluation.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
 
-        this.callUserFunc = function () {
-            return this.call_user_func_array(this.callbackReference, this.argumentArrayReference);
-        }.bind(this);
+        call_user_func_array = state.getFunction('call_user_func_array');
+
+        callbackVariable = variableFactory.createVariable('myCallback');
+        callbackValue = sinon.createStubInstance(ObjectValue);
+        callbackValue.call.returns(valueFactory.createNull());
+        callbackValue.getCallableName.withArgs(globalNamespace).returns('myFunc');
+        callbackValue.getForAssignment.returns(callbackValue);
+        callbackValue.getType.returns('object');
+        callbackValue.isCallable.returns(futureFactory.createPresent(true));
+        callbackValue.next.callsArgWith(0, callbackValue);
+        callbackVariable.setValue(callbackValue);
+
+        argumentArrayVariable = variableFactory.createVariable('myArguments');
+        argumentArrayVariable.setValue(valueFactory.createArray([]));
     });
 
-    it('should call the callback value once', function () {
-        this.callUserFunc();
+    it('should call the callback value once', async function () {
+        await call_user_func_array(callbackVariable, argumentArrayVariable).toPromise();
 
-        expect(this.callbackValue.call).to.have.been.calledOnce;
+        expect(callbackValue.call).to.have.been.calledOnce;
     });
 
-    it('should call the function with the resolved argument array', function () {
-        var argumentValue1 = sinon.createStubInstance(IntegerValue),
-            argumentValue2 = sinon.createStubInstance(IntegerValue);
-        this.argumentArrayValue.getValueReferences.returns([argumentValue1, argumentValue2]);
+    it('should call the function with the resolved argument array', async function () {
+        var argumentValue1 = valueFactory.createString('my first arg'),
+            argumentValue2 = valueFactory.createString('my second arg');
+        argumentArrayVariable.setValue(valueFactory.createArray([argumentValue1, argumentValue2]));
 
-        this.callUserFunc();
+        await call_user_func_array(callbackVariable, argumentArrayVariable).toPromise();
 
-        expect(this.callbackValue.call).to.have.been.calledWith([
+        expect(callbackValue.call).to.have.been.calledWith([
             argumentValue1,
             argumentValue2
         ]);
     });
 
-    it('should call the function with the global namespace', function () {
-        this.callUserFunc();
+    it('should call the function with the global namespace', async function () {
+        await call_user_func_array(callbackVariable, argumentArrayVariable).toPromise();
 
-        expect(this.callbackValue.call).to.have.been.calledWith(
+        expect(callbackValue.call).to.have.been.calledOnce;
+        expect(callbackValue.call).to.have.been.calledWith(
             sinon.match.any,
-            this.globalNamespace
+            globalNamespace
         );
     });
 
-    it('should return the result of the call', function () {
-        var resultValue = sinon.createStubInstance(IntegerValue);
-        this.callbackValue.call.returns(resultValue);
+    it('should return the result of the call', async function () {
+        var resultValue = valueFactory.createString('my result');
+        callbackValue.call.returns(resultValue);
 
-        expect(this.callUserFunc()).to.equal(resultValue);
+        expect(await call_user_func_array(callbackVariable, argumentArrayVariable).toPromise())
+            .to.equal(resultValue);
     });
 });

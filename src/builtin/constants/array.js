@@ -14,6 +14,8 @@ module.exports = function () {
         'COUNT_NORMAL': 0,
         'COUNT_RECURSIVE': 1,
 
-        'SORT_REGULAR': 0
+        'SORT_REGULAR': 0,
+        'SORT_STRING': 2,
+        'SORT_NATURAL': 6
     };
 };

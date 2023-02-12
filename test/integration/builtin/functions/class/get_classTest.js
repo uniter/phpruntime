@@ -11,7 +11,9 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    tools = require('../../../tools');
+    phpCommon = require('phpcommon'),
+    tools = require('../../../tools'),
+    PHPFatalError = phpCommon.PHPFatalError;
 
 describe('PHP "get_class" builtin function integration', function () {
     it('should be able to fetch both the current class and the class of a specified object', async function () {
@@ -51,5 +53,56 @@ EOS
             'My\\Space\\FirstClass',
             'My\\Space\\SecondClass'
         ]);
+    });
+
+    it('should raise a fatal error when called with no arguments outside a class', async function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+
+get_class();
+EOS
+*/;}), //jshint ignore:line
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module();
+
+        await expect(engine.execute()).to.eventually.be.rejectedWith(
+            PHPFatalError,
+            'PHP Fatal error: Uncaught Error: get_class() without arguments must be called from within a class ' +
+            'in /path/to/my_module.php on line 3'
+        );
+    });
+
+    it('should raise a fatal error when called with a non-null non-object', async function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+
+get_class(21);
+EOS
+*/;}), //jshint ignore:line
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module();
+
+        await expect(engine.execute()).to.eventually.be.rejectedWith(
+            PHPFatalError,
+            'PHP Fatal error: Uncaught TypeError: get_class(): Argument #1 ($object) must be of type object, int given ' +
+            'in /path/to/my_module.php on line 3'
+        );
+    });
+
+    it('should raise a fatal error when called with null', async function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+
+get_class(null);
+EOS
+*/;}), //jshint ignore:line
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module();
+
+        await expect(engine.execute()).to.eventually.be.rejectedWith(
+            PHPFatalError,
+            'PHP Fatal error: Uncaught TypeError: get_class(): Argument #1 ($object) must be of type object, null given ' +
+            'in /path/to/my_module.php on line 3'
+        );
     });
 });

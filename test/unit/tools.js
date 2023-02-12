@@ -11,8 +11,10 @@
 
 var _ = require('microdash'),
     asyncRuntime = require('phpcore/async'),
+    phpCommon = require('phpcommon'),
     psyncRuntime = require('phpcore/psync'),
-    syncRuntime = require('phpcore/sync');
+    syncRuntime = require('phpcore/sync'),
+    Exception = phpCommon.Exception;
 
 /**
  * Creates an Environment for the given mode.
@@ -64,9 +66,27 @@ module.exports = {
                     internals.allowServiceOverride();
 
                     _.forOwn(serviceOverrides, function (service, id) {
-                        serviceProviders[id] = function () {
-                            return service;
-                        };
+                        var provider;
+
+                        if (/^!/.test(id)) {
+                            id = id.replace(/^!/, '');
+
+                            if (typeof service !== 'function') {
+                                throw new Exception(
+                                    'Override for service "' + id + '" must be a function'
+                                );
+                            }
+
+                            provider = function () {
+                                return service(internals);
+                            };
+                        } else {
+                            provider = function () {
+                                return service;
+                            };
+                        }
+
+                        serviceProviders[id] = provider;
                     });
 
                     return serviceProviders;

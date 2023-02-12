@@ -11,7 +11,9 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    tools = require('../../../tools');
+    phpCommon = require('phpcommon'),
+    tools = require('../../../tools'),
+    Exception = phpCommon.Exception;
 
 describe('PHP "krsort" builtin function integration', function () {
     it('should be able to sort an associative array by key in reverse order', async function () {
@@ -49,6 +51,24 @@ array(4) {
 
 EOS
 */;}) //jshint ignore:line
+        );
+    });
+
+    it('should throw a meaningful error when SORT_NATURAL is provided for the sort flags', async function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+
+$myArray = ['first' => 1, 'second' => 2];
+
+krsort($myArray, SORT_NATURAL);
+EOS
+*/;}), //jshint ignore:line
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module();
+
+        await expect(engine.execute()).to.eventually.be.rejectedWith(
+            Exception,
+            'krsort() :: Only SORT_REGULAR (0) is supported, 6 given'
         );
     });
 });

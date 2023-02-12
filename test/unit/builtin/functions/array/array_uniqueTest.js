@@ -10,30 +10,61 @@
 'use strict';
 
 var expect = require('chai').expect,
-    arrayExtension = require('../../../../../src/builtin/functions/array'),
+    arrayConstantFactory = require('../../../../../src/builtin/constants/array'),
+    arrayFunctionFactory = require('../../../../../src/builtin/functions/array'),
     phpCommon = require('phpcommon'),
     sinon = require('sinon'),
     tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    KeyValuePair = require('phpcore/src/KeyValuePair'),
-    PHPError = phpCommon.PHPError,
-    Variable = require('phpcore/src/Variable').sync();
+    Exception = phpCommon.Exception,
+    KeyValuePair = require('phpcore/src/KeyValuePair');
 
 describe('PHP "array_unique" builtin function', function () {
-    var arrayReference,
-        array_unique,
+    var array_unique,
+        arrayVariable,
+        callFactory,
         callStack,
-        valueFactory;
+        futureFactory,
+        globalNamespace,
+        sortFlagsVariable,
+        state,
+        valueFactory,
+        variableFactory,
+        SORT_NATURAL;
 
     beforeEach(function () {
-        arrayReference = sinon.createStubInstance(Variable);
         callStack = sinon.createStubInstance(CallStack);
-        valueFactory = tools.createIsolatedState().getValueFactory();
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                constantGroups: [
+                    arrayConstantFactory
+                ],
+                functionGroups: [
+                    arrayFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
+        futureFactory = state.getFutureFactory();
+        globalNamespace = state.getGlobalNamespace();
+        valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
+        SORT_NATURAL = state.getConstantValue('SORT_NATURAL');
 
-        array_unique = arrayExtension({
-            callStack: callStack,
-            valueFactory: valueFactory
-        }).array_unique;
+        // We need a call on the stack for any isolated scope evaluation.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
+
+        array_unique = state.getFunction('array_unique');
+
+        arrayVariable = variableFactory.createVariable('myArray');
+        sortFlagsVariable = variableFactory.createVariable('mySortFlags');
     });
 
     describe('for an indexed array', function () {
@@ -47,31 +78,31 @@ describe('PHP "array_unique" builtin function', function () {
                 valueFactory.createString('first'),
                 valueFactory.createString('third')
             ]);
-            arrayReference.getValue.returns(arrayValue);
+            arrayVariable.setValue(arrayValue);
         });
 
-        it('should not reindex the elements starting from 0', function () {
-            var resultArray = array_unique(arrayReference);
+        it('should not reindex the elements starting from 0', async function () {
+            var resultArray = await array_unique(arrayVariable).toPromise();
 
             expect(resultArray.getNative()).to.deep.equal([
-                'first',    // Key 0
+                'first',    // Key 0.
                 undefined,
-                'second',   // Key 2
+                'second',   // Key 2.
                 undefined,
-                'third'     // Key 4
+                'third'     // Key 4.
             ]);
             expect(resultArray.getLength()).to.equal(3);
         });
 
-        it('should not modify the original array', function () {
-            array_unique(arrayReference);
+        it('should not modify the original array', async function () {
+            await array_unique(arrayVariable).toPromise();
 
             expect(arrayValue.getNative()).to.deep.equal([
-                'first',    // Key 0
+                'first',    // Key 0.
                 'first',
-                'second',   // Key 2
+                'second',   // Key 2.
                 'first',
-                'third'     // Key 4
+                'third'     // Key 4.
             ]);
             expect(arrayValue.getLength()).to.equal(5);
         });
@@ -103,11 +134,11 @@ describe('PHP "array_unique" builtin function', function () {
                     valueFactory.createString('third')
                 )
             ]);
-            arrayReference.getValue.returns(arrayValue);
+            arrayVariable.setValue(arrayValue);
         });
 
-        it('should preserve the keys', function () {
-            var resultArray = array_unique(arrayReference);
+        it('should preserve the keys', async function () {
+            var resultArray = await array_unique(arrayVariable).toPromise();
 
             expect(resultArray.getNative()).to.deep.equal({
                 'a': 'first',
@@ -117,8 +148,8 @@ describe('PHP "array_unique" builtin function', function () {
             expect(resultArray.getLength()).to.equal(3);
         });
 
-        it('should not modify the original array', function () {
-            array_unique(arrayReference);
+        it('should not modify the original array', async function () {
+            await array_unique(arrayVariable).toPromise();
 
             expect(arrayValue.getNative()).to.deep.equal({
                 'a': 'first',
@@ -136,41 +167,26 @@ describe('PHP "array_unique" builtin function', function () {
 
         beforeEach(function () {
             arrayValue = valueFactory.createArray([]);
-            arrayReference.getValue.returns(arrayValue);
+            arrayVariable.setValue(arrayValue);
         });
 
-        it('should return an empty array', function () {
-            var resultArray = array_unique(arrayReference);
+        it('should return an empty array', async function () {
+            var resultArray = await array_unique(arrayVariable).toPromise();
 
             expect(resultArray.getLength()).to.equal(0);
         });
     });
 
-    describe('when no arguments are provided', function () {
-        it('should raise a warning', function () {
-            array_unique();
-
-            expect(callStack.raiseError).to.have.been.calledOnce;
-            expect(callStack.raiseError).to.have.been.calledWith(
-                PHPError.E_WARNING,
-                'array_unique() expects at least 1 parameter, 0 given'
-            );
-        });
-
-        it('should return NULL', function () {
-            var result = array_unique();
-
-            expect(result.getType()).to.equal('null');
-        });
-    });
-
     describe('when sort flags are provided (currently unsupported)', function () {
-        it('should throw an error', function () {
-            var sortFlagsReference = sinon.createStubInstance(Variable);
+        it('should throw a meaningful error', async function () {
+            arrayVariable.setValue(valueFactory.createArray([]));
+            sortFlagsVariable.setValue(SORT_NATURAL);
 
-            expect(function () {
-                array_unique(arrayReference, sortFlagsReference);
-            }).to.throw('array_unique() :: Sort flags are not yet supported');
+            await expect(array_unique(arrayVariable, sortFlagsVariable).toPromise())
+                .to.eventually.be.rejectedWith(
+                    Exception,
+                    'array_unique() :: Only SORT_STRING (2) is supported, 6 given'
+                );
         });
     });
 });

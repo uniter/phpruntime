@@ -14,35 +14,17 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "array_merge" builtin function integration', function () {
-    it('should be able to merge two indexed arrays', async function () {
+    it('should be able to merge indexed arrays', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 $firstArray = [20, 25];
 $secondArray = [10, 11];
+$thirdArray = [97, 98];
 
-$result = array_merge($firstArray, $secondArray);
+$result = [];
 
-return $result;
-EOS
-*/;}), //jshint ignore:line
-            module = tools.asyncTranspile('/path/to/my_module.php', php),
-            engine = module();
-
-        expect((await engine.execute()).getNative()).to.deep.equal([
-            20,
-            25,
-            10,
-            11
-        ]);
-    });
-
-    it('should be able to merge two associative arrays', async function () {
-        var php = nowdoc(function () {/*<<<EOS
-<?php
-$firstArray = ['first' => 20, 'second' => 25];
-$secondArray = ['first' => 27, 'third' => 10, 'fourth' => 11];
-
-$result = array_merge($firstArray, $secondArray);
+$result['two arrays'] = array_merge($firstArray, $secondArray);
+$result['three arrays'] = array_merge($firstArray, $secondArray, $thirdArray);
 
 return $result;
 EOS
@@ -51,10 +33,56 @@ EOS
             engine = module();
 
         expect((await engine.execute()).getNative()).to.deep.equal({
-            'first': 27,  // Overridden by `first` element in second array
-            'second': 25,
-            'third': 10,
-            'fourth': 11
+            'two arrays': [
+                20,
+                25,
+                10,
+                11
+            ],
+            'three arrays': [
+                20,
+                25,
+                10,
+                11,
+                97,
+                98
+            ]
+        });
+    });
+
+    it('should be able to merge associative arrays', async function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+$firstArray = ['first' => 20, 'second' => 25];
+$secondArray = ['first' => 27, 'third' => 10, 'fourth' => 11];
+$thirdArray = ['third' => 97, 'fifth' => 98, 'sixth' => 99];
+
+$result = [];
+
+$result['two arrays'] = array_merge($firstArray, $secondArray);
+$result['three arrays'] = array_merge($firstArray, $secondArray, $thirdArray);
+
+return $result;
+EOS
+*/;}), //jshint ignore:line
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module();
+
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            'two arrays': {
+                'first': 27,  // Overridden by `first` element in second array.
+                'second': 25,
+                'third': 10,
+                'fourth': 11
+            },
+            'three arrays': {
+                'first': 27,  // Overridden by `first` element in second array.
+                'second': 25,
+                'third': 97,  // Overridden by `third` element in third array.
+                'fourth': 11,
+                'fifth': 98,
+                'sixth': 99
+            }
         });
     });
 });

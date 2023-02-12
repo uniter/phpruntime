@@ -13,13 +13,14 @@ var _ = require('microdash'),
     hasOwn = {}.hasOwnProperty,
     phpCommon = require('phpcommon'),
     slice = [].slice,
-    COUNT_NORMAL = 0,
     KeyValuePair = require('phpcore/src/KeyValuePair'),
     Exception = phpCommon.Exception,
     PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {
-    var SORT_REGULAR = internals.getConstant('SORT_REGULAR'),
+    var COUNT_NORMAL = internals.getConstant('COUNT_NORMAL'),
+        SORT_REGULAR = internals.getConstant('SORT_REGULAR'),
+        SORT_STRING = internals.getConstant('SORT_STRING'),
         callStack = internals.callStack,
         flow = internals.flow,
         globalNamespace = internals.globalNamespace,
@@ -120,11 +121,11 @@ module.exports = function (internals) {
                     resultPairs = [];
 
                 if (callbackValue.getType() === 'null') {
-                    throw new Error('array_filter() :: Callback cannot yet be omitted');
+                    throw new Exception('array_filter() :: Callback cannot yet be omitted');
                 }
 
                 if (mode !== 0) {
-                    throw new Error('array_filter() :: Mode flags are not yet supported');
+                    throw new Exception('array_filter() :: Mode flags are not yet supported');
                 }
 
                 // Work on a copy, so we don't mutate the original array.
@@ -209,7 +210,7 @@ module.exports = function (internals) {
             var arrayValue;
 
             if (searchValueReference || strictMatchReference) {
-                throw new Error('array_keys() :: Search functionality is not yet supported');
+                throw new Exception('array_keys() :: Search functionality is not yet supported');
             }
 
             arrayValue = arrayReference.getValue();
@@ -232,7 +233,7 @@ module.exports = function (internals) {
 
             if (arguments.length > 2) {
                 return valueFactory.createRejection(
-                    new Error('array_map() :: Multiple input arrays are not yet supported')
+                    new Exception('array_map() :: Multiple input arrays are not yet supported')
                 );
             }
 
@@ -254,7 +255,7 @@ module.exports = function (internals) {
         },
 
         /**
-         * Merges one or more arrays together, returning a new array with the result
+         * Merges one or more arrays together, returning a new array with the result.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-merge.php}
          *
@@ -275,36 +276,36 @@ module.exports = function (internals) {
                 return valueFactory.createNull();
             }
 
-            return flow.eachAsync(arguments, function (arrayReference, argumentIndex) {
-                return arrayReference.getValue().next(function (arrayValue) {
-                    if (arrayValue.getType() !== 'array') {
-                        callStack.raiseError(
-                            PHPError.E_WARNING,
-                            'array_merge(): Argument #' + (argumentIndex + 1) + ' is not an array'
-                        );
-                        returnNull = true;
-                        return false;
+            return flow.eachAsync(arguments, function (arrayVariable, argumentIndex) {
+                var arrayValue = arrayVariable.getValue();
+
+                if (arrayValue.getType() !== 'array') {
+                    callStack.raiseError(
+                        PHPError.E_WARNING,
+                        'array_merge(): Argument #' + (argumentIndex + 1) + ' is not an array'
+                    );
+                    returnNull = true;
+                    return false;
+                }
+
+                _.each(arrayValue.getKeys(), function (key) {
+                    var mergedKey,
+                        nativeKey;
+
+                    if (key.isNumeric()) {
+                        nativeKey = nextIndex++;
+                        mergedKey = valueFactory.createInteger(nativeKey);
+                        nativeKeys.push(nativeKey);
+                    } else {
+                        nativeKey = key.getNative();
+                        mergedKey = key;
+
+                        if (!hasOwn.call(nativeKeyToElementMap, nativeKey)) {
+                            nativeKeys.push(nativeKey);
+                        }
                     }
 
-                    _.each(arrayValue.getKeys(), function (key) {
-                        var mergedKey,
-                            nativeKey;
-
-                        if (key.isNumeric()) {
-                            nativeKey = nextIndex++;
-                            mergedKey = valueFactory.createInteger(nativeKey);
-                            nativeKeys.push(nativeKey);
-                        } else {
-                            nativeKey = key.getNative();
-                            mergedKey = key;
-
-                            if (!hasOwn.call(nativeKeyToElementMap, nativeKey)) {
-                                nativeKeys.push(nativeKey);
-                            }
-                        }
-
-                        nativeKeyToElementMap[nativeKey] = arrayValue.getElementPairByKey(key, mergedKey);
-                    });
+                    nativeKeyToElementMap[nativeKey] = arrayValue.getElementPairByKey(key, mergedKey);
                 });
             }).next(function () {
                 if (returnNull) {
@@ -320,20 +321,20 @@ module.exports = function (internals) {
         },
 
         /**
-         * Pops the last element off the end of an array and returns it
+         * Pops the last element off the end of an array and returns it.
          *
-         * - Also resets the internal array pointer
+         * Also resets the internal array pointer.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-pop.php}
-         *
-         * @param {Value|Variable|Reference} arrayReference
-         * @return {Value}
          */
-        'array_pop': function (arrayReference) {
-            var arrayValue = arrayReference.getValue();
+        'array_pop': internals.typeFunction(
+            'array &$array : mixed',
+            function (arraySnapshot) {
+                var arrayValue = arraySnapshot.getValue();
 
-            return arrayValue.pop();
-        },
+                return arrayValue.pop();
+            }
+        ),
 
         /**
          * Pushes one or more elements onto the end of an array
@@ -344,10 +345,7 @@ module.exports = function (internals) {
          * @returns {IntegerValue} The new length of the array after pushing
          */
         'array_push': function (arrayReference) {
-            var arrayValue,
-                i,
-                reference,
-                value;
+            var arrayValue;
 
             if (!arrayReference) {
                 callStack.raiseError(PHPError.E_WARNING, 'array_push() expects at least 2 parameters, 0 given');
@@ -356,13 +354,13 @@ module.exports = function (internals) {
 
             arrayValue = arrayReference.getValue();
 
-            for (i = 1; i < arguments.length; i++) {
-                reference = arguments[i];
-                value = reference.getValue();
-                arrayValue.push(value);
-            }
-
-            return valueFactory.createInteger(arrayValue.getLength());
+            return flow
+                .eachAsync(slice.call(arguments, 1), function (reference) {
+                    return arrayValue.push(reference.getValue());
+                })
+                .next(function () {
+                    return valueFactory.createInteger(arrayValue.getLength());
+                });
         },
 
         /**
@@ -384,7 +382,6 @@ module.exports = function (internals) {
                     var elementPair = haystackValue.getElementPairByKey(keyValue);
 
                     return elementPair.getValue()
-                        .asFuture()
                         .next(function (elementValue) {
                             if (strict) {
                                 return needleValue.isIdenticalTo(elementValue)
@@ -435,53 +432,48 @@ module.exports = function (internals) {
          * Returns a new array without duplicate values from a source array.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-unique.php}
-         *
-         * @param {Variable|ArrayValue} arrayReference
-         * @param {Variable|IntegerValue} sortFlagsReference
-         * @returns {ArrayValue}
          */
-        'array_unique': function (arrayReference, sortFlagsReference) {
-            var arrayValue,
-                resultPairs = [],
-                usedValues = {};
+        'array_unique': internals.typeFunction(
+            'array $array, int $flags = SORT_STRING : array',
+            function (arrayValue, sortFlagsValue) {
+                var resultPairs = [],
+                    sortFlags = sortFlagsValue.getNative(),
+                    usedValues = {};
 
-            if (!arrayReference) {
-                callStack.raiseError(PHPError.E_WARNING, 'array_unique() expects at least 1 parameter, 0 given');
-                return valueFactory.createNull();
-            }
-
-            if (sortFlagsReference) {
-                throw new Error('array_unique() :: Sort flags are not yet supported');
-            }
-
-            arrayValue = arrayReference.getValue();
-
-            // Work on a copy, so we don't mutate the original array.
-            arrayValue = arrayValue.getForAssignment();
-
-            // First sort the elements alphabetically by value (default/SORT_STRING behaviour).
-            arrayValue.sort(function (elementA, elementB) {
-                var nativeValueA = elementA.getValue().coerceToString().getNative(),
-                    nativeValueB = elementB.getValue().coerceToString().getNative();
-
-                return String(nativeValueB).localeCompare(nativeValueA);
-            });
-
-            _.each(arrayValue.getKeys(), function (keyValue) {
-                var elementPair = arrayValue.getElementPairByKey(keyValue),
-                    nativeValue = elementPair.getValue().coerceToString().getNative();
-
-                if (hasOwn.call(usedValues, nativeValue)) {
-                    return;
+                if (sortFlags !== SORT_STRING) {
+                    throw new Exception(
+                        'array_unique() :: Only SORT_STRING (' + SORT_STRING + ') is supported, ' +
+                        sortFlags + ' given'
+                    );
                 }
 
-                usedValues[nativeValue] = true;
+                // Work on a copy, so we don't mutate the original array.
+                arrayValue = arrayValue.getForAssignment();
 
-                resultPairs.push(elementPair);
-            });
+                // First sort the elements alphabetically by value (default/SORT_STRING behaviour).
+                arrayValue.sort(function (elementA, elementB) {
+                    var nativeValueA = elementA.getValue().coerceToString().getNative(),
+                        nativeValueB = elementB.getValue().coerceToString().getNative();
 
-            return valueFactory.createArray(resultPairs);
-        },
+                    return String(nativeValueB).localeCompare(nativeValueA);
+                });
+
+                _.each(arrayValue.getKeys(), function (keyValue) {
+                    var elementPair = arrayValue.getElementPairByKey(keyValue),
+                        nativeValue = elementPair.getValue().coerceToString().getNative();
+
+                    if (hasOwn.call(usedValues, nativeValue)) {
+                        return;
+                    }
+
+                    usedValues[nativeValue] = true;
+
+                    resultPairs.push(elementPair);
+                });
+
+                return valueFactory.createArray(resultPairs);
+            }
+        ),
 
         /**
          * Returns all the values from the array and indexes the array numerically.
@@ -505,32 +497,30 @@ module.exports = function (internals) {
         },
 
         /**
-         * Counts the specified array or object. May be hooked
-         * by implementing interface Countable
+         * Counts the specified array or object.
+         * May be hooked by implementing interface Countable.
          *
          * @see {@link https://secure.php.net/manual/en/function.count.php}
-         *
-         * @param {Variable|Value} arrayReference
-         * @param {Variable|Value} modeReference
-         * @returns {FutureValue<IntegerValue>|IntegerValue}
          */
-        'count': function (arrayReference, modeReference) {
-            var array = arrayReference.getValue(),
-                mode = modeReference ? modeReference.getNative() : 0,
-                type = array.getType();
+        'count': internals.typeFunction(
+            'Countable|array $value, int $mode = COUNT_NORMAL : int',
+            function (arrayOrCountableValue, modeValue) {
+                var mode = modeValue.getNative(),
+                    type = arrayOrCountableValue.getType();
 
-            if (type === 'object' && array.classIs('Countable')) {
-                return array.callMethod('count');
+                if (type === 'object' && arrayOrCountableValue.classIs('Countable')) {
+                    return arrayOrCountableValue.callMethod('count');
+                }
+
+                if (mode !== COUNT_NORMAL) {
+                    throw new Exception(
+                        'count() :: Only COUNT_NORMAL (' + COUNT_NORMAL + ') is supported, ' + mode + ' given'
+                    );
+                }
+
+                return valueFactory.createInteger(arrayOrCountableValue.getLength());
             }
-
-            if (mode !== COUNT_NORMAL) {
-                throw new Error('Unsupported mode for count(...) :: ' + mode);
-            }
-
-            return valueFactory.createInteger(
-                type === 'array' || type === 'object' ? array.getLength() : 1
-            );
-        },
+        ),
 
         /**
          * Fetches the value of the element currently pointed to by the internal array pointer.
@@ -666,7 +656,7 @@ module.exports = function (internals) {
                     sortFlags = sortFlagsSnapshot.getValue().getNative();
 
                 if (sortFlags !== SORT_REGULAR) {
-                    throw new Error(
+                    throw new Exception(
                         'krsort() :: Only SORT_REGULAR (' +
                         SORT_REGULAR +
                         ') is supported, ' +

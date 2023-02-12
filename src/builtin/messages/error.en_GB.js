@@ -17,6 +17,7 @@ module.exports = {
         'core': {
             'cannot_pop_from_empty_datastructure': 'Can\'t pop from an empty datastructure',
             'cannot_shift_from_empty_datastructure': 'Can\'t shift from an empty datastructure',
+            'get_class_without_args_outside_class': 'get_class() without arguments must be called from within a class',
             'offset_out_of_range': 'Offset invalid or out of range'
         }
     }
