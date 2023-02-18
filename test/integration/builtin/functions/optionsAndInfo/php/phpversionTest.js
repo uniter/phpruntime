@@ -14,29 +14,29 @@ var expect = require('chai').expect,
     tools = require('../../../../tools');
 
 describe('PHP "phpversion" builtin function integration', function () {
-    it('should return the correct string when no extension is specified', function () {
+    it('should return the correct string when no extension is specified', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 return phpversion();
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.equal('5.4.0');
+        expect((await engine.execute()).getNative()).to.equal('5.4.0');
     });
 
-    it('should return false for now when any extension is specified', function () {
+    it('should return false for now when any extension is specified', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 return phpversion('any_ext');
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.be.false;
+        expect((await engine.execute()).getNative()).to.be.false;
     });
 });

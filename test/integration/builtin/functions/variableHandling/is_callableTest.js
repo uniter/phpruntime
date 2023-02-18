@@ -11,10 +11,12 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    tools = require('../../../tools');
+    phpCommon = require('phpcommon'),
+    tools = require('../../../tools'),
+    Exception = phpCommon.Exception;
 
 describe('PHP "is_callable" builtin function integration', function () {
-    it('should only return true for callable values', function () {
+    it('should only return true for callable values', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -89,10 +91,10 @@ namespace {
 }
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php);
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module();
 
-        expect(module().execute().getNative()).to.deep.equal({
+        expect((await engine.execute()).getNative()).to.deep.equal({
             'function in global space': true,
             'undefined function in global space': false,
 
@@ -114,5 +116,35 @@ EOS
             'instance method via array': true,
             'undefined instance method via array': false
         });
+    });
+
+    it('should throw when $syntax_only=true (for now)', async function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+is_callable('myFunction', true);
+EOS
+*/;}), //jshint ignore:line
+            module = tools.asyncTranspile('/my/module.php', php),
+            engine = module();
+
+        await expect(engine.execute()).to.eventually.be.rejectedWith(
+            Exception,
+            'is_callable() :: $syntax_only=true is not yet supported'
+        );
+    });
+
+    it('should throw when $callable_name is given (for now)', async function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+is_callable('myFunction', false, $callableName);
+EOS
+*/;}), //jshint ignore:line
+            module = tools.asyncTranspile('/my/module.php', php),
+            engine = module();
+
+        await expect(engine.execute()).to.eventually.be.rejectedWith(
+            Exception,
+            'is_callable() :: $callable_name is not yet supported'
+        );
     });
 });

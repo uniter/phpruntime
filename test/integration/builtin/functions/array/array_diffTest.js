@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "array_diff" builtin function integration', function () {
-    it('should be able to diff two indexed arrays', function () {
+    it('should be able to diff two indexed arrays', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -26,16 +26,16 @@ $result = array_diff($myFirstArray, $mySecondArray);
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             undefined,
             'two'
         ]);
     });
 
-    it('should be able to diff three indexed arrays', function () {
+    it('should be able to diff three indexed arrays', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -48,16 +48,16 @@ $result = array_diff($myFirstArray, $mySecondArray, $myThirdArray);
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             'one',
             'two'
         ]);
     });
 
-    it('should be able to diff two associative arrays', function () {
+    it('should be able to diff two associative arrays', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -77,15 +77,15 @@ $result = array_diff($myFirstArray, $mySecondArray);
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal({
+        expect((await engine.execute()).getNative()).to.deep.equal({
             'my_first_element': 'one' // Only values are compared, but keys are preserved
         });
     });
 
-    it('should be able to diff two mixed-type arrays', function () {
+    it('should be able to diff two mixed-type arrays', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -105,10 +105,10 @@ $result = array_diff($myFirstArray, $mySecondArray);
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal({
+        expect((await engine.execute()).getNative()).to.deep.equal({
             'my_first_element': 'one' // Only values are compared, but keys are preserved
         });
     });

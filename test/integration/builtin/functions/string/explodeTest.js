@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "explode" builtin function integration', function () {
-    it('should be able to split a string on a delimiter', function () {
+    it('should be able to split a string on a delimiter', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -38,11 +38,10 @@ $result[] = explode(',', 'first,second', 10);
 return $result;
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             ['21', '101', 'hello'],
             ['first', 'second', 'third,fourth,fifth'],
             ['first', 'second', 'third'],

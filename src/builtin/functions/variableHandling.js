@@ -14,249 +14,233 @@ var hasOwn = {}.hasOwnProperty,
     MAX_DUMPS = 20000,
     MAX_RECURSION_DEPTH = 5,
     MAX_STRING_LENGTH = 2048,
-    PHPError = phpCommon.PHPError;
+    Exception = phpCommon.Exception;
 
 module.exports = function (internals) {
-    var callStack = internals.callStack,
-        flow = internals.flow,
+    var flow = internals.flow,
         futureFactory = internals.futureFactory,
         globalNamespace = internals.globalNamespace,
         output = internals.output,
         valueFactory = internals.valueFactory;
 
     function createTypeChecker(name, type) {
-        return function (valueReference) {
-            if (!valueReference) {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    name + '() expects exactly 1 parameter, 0 given'
-                );
-
-                return valueFactory.createBoolean(false);
-            }
-
-            return valueFactory.createBoolean(valueReference.getValue().getType() === type);
-        };
+        return internals.typeFunction('mixed $value : bool', function (value) {
+            return valueFactory.createBoolean(value.getType() === type);
+        });
     }
 
     return {
         /**
-         * Fetches the type of a variable or value
+         * Fetches the type of a resource value.
          *
-         * @see {@link https://secure.php.net/manual/en/function.gettype.php}
+         * @see {@link https://secure.php.net/manual/en/function.get-resource-type.php}
          *
          * @param {Variable|Value} valueReference The variable or value to fetch the type of
          * @returns {StringValue}
          */
-        'gettype': function (valueReference) {
-            var value,
-                type;
+        'get_resource_type': internals.typeFunction(
+            // FIXME: Add resource parameter type once supported.
+            'mixed $resource : string',
+            function (resourceValue) {
+                if (resourceValue.getType() !== 'resource') {
+                    throw new Exception('get_resource_type() :: Non-resource given - FIXME add parameter type');
+                }
 
-            if (!valueReference) {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'gettype() expects exactly 1 parameter, 0 given'
-                );
-
-                return valueFactory.createNull();
+                return resourceValue.getResourceType();
             }
+        ),
 
-            value = valueReference.getValue();
-            type = value.getType();
+        /**
+         * Fetches the type of a variable or value.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.gettype.php}
+         */
+        'gettype': internals.typeFunction('mixed $value : string', function (value) {
+            var type = value.getType();
 
             if (type === 'float') {
-                // For historical reasons "double" is returned rather than "float"
+                // For historical reasons "double" is returned rather than "float".
                 type = 'double';
             } else if (type === 'null') {
                 type = 'NULL';
             }
 
             return valueFactory.createString(type);
-        },
+        }),
 
+        /**
+         * Determines whether the given value or variable is an array.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-array.php}
+         */
         'is_array': createTypeChecker('is_array', 'array'),
 
+        /**
+         * Determines whether the given value or variable is a boolean.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-bool.php}
+         */
         'is_bool': createTypeChecker('is_bool', 'boolean'),
 
         /**
-         * Determines whether a value is a valid callable function, method, closure or invokable object
+         * Determines whether a value is a valid callable function, method,
+         * closure or invokable object from the current scope.
          *
          * @see {@link https://secure.php.net/manual/en/function.is-callable.php}
-         *
-         * @param {Reference|Value|Variable} valueReference
-         * @param {BooleanValue|Reference|Variable=} syntaxOnlyReference
-         * @param {Reference|Variable=} callableNameReference
-         * @returns {FutureValue<BooleanValue>}
          */
-        'is_callable': function (valueReference, syntaxOnlyReference, callableNameReference) {
-            var syntaxOnly = syntaxOnlyReference && syntaxOnlyReference.getValue().getNative(),
-                value = valueReference.getValue();
+        'is_callable': internals.typeFunction(
+            'mixed $value, bool $syntax_only = false, string &$callable_name = null : bool',
+            function (value, syntaxOnlyValue, callableNameReference) {
+                var syntaxOnly = syntaxOnlyValue.getNative();
 
-            if (syntaxOnly) {
-                throw new Error('is_callable() :: syntax_only=true is not supported');
+                if (syntaxOnly) {
+                    throw new Exception('is_callable() :: $syntax_only=true is not yet supported');
+                }
+
+                if (callableNameReference.isReferenceable()) {
+                    throw new Exception('is_callable() :: $callable_name is not yet supported');
+                }
+
+                return value.isCallable(globalNamespace)
+                    .asValue();
             }
+        ),
 
-            if (callableNameReference) {
-                throw new Error('is_callable() :: callable_name is not supported');
-            }
-
-            return value.isCallable(globalNamespace)
-                .asValue();
-        },
-
+        /**
+         * Determines whether the given value or variable is a float.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-float.php}
+         */
         'is_float': createTypeChecker('is_float', 'float'),
 
         /**
-         * Determines whether the type of a variable is an integer
+         * Determines whether the type of a variable is an integer.
          *
          * @see {@link https://secure.php.net/manual/en/function.is-int.php}
-         *
-         * @param {Variable|Reference|Value} valueReference The variable or value to check the type of
-         * @returns {BooleanValue}
          */
         'is_int': createTypeChecker('is_int', 'int'),
 
         /**
-         * Determines whether a variable is a number or a string containing a number
+         * Determines whether the type of a variable is an integer (alias of is_int(...)).
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-integer.php}
+         */
+        'is_integer': 'is_int',
+
+        /**
+         * Determines whether a variable is null.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-null.php}
+         */
+        'is_null': createTypeChecker('is_null', 'null'),
+
+        /**
+         * Determines whether a variable is a number or a string containing a number.
          *
          * @see {@link https://secure.php.net/manual/en/function.is-numeric.php}
-         *
-         * @param {Variable|Reference|Value} valueReference The variable or value to check the numericness of
-         * @returns {BooleanValue}
          */
-        'is_numeric': function (valueReference) {
-            var value;
-
-            if (!valueReference) {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'is_numeric() expects exactly 1 parameter, 0 given'
-                );
-
-                return valueFactory.createNull();
+        'is_numeric': internals.typeFunction(
+            'mixed $value : bool',
+            function (value) {
+                return valueFactory.createBoolean(value.isNumeric());
             }
-
-            value = valueReference.getValue();
-
-            return valueFactory.createBoolean(
-                value.getType() === 'int' ||
-                value.getType() === 'float' ||
-                (
-                    value.getType() === 'string' &&
-                    isFinite(value.getNative())
-                )
-            );
-        },
+        ),
 
         /**
          * Determines whether the type of a variable is an object
          *
          * @see {@link https://secure.php.net/manual/en/function.is-object.php}
-         *
-         * @param {Variable|Reference|Value} valueReference The variable or value to check the type of
-         * @returns {BooleanValue}
          */
         'is_object': createTypeChecker('is_object', 'object'),
 
         /**
-         * Determines whether the type of a variable is a string
+         * Determines whether the type of a variable is a resource.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.is-resource.php}
+         */
+        'is_resource': createTypeChecker('is_resource', 'resource'),
+
+        /**
+         * Determines whether the type of a variable is a string.
          *
          * @see {@link https://secure.php.net/manual/en/function.is-string.php}
-         *
-         * @param {Variable|Reference|Value} valueReference The variable or value to check the type of
-         * @returns {BooleanValue}
          */
         'is_string': createTypeChecker('is_string', 'string'),
 
         /**
-         * Outputs or returns a valid PHP code string that will evaluate to the given value
+         * Outputs or returns a valid PHP code string that will evaluate to the given value.
          *
          * @see {@link https://secure.php.net/manual/en/function.var-export.php}
-         *
-         * @param {Variable|Reference|Value} valueReference The variable or value to export
-         * @param {Variable|Reference|Value} returnReference Whether to return the string rather than output
-         * @returns {NullValue|StringValue} Returns NULL when outputting, the code string when return=true
          */
-        'var_export': function (valueReference, returnReference) {
-            var exportedCodeString,
-                shouldReturn,
-                value;
+        'var_export': internals.typeFunction(
+            'mixed $value, bool $return = false : ?string',
+            function (value, shouldReturnValue) {
+                var exportedCodeString,
+                    shouldReturn = shouldReturnValue.getNative();
 
-            function exportValue(value) {
-                var parts;
+                function exportValue(value) {
+                    var parts;
 
-                switch (value.getType()) {
-                    case 'array':
-                        parts = [];
-                        value.getKeys().forEach(function (keyValue) {
-                            var elementPair = value.getElementPairByKey(keyValue);
+                    switch (value.getType()) {
+                        case 'array':
+                            parts = [];
+                            value.getKeys().forEach(function (keyValue) {
+                                var element = value.getElementByKey(keyValue);
 
-                            parts.push(
-                                '  ' +
-                                exportValue(elementPair.getKey()) +
-                                ' => ' +
-                                exportValue(elementPair.getValue()) +
-                                ',\n'
-                            );
-                        });
-                        return 'array (\n' + parts.join('') + ')';
-                    case 'boolean':
-                    case 'float':
-                    case 'int':
-                        return '' + value.getNative();
-                    case 'null':
-                        return 'NULL';
-                    case 'object':
-                        if (value.getLength() > 0) {
-                            throw new Error('var_export() :: Non-empty objects not implemented');
-                        }
+                                parts.push(
+                                    '  ' +
+                                    exportValue(element.getKey()) +
+                                    ' => ' +
+                                    // Note that references are followed and the eventual value exported instead.
+                                    exportValue(element.getValue()) +
+                                    ',\n'
+                                );
+                            });
+                            return 'array (\n' + parts.join('') + ')';
+                        case 'boolean':
+                        case 'float':
+                        case 'int':
+                            return String(value.getNative());
+                        case 'null':
+                        case 'resource': // Resources cannot be exported and so become null.
+                            return 'NULL';
+                        case 'object':
+                            if (value.getLength() > 0) {
+                                throw new Exception('var_export() :: Non-empty objects not implemented');
+                            }
 
-                        return value.getClassName() + '::__set_state(array(\n))';
-                    case 'string':
-                        return '\'' + value.getNative().replace(/['\\]/g, '\\$&') + '\'';
-                    default:
-                        throw new Error('var_export() :: Unexpected value type "' + value.getType() + '"');
+                            return value.getClassName() + '::__set_state(array(\n))';
+                        case 'string':
+                            return '\'' + value.getNative().replace(/['\\]/g, '\\$&') + '\'';
+                        default:
+                            throw new Exception('var_export() :: Unexpected value type "' + value.getType() + '"');
+                    }
                 }
-            }
 
-            if (!valueReference) {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'var_export() expects at least 1 parameter, 0 given'
-                );
+                exportedCodeString = exportValue(value);
+
+                if (shouldReturn) {
+                    return valueFactory.createString(exportedCodeString);
+                }
+
+                // No trailing newline should be output.
+                output.write(exportedCodeString);
 
                 return valueFactory.createNull();
             }
+        ),
 
-            value = valueReference.getValue();
-
-            // Output the string representation by default, or return it if specified
-            shouldReturn = returnReference ? returnReference.getNative() : false;
-
-            exportedCodeString = exportValue(value);
-
-            if (shouldReturn) {
-                return valueFactory.createString(exportedCodeString);
-            }
-
-            // No trailing newline should be output
-            output.write(exportedCodeString);
-
-            return valueFactory.createNull();
-        },
-
-        // NB: This output matches that of PHP with XDebug disabled
-        'var_dump': function (valueReference) {
+        /**
+         * Outputs a representation of the given variable(s) to the output mechanism.
+         *
+         * NB: This output matches that of PHP with XDebug disabled.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.var-dump.php}
+         */
+        'var_dump': internals.typeFunction('mixed $value', function (value) {
+            // TODO: Use variadic param when supported.
             var dumps = 0,
-                value,
                 objectIDHash = {};
-
-            if (!valueReference) {
-                callStack.raiseError(PHPError.E_WARNING, 'var_dump() expects at least 1 parameter, 0 given');
-                return;
-            }
-
-            value = valueReference.getValue();
 
             function dump(value, depth, isReference, arraysEncountered) {
                 var currentIndentation = new Array(depth).join('  '),
@@ -301,7 +285,7 @@ module.exports = function (internals) {
                         return flow.mapAsync(value.getKeys(), function (key) {
                             var element = value.getElementByKey(key);
 
-                            return element.getValue().asFuture().next(function (elementValue) {
+                            return element.getValue().next(function (elementValue) {
                                 return dump(
                                     elementValue,
                                     depth + 1,
@@ -345,7 +329,7 @@ module.exports = function (internals) {
                         return flow.mapAsync(names, function (nameValue) {
                             var property = value.getInstancePropertyByName(nameValue);
 
-                            return property.getValue().asFuture().next(function (propertyValue) {
+                            return property.getValue().next(function (propertyValue) {
                                 return dump(
                                     propertyValue,
                                     depth + 1,
@@ -389,6 +373,12 @@ module.exports = function (internals) {
                     case 'null':
                         representationFuture = representationFuture.concatString('NULL');
                         break;
+                    case 'resource':
+                        representationFuture = representationFuture.concatString(
+                            // ResourceValues have their unique ID and internal type shown.
+                            'resource(' + value.getNative() + ') of type (' + value.getResourceType() + ')'
+                        );
+                        break;
                     case 'string':
                         nativeValue = value.getNative();
                         nativeLength = nativeValue.length;
@@ -402,16 +392,23 @@ module.exports = function (internals) {
                         );
                         break;
                     default:
-                        throw new Error('var_dump() :: Unsupported value type "' + value.getType() + '"');
+                        throw new Exception('var_dump() :: Unsupported value type "' + value.getType() + '"');
                     }
                 }
 
                 return representationFuture.concatString('\n');
             }
 
+            if (arguments.length > 1) {
+                throw new Exception(
+                    'var_dump() :: Only one argument is currently supported, ' +
+                    arguments.length + ' given'
+                );
+            }
+
             return dump(value, 1, false, []).next(function (text) {
                 output.write(text);
             });
-        }
+        })
     };
 };

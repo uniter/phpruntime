@@ -10,60 +10,74 @@
 'use strict';
 
 var expect = require('chai').expect,
-    sinon = require('sinon'),
     htmlStringFunctionFactory = require('../../../../../../src/builtin/functions/string/html'),
+    phpCommon = require('phpcommon'),
+    sinon = require('sinon'),
+    stringConstantFactory = require('../../../../../../src/builtin/constants/string'),
     tools = require('../../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    Variable = require('phpcore/src/Variable').sync(),
-
-    HTML_SPECIALCHARS = 0,
-    HTML_ENTITIES = 1,
-    ENT_NOQUOTES = 0,
-    ENT_COMPAT = 2,
-    ENT_QUOTES = 3,
-    ENT_HTML401 = 0;
+    PHPError = phpCommon.PHPError;
 
 describe('PHP "get_html_translation_table" builtin function', function () {
-    var callStack,
-        encodingReference,
-        flagsReference,
-        getBinding,
-        getConstant,
+    var callFactory,
+        callStack,
+        encodingVariable,
+        flagsVariable,
         get_html_translation_table,
-        internals,
-        stringFunctions,
-        tableReference,
-        valueFactory;
+        state,
+        tableVariable,
+        valueFactory,
+        variableFactory,
+
+        HTML_SPECIALCHARS,
+        HTML_ENTITIES,
+        ENT_NOQUOTES,
+        ENT_COMPAT,
+        ENT_QUOTES,
+        ENT_HTML401;
 
     beforeEach(function () {
         callStack = sinon.createStubInstance(CallStack);
-        getBinding = sinon.stub();
-        getConstant = sinon.stub();
-        valueFactory = tools.createIsolatedState().getValueFactory();
-        internals = {
-            callStack: callStack,
-            getBinding: getBinding,
-            getConstant: getConstant,
-            valueFactory: valueFactory
-        };
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                constantGroups: [
+                    stringConstantFactory
+                ],
+                functionGroups: [
+                    htmlStringFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
+        valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
 
-        getConstant.withArgs('HTML_SPECIALCHARS').returns(HTML_SPECIALCHARS);
-        getConstant.withArgs('HTML_ENTITIES').returns(HTML_ENTITIES);
-        getConstant.withArgs('ENT_NOQUOTES').returns(ENT_NOQUOTES);
-        getConstant.withArgs('ENT_COMPAT').returns(ENT_COMPAT);
-        getConstant.withArgs('ENT_QUOTES').returns(ENT_QUOTES);
-        getConstant.withArgs('ENT_HTML401').returns(ENT_HTML401);
+        HTML_SPECIALCHARS = state.getConstantValue('HTML_SPECIALCHARS');
+        HTML_ENTITIES = state.getConstantValue('HTML_ENTITIES');
+        ENT_NOQUOTES = state.getConstantValue('ENT_NOQUOTES');
+        ENT_COMPAT = state.getConstantValue('ENT_COMPAT');
+        ENT_QUOTES = state.getConstantValue('ENT_QUOTES');
+        ENT_HTML401 = state.getConstantValue('ENT_HTML401');
 
-        stringFunctions = htmlStringFunctionFactory(internals);
-        get_html_translation_table = stringFunctions.get_html_translation_table;
+        // We need a call on the stack for any isolated scope evaluation.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
 
-        tableReference = sinon.createStubInstance(Variable);
-        flagsReference = sinon.createStubInstance(Variable);
-        encodingReference = sinon.createStubInstance(Variable);
+        get_html_translation_table = state.getFunction('get_html_translation_table');
+
+        tableVariable = variableFactory.createVariable('myTable');
+        flagsVariable = variableFactory.createVariable('myFlags');
+        encodingVariable = variableFactory.createVariable('myEncoding');
     });
 
-    it('should return the htmlspecialchars(...) table by default', function () {
-        var resultValue = get_html_translation_table();
+    it('should return the htmlspecialchars(...) table by default', async function () {
+        var resultValue = await get_html_translation_table().toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal({
@@ -74,11 +88,11 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         });
     });
 
-    it('should return the htmlspecialchars(...) table when fetched explicitly', function () {
+    it('should return the htmlspecialchars(...) table when fetched explicitly', async function () {
         var resultValue;
-        tableReference.getValue.returns(valueFactory.createInteger(HTML_SPECIALCHARS));
+        tableVariable.setValue(HTML_SPECIALCHARS);
 
-        resultValue = get_html_translation_table(tableReference);
+        resultValue = await get_html_translation_table(tableVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal({
@@ -89,11 +103,11 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         });
     });
 
-    it('should return the htmlentities(...) table when fetched explicitly', function () {
+    it('should return the htmlentities(...) table when fetched explicitly', async function () {
         var resultValue;
-        tableReference.getValue.returns(valueFactory.createInteger(HTML_ENTITIES));
+        tableVariable.setValue(HTML_ENTITIES);
 
-        resultValue = get_html_translation_table(tableReference);
+        resultValue = await get_html_translation_table(tableVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal({
@@ -105,12 +119,12 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         });
     });
 
-    it('should return the htmlspecialchars(...) table with only double quotes included with ENT_COMPAT', function () {
+    it('should return the htmlspecialchars(...) table with only double quotes included with ENT_COMPAT', async function () {
         var resultValue;
-        tableReference.getValue.returns(valueFactory.createInteger(HTML_SPECIALCHARS));
-        flagsReference.getValue.returns(valueFactory.createInteger(ENT_COMPAT));
+        tableVariable.setValue(HTML_SPECIALCHARS);
+        flagsVariable.setValue(ENT_COMPAT);
 
-        resultValue = get_html_translation_table(tableReference, flagsReference);
+        resultValue = await get_html_translation_table(tableVariable, flagsVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal({
@@ -121,12 +135,12 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         });
     });
 
-    it('should return the htmlspecialchars(...) table with single quotes included with ENT_QUOTES', function () {
+    it('should return the htmlspecialchars(...) table with single quotes included with ENT_QUOTES', async function () {
         var resultValue;
-        tableReference.getValue.returns(valueFactory.createInteger(HTML_SPECIALCHARS));
-        flagsReference.getValue.returns(valueFactory.createInteger(ENT_QUOTES));
+        tableVariable.setValue(HTML_SPECIALCHARS);
+        flagsVariable.setValue(ENT_QUOTES);
 
-        resultValue = get_html_translation_table(tableReference, flagsReference);
+        resultValue = await get_html_translation_table(tableVariable, flagsVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal({
@@ -138,12 +152,12 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         });
     });
 
-    it('should return the htmlspecialchars(...) table with no quotes included with ENT_NOQUOTES', function () {
+    it('should return the htmlspecialchars(...) table with no quotes included with ENT_NOQUOTES', async function () {
         var resultValue;
-        tableReference.getValue.returns(valueFactory.createInteger(HTML_SPECIALCHARS));
-        flagsReference.getValue.returns(valueFactory.createInteger(ENT_NOQUOTES));
+        tableVariable.setValue(HTML_SPECIALCHARS);
+        flagsVariable.setValue(ENT_NOQUOTES);
 
-        resultValue = get_html_translation_table(tableReference, flagsReference);
+        resultValue = await get_html_translation_table(tableVariable, flagsVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal({
@@ -153,13 +167,13 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         });
     });
 
-    it('should support the UTF-8 encoding', function () {
+    it('should support the UTF-8 encoding', async function () {
         var resultValue;
-        tableReference.getValue.returns(valueFactory.createInteger(HTML_SPECIALCHARS));
-        flagsReference.getValue.returns(valueFactory.createInteger(ENT_NOQUOTES));
-        encodingReference.getValue.returns(valueFactory.createString('UTF-8'));
+        tableVariable.setValue(HTML_SPECIALCHARS);
+        flagsVariable.setValue(ENT_NOQUOTES);
+        encodingVariable.setValue(valueFactory.createString('UTF-8'));
 
-        resultValue = get_html_translation_table(tableReference, flagsReference, encodingReference);
+        resultValue = await get_html_translation_table(tableVariable, flagsVariable, encodingVariable).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal({
@@ -169,21 +183,21 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         });
     });
 
-    describe('passing NULL for table and flags when specifying UTF-8 as the encoding', function () {
+    describe('passing NULL for table and flags when specifying UTF-8 as the encoding', async function () {
         beforeEach(function () {
-            tableReference.getValue.returns(valueFactory.createNull());
-            flagsReference.getValue.returns(valueFactory.createNull());
-            encodingReference.getValue.returns(valueFactory.createString('UTF-8'));
+            tableVariable.setValue(valueFactory.createNull());
+            flagsVariable.setValue(valueFactory.createNull());
+            encodingVariable.setValue(valueFactory.createString('UTF-8'));
         });
 
-        it('should not raise a warning', function () {
-            get_html_translation_table(tableReference, flagsReference, encodingReference);
+        it('should not raise a warning', async function () {
+            await get_html_translation_table(tableVariable, flagsVariable, encodingVariable).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
 
-        it('should use UTF-8', function () {
-            var resultValue = get_html_translation_table(tableReference, flagsReference, encodingReference);
+        it('should use UTF-8', async function () {
+            var resultValue = await get_html_translation_table(tableVariable, flagsVariable, encodingVariable).toPromise();
 
             expect(resultValue.getType()).to.equal('array');
             expect(resultValue.getNative()).to.deep.equal({
@@ -196,19 +210,19 @@ describe('PHP "get_html_translation_table" builtin function', function () {
 
     describe('when the UTF-8 encoding is given with different case', function () {
         beforeEach(function () {
-            tableReference.getValue.returns(valueFactory.createInteger(HTML_SPECIALCHARS));
-            flagsReference.getValue.returns(valueFactory.createInteger(ENT_NOQUOTES));
-            encodingReference.getValue.returns(valueFactory.createString('uTf-8'));
+            tableVariable.setValue(HTML_SPECIALCHARS);
+            flagsVariable.setValue(ENT_NOQUOTES);
+            encodingVariable.setValue(valueFactory.createString('uTf-8'));
         });
 
-        it('should not raise a warning', function () {
-            get_html_translation_table(tableReference, flagsReference, encodingReference);
+        it('should not raise a warning', async function () {
+            await get_html_translation_table(tableVariable, flagsVariable, encodingVariable).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
 
-        it('should use UTF-8', function () {
-            var resultValue = get_html_translation_table(tableReference, flagsReference, encodingReference);
+        it('should use UTF-8', async function () {
+            var resultValue = await get_html_translation_table(tableVariable, flagsVariable, encodingVariable).toPromise();
 
             expect(resultValue.getType()).to.equal('array');
             expect(resultValue.getNative()).to.deep.equal({
@@ -219,25 +233,26 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         });
     });
 
+    // ISO-8859-1 is not yet supported, only UTF-8.
     describe('when the ISO-8859-1 encoding is given', function () {
         beforeEach(function () {
-            tableReference.getValue.returns(valueFactory.createInteger(HTML_SPECIALCHARS));
-            flagsReference.getValue.returns(valueFactory.createInteger(ENT_NOQUOTES));
-            encodingReference.getValue.returns(valueFactory.createString('ISO-8859-1'));
+            tableVariable.setValue(HTML_SPECIALCHARS);
+            flagsVariable.setValue(ENT_NOQUOTES);
+            encodingVariable.setValue(valueFactory.createString('ISO-8859-1'));
         });
 
-        it('should raise a warning', function () {
-            get_html_translation_table(tableReference, flagsReference, encodingReference);
+        it('should raise a warning', async function () {
+            await get_html_translation_table(tableVariable, flagsVariable, encodingVariable).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
-                'Warning',
+                PHPError.E_WARNING,
                 'get_html_translation_table(): charset `ISO-8859-1\' not supported, assuming utf-8'
             );
         });
 
-        it('should assume UTF-8', function () {
-            var resultValue = get_html_translation_table(tableReference, flagsReference, encodingReference);
+        it('should assume UTF-8', async function () {
+            var resultValue = await get_html_translation_table(tableVariable, flagsVariable, encodingVariable).toPromise();
 
             expect(resultValue.getType()).to.equal('array');
             expect(resultValue.getNative()).to.deep.equal({

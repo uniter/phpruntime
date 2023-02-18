@@ -12,14 +12,16 @@
 var _ = require('microdash'),
     hasOwn = {}.hasOwnProperty,
     phpCommon = require('phpcommon'),
-    COUNT_NORMAL = 0,
-    IMPLODE = 'implode',
+    slice = [].slice,
     KeyValuePair = require('phpcore/src/KeyValuePair'),
-    SORT_REGULAR = 0,
+    Exception = phpCommon.Exception,
     PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {
-    var callStack = internals.callStack,
+    var COUNT_NORMAL = internals.getConstant('COUNT_NORMAL'),
+        SORT_REGULAR = internals.getConstant('SORT_REGULAR'),
+        SORT_STRING = internals.getConstant('SORT_STRING'),
+        callStack = internals.callStack,
         flow = internals.flow,
         globalNamespace = internals.globalNamespace,
         methods,
@@ -59,57 +61,140 @@ module.exports = function (internals) {
 
             // Start with the key-value pairs for the elements of the first array,
             // as for each successive array we will compare their values against the values
-            // of this first one
+            // of this first one.
             remainingElementPairs = firstArrayValue.getKeys().map(function (keyValue) {
                 return firstArrayValue.getElementPairByKey(keyValue);
             });
 
-            _.each([].slice.call(arguments, 1), function (arrayReference, argumentIndex) {
-                var arrayValue = arrayReference.getValue();
+            return flow
+                .eachAsync(slice.call(arguments, 1), function (arraySnapshot, argumentIndex) {
+                    var arrayValue = arraySnapshot.getValue();
 
-                if (arrayValue.getType() !== 'array') {
-                    callStack.raiseError(
-                        PHPError.E_WARNING,
-                        'array_diff(): Argument #' + (argumentIndex + 2) + ' is not an array'
-                    );
-                    returnNull = true;
-                    return false;
-                }
+                    if (arrayValue.getType() !== 'array') {
+                        callStack.raiseError(
+                            PHPError.E_WARNING,
+                            'array_diff(): Argument #' + (argumentIndex + 2) + ' is not an array'
+                        );
+                        returnNull = true;
 
-                _.each(arrayValue.getKeys(), function (keyValue) {
-                    var elementValue = arrayValue.getElementByKey(keyValue).getValue();
+                        return false;
+                    }
 
-                    remainingElementPairs = remainingElementPairs.filter(function (remainingElementPair) {
-                        return elementValue.getValue().isNotEqualTo(remainingElementPair.getValue()).getNative();
+                    return flow.eachAsync(arrayValue.getKeys(), function (keyValue) {
+                        var elementValue = arrayValue.getElementByKey(keyValue).getValue(),
+                            filteredElementPairs = [];
+
+                        return flow
+                            .eachAsync(remainingElementPairs, function (remainingElementPair) {
+                                return elementValue.isNotEqualTo(remainingElementPair.getValue())
+                                    .next(function (inequalityValue) {
+                                        if (inequalityValue.getNative()) {
+                                            filteredElementPairs.push(remainingElementPair);
+                                        }
+                                    });
+                            })
+                            .next(function () {
+                                remainingElementPairs = filteredElementPairs;
+                            });
                     });
+                })
+                .next(function () {
+                    if (returnNull) {
+                        return valueFactory.createNull();
+                    }
+
+                    return valueFactory.createArray(remainingElementPairs);
                 });
-            });
-
-            if (returnNull) {
-                return valueFactory.createNull();
-            }
-
-            return valueFactory.createArray(remainingElementPairs);
         },
 
         /**
-         * Determines whether the given key or index exists in the array
+         * Filters the elements of an array, optionally using a callback function.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-filter.php}
+         *
+         * @returns {ArrayValue}
+         */
+        'array_filter': internals.typeFunction(
+            'array $array, ?callable $callback, int $mode = 0 : array',
+            function (arrayValue, callbackValue, modeValue) {
+                var mode = modeValue.getNative(),
+                    resultPairs = [];
+
+                if (callbackValue.getType() === 'null') {
+                    throw new Exception('array_filter() :: Callback cannot yet be omitted');
+                }
+
+                if (mode !== 0) {
+                    throw new Exception('array_filter() :: Mode flags are not yet supported');
+                }
+
+                // Work on a copy, so we don't mutate the original array.
+                arrayValue = arrayValue.getForAssignment();
+
+                return flow.eachAsync(arrayValue.getKeys(), function (keyValue) {
+                    var elementPair = arrayValue.getElementPairByKey(keyValue);
+
+                    return elementPair.getValue().next(function (elementValue) {
+                        return callbackValue.call([elementValue]).next(function (resultValue) {
+                            if (resultValue.getType() === 'boolean' && resultValue.getNative() === true) {
+                                resultPairs.push(elementPair);
+                            }
+                        });
+                    });
+                })
+                    .next(function () {
+                        return valueFactory.createArray(resultPairs);
+                    })
+                    .asValue();
+            }
+        ),
+
+        /**
+         * Associative sort - sorts an array in-place, by value, in ascending order,
+         * maintaining key->value associations.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.asort.php}
+         */
+        'asort': internals.typeFunction(
+            'array &$array, int $flags = SORT_REGULAR : bool',
+            function (arraySnapshot, sortFlagsValue) {
+                var arrayValue = arraySnapshot.getValue(),
+                    sortFlags = sortFlagsValue.getNative();
+
+                if (sortFlags !== SORT_REGULAR) {
+                    throw new Exception(
+                        'asort() :: Only SORT_REGULAR (' +
+                        SORT_REGULAR +
+                        ') is supported, ' +
+                        sortFlags +
+                        ' given'
+                    );
+                }
+
+                arrayValue.sort(function (elementA, elementB) {
+                    // TODO: Handle FutureValues being returned here,
+                    //       if the element has a reference assigned that evaluates to a FutureValue.
+                    var nativeKeyA = elementA.getValue().getNative(),
+                        nativeKeyB = elementB.getValue().getNative();
+
+                    return String(nativeKeyA).localeCompare(nativeKeyB);
+                });
+
+                return valueFactory.createBoolean(true); // asort() always returns true.
+            }
+        ),
+
+        /**
+         * Determines whether the given key or index exists in the array.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-key-exists.php}
-         *
-         * @param {Variable|Value} keyReference
-         * @param {Variable|ArrayValue} arrayReference
-         * @returns {BooleanValue}
          */
-        'array_key_exists': function (keyReference, arrayReference) {
-            var arrayValue,
-                keyValue;
-
-            keyValue = keyReference.getValue();
-            arrayValue = arrayReference.getValue();
-
-            return valueFactory.createBoolean(arrayValue.getElementByKey(keyValue).isDefined());
-        },
+        'array_key_exists': internals.typeFunction(
+            'string|int $key, array $array : bool',
+            function (keyValue, arrayValue) {
+                return valueFactory.createBoolean(arrayValue.getElementByKey(keyValue).isDefined());
+            }
+        ),
 
         /**
          * Fetch all keys (or a subset of the keys) in an array
@@ -125,7 +210,7 @@ module.exports = function (internals) {
             var arrayValue;
 
             if (searchValueReference || strictMatchReference) {
-                throw new Error('array_keys() :: Search functionality is not yet supported');
+                throw new Exception('array_keys() :: Search functionality is not yet supported');
             }
 
             arrayValue = arrayReference.getValue();
@@ -134,7 +219,7 @@ module.exports = function (internals) {
         },
 
         /**
-         * Maps one or more arrays to a new array
+         * Maps one or more arrays to a new array.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-map.php}
          *
@@ -148,17 +233,17 @@ module.exports = function (internals) {
 
             if (arguments.length > 2) {
                 return valueFactory.createRejection(
-                    new Error('array_map() :: Multiple input arrays are not yet supported')
+                    new Exception('array_map() :: Multiple input arrays are not yet supported')
                 );
             }
 
-            return flow.mapAsync(firstArrayValue.getKeys(), function (keyValue) {
+            return flow
+                .mapAsync(firstArrayValue.getKeys(), function (keyValue) {
                     // Pass the global namespace as the namespace scope -
-                    // any normal function callback will need to be fully-qualified
+                    // any normal function callback will need to be fully-qualified.
                     var elementValue = firstArrayValue.getElementByKey(keyValue);
 
                     return callbackValue.call([elementValue], globalNamespace)
-                        .asFuture() // Keep the KeyValuePairs created below rather than wrapping them in ObjectValues.
                         .next(function (mappedElementValue) {
                             return new KeyValuePair(keyValue, mappedElementValue);
                         });
@@ -170,7 +255,7 @@ module.exports = function (internals) {
         },
 
         /**
-         * Merges one or more arrays together, returning a new array with the result
+         * Merges one or more arrays together, returning a new array with the result.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-merge.php}
          *
@@ -191,8 +276,8 @@ module.exports = function (internals) {
                 return valueFactory.createNull();
             }
 
-            _.each(arguments, function (arrayReference, argumentIndex) {
-                var arrayValue = arrayReference.getValue();
+            return flow.eachAsync(arguments, function (arrayVariable, argumentIndex) {
+                var arrayValue = arrayVariable.getValue();
 
                 if (arrayValue.getType() !== 'array') {
                     callStack.raiseError(
@@ -222,34 +307,34 @@ module.exports = function (internals) {
 
                     nativeKeyToElementMap[nativeKey] = arrayValue.getElementPairByKey(key, mergedKey);
                 });
+            }).next(function () {
+                if (returnNull) {
+                    return valueFactory.createNull();
+                }
+
+                mergedElements = _.map(nativeKeys, function (nativeKey) {
+                    return nativeKeyToElementMap[nativeKey];
+                });
+
+                return valueFactory.createArray(mergedElements);
             });
-
-            if (returnNull) {
-                return valueFactory.createNull();
-            }
-
-            mergedElements = _.map(nativeKeys, function (nativeKey) {
-                return nativeKeyToElementMap[nativeKey];
-            });
-
-            return valueFactory.createArray(mergedElements);
         },
 
         /**
-         * Pops the last element off the end of an array and returns it
+         * Pops the last element off the end of an array and returns it.
          *
-         * - Also resets the internal array pointer
+         * Also resets the internal array pointer.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-pop.php}
-         *
-         * @param {Value|Variable|Reference} arrayReference
-         * @return {Value}
          */
-        'array_pop': function (arrayReference) {
-            var arrayValue = arrayReference.getValue();
+        'array_pop': internals.typeFunction(
+            'array &$array : mixed',
+            function (arraySnapshot) {
+                var arrayValue = arraySnapshot.getValue();
 
-            return arrayValue.pop();
-        },
+                return arrayValue.pop();
+            }
+        ),
 
         /**
          * Pushes one or more elements onto the end of an array
@@ -260,10 +345,7 @@ module.exports = function (internals) {
          * @returns {IntegerValue} The new length of the array after pushing
          */
         'array_push': function (arrayReference) {
-            var arrayValue,
-                i,
-                reference,
-                value;
+            var arrayValue;
 
             if (!arrayReference) {
                 callStack.raiseError(PHPError.E_WARNING, 'array_push() expects at least 2 parameters, 0 given');
@@ -272,14 +354,65 @@ module.exports = function (internals) {
 
             arrayValue = arrayReference.getValue();
 
-            for (i = 1; i < arguments.length; i++) {
-                reference = arguments[i];
-                value = reference.getValue();
-                arrayValue.push(value);
-            }
-
-            return valueFactory.createInteger(arrayValue.getLength());
+            return flow
+                .eachAsync(slice.call(arguments, 1), function (reference) {
+                    return arrayValue.push(reference.getValue());
+                })
+                .next(function () {
+                    return valueFactory.createInteger(arrayValue.getLength());
+                });
         },
+
+        /**
+         * Searches for a value in an array, returning the first key with that value.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-search.php}
+         *
+         * @param {Variable|ArrayValue} arrayReference
+         * @returns {Value}
+         */
+        'array_search': internals.typeFunction(
+            // FIXME: Add return type once union types supported.
+            'mixed $needle, array $haystack, bool $strict = false',
+            function (needleValue, haystackValue, strictValue) {
+                var strict = strictValue.getNative(),
+                    resultKeyValue = false;
+
+                return flow.eachAsync(haystackValue.getKeys(), function (keyValue) {
+                    var elementPair = haystackValue.getElementPairByKey(keyValue);
+
+                    return elementPair.getValue()
+                        .next(function (elementValue) {
+                            if (strict) {
+                                return needleValue.isIdenticalTo(elementValue)
+                                    .asEventualNative()
+                                    .next(function (isIdentical) {
+                                        if (isIdentical) {
+                                            resultKeyValue = keyValue;
+
+                                            // Value was found, no need to check any further elements.
+                                            return false;
+                                        }
+                                    });
+                            }
+
+                            return needleValue.compareWith(elementValue)
+                                .next(function (comparisonResult) {
+                                    if (comparisonResult === 0) {
+                                        resultKeyValue = keyValue;
+
+                                        // Value was found, no need to check any further elements.
+                                        return false;
+                                    }
+                                });
+                        });
+                })
+                    .next(function () {
+                        return resultKeyValue;
+                    })
+                    .asValue();
+            }
+        ),
 
         /**
          * Shifts an element off the beginning of an array
@@ -296,56 +429,51 @@ module.exports = function (internals) {
         },
 
         /**
-         * Returns a new array without duplicate values from a source array
+         * Returns a new array without duplicate values from a source array.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-unique.php}
-         *
-         * @param {Variable|ArrayValue} arrayReference
-         * @param {Variable|IntegerValue} sortFlagsReference
-         * @returns {ArrayValue}
          */
-        'array_unique': function (arrayReference, sortFlagsReference) {
-            var arrayValue,
-                resultPairs = [],
-                usedValues = {};
+        'array_unique': internals.typeFunction(
+            'array $array, int $flags = SORT_STRING : array',
+            function (arrayValue, sortFlagsValue) {
+                var resultPairs = [],
+                    sortFlags = sortFlagsValue.getNative(),
+                    usedValues = {};
 
-            if (!arrayReference) {
-                callStack.raiseError(PHPError.E_WARNING, 'array_unique() expects at least 1 parameter, 0 given');
-                return valueFactory.createNull();
-            }
-
-            if (sortFlagsReference) {
-                throw new Error('array_unique() :: Sort flags are not yet supported');
-            }
-
-            arrayValue = arrayReference.getValue();
-
-            // Work on a copy, so we don't mutate the original array
-            arrayValue = arrayValue.getForAssignment();
-
-            // First sort the elements alphabetically by value (default/SORT_STRING behaviour)
-            arrayValue.sort(function (elementA, elementB) {
-                var nativeValueA = elementA.getValue().coerceToString().getNative(),
-                    nativeValueB = elementB.getValue().coerceToString().getNative();
-
-                return String(nativeValueB).localeCompare(nativeValueA);
-            });
-
-            _.each(arrayValue.getKeys(), function (keyValue) {
-                var elementPair = arrayValue.getElementPairByKey(keyValue),
-                    nativeValue = elementPair.getValue().coerceToString().getNative();
-
-                if (hasOwn.call(usedValues, nativeValue)) {
-                    return;
+                if (sortFlags !== SORT_STRING) {
+                    throw new Exception(
+                        'array_unique() :: Only SORT_STRING (' + SORT_STRING + ') is supported, ' +
+                        sortFlags + ' given'
+                    );
                 }
 
-                usedValues[nativeValue] = true;
+                // Work on a copy, so we don't mutate the original array.
+                arrayValue = arrayValue.getForAssignment();
 
-                resultPairs.push(elementPair);
-            });
+                // First sort the elements alphabetically by value (default/SORT_STRING behaviour).
+                arrayValue.sort(function (elementA, elementB) {
+                    var nativeValueA = elementA.getValue().coerceToString().getNative(),
+                        nativeValueB = elementB.getValue().coerceToString().getNative();
 
-            return valueFactory.createArray(resultPairs);
-        },
+                    return String(nativeValueB).localeCompare(nativeValueA);
+                });
+
+                _.each(arrayValue.getKeys(), function (keyValue) {
+                    var elementPair = arrayValue.getElementPairByKey(keyValue),
+                        nativeValue = elementPair.getValue().coerceToString().getNative();
+
+                    if (hasOwn.call(usedValues, nativeValue)) {
+                        return;
+                    }
+
+                    usedValues[nativeValue] = true;
+
+                    resultPairs.push(elementPair);
+                });
+
+                return valueFactory.createArray(resultPairs);
+            }
+        ),
 
         /**
          * Returns all the values from the array and indexes the array numerically.
@@ -369,66 +497,64 @@ module.exports = function (internals) {
         },
 
         /**
-         * Counts the specified array or object. May be hooked
-         * by implementing interface Countable
+         * Counts the specified array or object.
+         * May be hooked by implementing interface Countable.
          *
          * @see {@link https://secure.php.net/manual/en/function.count.php}
-         *
-         * @param {Variable|Value} arrayReference
-         * @param {Variable|Value} modeReference
-         * @returns {FutureValue<IntegerValue>|IntegerValue}
          */
-        'count': function (arrayReference, modeReference) {
-            var array = arrayReference.getValue(),
-                mode = modeReference ? modeReference.getNative() : 0,
-                type = array.getType();
+        'count': internals.typeFunction(
+            'Countable|array $value, int $mode = COUNT_NORMAL : int',
+            function (arrayOrCountableValue, modeValue) {
+                var mode = modeValue.getNative(),
+                    type = arrayOrCountableValue.getType();
 
-            if (type === 'object' && array.classIs('Countable')) {
-                return array.callMethod('count');
+                if (type === 'object' && arrayOrCountableValue.classIs('Countable')) {
+                    return arrayOrCountableValue.callMethod('count');
+                }
+
+                if (mode !== COUNT_NORMAL) {
+                    throw new Exception(
+                        'count() :: Only COUNT_NORMAL (' + COUNT_NORMAL + ') is supported, ' + mode + ' given'
+                    );
+                }
+
+                return valueFactory.createInteger(arrayOrCountableValue.getLength());
             }
+        ),
 
-            if (mode !== COUNT_NORMAL) {
-                throw new Error('Unsupported mode for count(...) :: ' + mode);
-            }
-
-            return valueFactory.createInteger(
-                type === 'array' || type === 'object' ? array.getLength() : 1
-            );
-        },
-
-        'current': function (arrayReference) {
-            var arrayValue = arrayReference.getValue();
-
+        /**
+         * Fetches the value of the element currently pointed to by the internal array pointer.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.current.php}
+         */
+        'current': internals.typeFunction('array|object $array : mixed', function (arrayValue) {
             if (arrayValue.getPointer() >= arrayValue.getLength()) {
                 return valueFactory.createBoolean(false);
             }
 
             return arrayValue.getCurrentElementValue();
-        },
+        }),
 
         /**
          * Set the internal pointer of an array to its last element,
          * returning the value of that last element.
-         * False will be returned for an empty array
+         * False will be returned for an empty array.
          *
          * @see {@link https://secure.php.net/manual/en/function.end.php}
-         *
-         * @param {Variable|Value} arrayReference
-         * @returns {Value}
          */
-        'end': function (arrayReference) {
-            var arrayValue = arrayReference.getValue(),
+        'end': internals.typeFunction('array|object &$array : mixed', function (arraySnapshot) {
+            var arrayValue = arraySnapshot.getValue(),
                 keys = arrayValue.getKeys();
 
             if (keys.length === 0) {
                 return valueFactory.createBoolean(false);
             }
 
-            // Advance the array's internal pointer to the last element
+            // Advance the array's internal pointer to the last element.
             arrayValue.setPointer(keys.length - 1);
 
-            return arrayValue.getElementByKey(keys[keys.length - 1]).getValue();
-        },
+            return arrayValue.getCurrentElementValue();
+        }),
 
         /**
          * Joins substrings (the "pieces") together with a given delimiter (the "glue").
@@ -447,7 +573,7 @@ module.exports = function (internals) {
                 tmp,
                 values;
 
-            // For backwards-compatibility, PHP supports receiving args in either order
+            // For backwards-compatibility, PHP supports receiving args in either order.
             if (glueValue.getType() === 'array') {
                 tmp = glueValue;
                 glueValue = piecesValue;
@@ -458,149 +584,108 @@ module.exports = function (internals) {
 
             return flow
                 .mapAsync(values, function (value) {
-                    return value.coerceToString().asEventualNative();
+                    return value.coerceToString();
                 })
-                .next(function (pieceStrings) {
+                .next(function (pieceStringValues) {
+                    var pieceStrings = pieceStringValues.map(function (pieceStringValue) {
+                        return pieceStringValue.getNative();
+                    });
+
                     return valueFactory.createString(pieceStrings.join(glueValue.getNative()));
-                })
-                .asValue();
+                });
         },
 
         /**
-         * Determines whether a value (the "needle") exists in a given array (the "haystack")
+         * Determines whether a value (the "needle") exists in a given array (the "haystack").
          *
          * @see {@link https://secure.php.net/manual/en/function.in-array.php}
-         *
-         * @param {Variable|Value} needleReference
-         * @param {Variable|Value} haystackReference
-         * @param {Variable|Value} strictMatchReference
-         * @returns {BooleanValue}
          */
-        'in_array': function (needleReference, haystackReference, strictMatchReference) {
-            var contains = false,
-                haystackValue,
-                needleValue,
-                strictMatch;
+        'in_array': internals.typeFunction(
+            'mixed $needle, array $haystack, bool $strict = false : bool',
+            function (needleValue, haystackValue, strictMatchValue) {
+                var contains = false,
+                    strictMatch = strictMatchValue.getNative();
 
-            haystackValue = haystackReference.getValue();
-            needleValue = needleReference.getValue();
-            strictMatch = strictMatchReference ? strictMatchReference.getNative() : false;
+                return flow
+                    .eachAsync(haystackValue.getValues(), function (elementValue) {
+                        var equalityChainable = strictMatch ?
+                                elementValue.isIdenticalTo(needleValue) :
+                                elementValue.isEqualTo(needleValue);
 
-            _.each(haystackValue.getValues(), function (elementValue) {
-                if (
-                    (strictMatch && elementValue.isIdenticalTo(needleValue).getNative()) ||
-                    (!strictMatch && elementValue.isEqualTo(needleValue).getNative())
-                ) {
-                    contains = true;
-                    return false;
-                }
-            });
-
-            return valueFactory.createBoolean(contains);
-        },
-
-        'join': function (glueReference, piecesReference) {
-            return methods[IMPLODE](glueReference, piecesReference);
-        },
+                        return equalityChainable.next(function (equalityValue) {
+                            if (equalityValue.getNative()) {
+                                contains = true;
+                            }
+                        });
+                    })
+                    .next(function () {
+                        return valueFactory.createBoolean(contains);
+                    });
+            }
+        ),
 
         /**
-         * Fetches the key for the element the array's internal pointer is pointing at
+         * Alias of implode().
+         *
+         * @see {@link https://secure.php.net/manual/en/function.join.php}
+         */
+        'join': 'implode',
+
+        /**
+         * Fetches the key for the element the array's internal pointer is pointing at.
          *
          * @see {@link https://secure.php.net/manual/en/function.key.php}
-         *
-         * @param {ArrayValue|Reference|Variable|Value} arrayReference
-         * @return {Value}
          */
-        'key': function (arrayReference) {
-            var arrayValue,
-                currentKey;
-
-            if (!arrayReference) {
-                callStack.raiseError(PHPError.E_WARNING, 'key() expects exactly 1 parameter, 0 given');
-                return valueFactory.createNull();
-            }
-
-            arrayValue = arrayReference.getValue();
-
-            if (arrayValue.getType() !== 'array') {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'key() expects parameter 1 to be array, ' +
-                    arrayValue.getType() +
-                    ' given'
-                );
-                return valueFactory.createNull();
-            }
-
-            currentKey = arrayValue.getKeyByIndex(arrayValue.getPointer());
+        'key': internals.typeFunction('array|object $array : int|string|null', function (arrayValue) {
+            var currentKey = arrayValue.getKeyByIndex(arrayValue.getPointer());
 
             return currentKey !== null ?
                 currentKey :
                 valueFactory.createNull();
-        },
+        }),
 
         /**
-         * Sorts an array in-place, by key, in reverse order
+         * Sorts an array in-place, by key, in reverse order.
          *
          * @see {@link https://secure.php.net/manual/en/function.krsort.php}
-         *
-         * @param {Variable|Value} arrayReference
-         * @param {Variable|Value|undefined} sortFlagsReference
-         * @returns {IntegerValue}
          */
-        'krsort': function (arrayReference, sortFlagsReference) {
-            var arrayValue,
-                sortFlags;
+        'krsort': internals.typeFunction(
+            'array &$array, int $flags = SORT_REGULAR : bool',
+            function (arraySnapshot, sortFlagsSnapshot) {
+                var arrayValue = arraySnapshot.getValue(),
+                    sortFlags = sortFlagsSnapshot.getValue().getNative();
 
-            if (!arrayReference) {
-                callStack.raiseError(PHPError.E_WARNING, 'krsort() expects at least 1 parameter, 0 given');
-                return valueFactory.createBoolean(false);
+                if (sortFlags !== SORT_REGULAR) {
+                    throw new Exception(
+                        'krsort() :: Only SORT_REGULAR (' +
+                        SORT_REGULAR +
+                        ') is supported, ' +
+                        sortFlags +
+                        ' given'
+                    );
+                }
+
+                arrayValue.sort(function (elementA, elementB) {
+                    var nativeKeyA = elementA.getKey().getNative(),
+                        nativeKeyB = elementB.getKey().getNative();
+
+                    return String(nativeKeyB).localeCompare(nativeKeyA);
+                });
+
+                return valueFactory.createBoolean(true);
             }
+        ),
 
-            arrayValue = arrayReference.getValue();
-            sortFlags = sortFlagsReference ? sortFlagsReference.getValue().getNative() : SORT_REGULAR;
-
-            if (arrayValue.getType() !== 'array') {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'krsort() expects parameter 1 to be array, ' +
-                    arrayValue.getType() +
-                    ' given'
-                );
-                return valueFactory.createBoolean(false);
-            }
-
-            if (sortFlags !== SORT_REGULAR) {
-                throw new Error(
-                    'krsort() :: Only SORT_REGULAR (' +
-                    SORT_REGULAR +
-                    ') is supported, ' +
-                    sortFlags +
-                    ' given'
-                );
-            }
-
-            arrayValue.sort(function (elementA, elementB) {
-                var nativeKeyA = elementA.getKey().getNative(),
-                    nativeKeyB = elementB.getKey().getNative();
-
-                return String(nativeKeyB).localeCompare(nativeKeyA);
-            });
-
-            return valueFactory.createBoolean(true);
-        },
-        'next': function (arrayReference) {
-            var arrayValue = arrayReference.getValue();
-
-            if (arrayValue.getType() !== 'array') {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'next() expects parameter 1 to be array, ' +
-                    arrayValue.getType() +
-                    ' given'
-                );
-                return valueFactory.createNull();
-            }
+        /**
+         * Advances the internal array pointer by one and returns the new current element's value.
+         * Returns false if there are no more elements.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.next.php}
+         *
+         * @returns {BooleanValue|Value}
+         */
+        'next': internals.typeFunction('array|object &$array : mixed', function (arraySnapshot) {
+            var arrayValue = arraySnapshot.getValue();
 
             arrayValue.setPointer(arrayValue.getPointer() + 1);
 
@@ -609,16 +694,30 @@ module.exports = function (internals) {
             }
 
             return arrayValue.getCurrentElementValue();
-        },
+        }),
 
         /**
-         * Alias of count()
+         * Resets the internal array pointer and returns the first element, or false if none.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.reset.php}
+         */
+        'reset': internals.typeFunction(
+            'array|object &$array : mixed',
+            function (arraySnapshot) {
+                var arrayValue = arraySnapshot.getValue();
+
+                arrayValue.reset();
+
+                return arrayValue.getLength() > 0 ?
+                    arrayValue.getElementByIndex(0).getValue() :
+                    valueFactory.createBoolean(false);
+            }
+        ),
+
+        /**
+         * Alias of count().
          *
          * @see {@link https://secure.php.net/manual/en/function.sizeof.php}
-         *
-         * @param {Variable|Value} arrayReference
-         * @param {Variable|Value} modeReference
-         * @returns {IntegerValue}
          */
         'sizeof': 'count'
     };

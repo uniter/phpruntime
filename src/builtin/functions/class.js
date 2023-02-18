@@ -10,7 +10,9 @@
 'use strict';
 
 var phpCommon = require('phpcommon'),
-    PHPError = phpCommon.PHPError;
+    PHPError = phpCommon.PHPError,
+    GET_CLASS_WITHOUT_ARGS_OUTSIDE_CLASS = 'core.get_class_without_args_outside_class',
+    INVALID_VALUE_FOR_TYPE_BUILTIN = 'core.invalid_value_for_type_builtin';
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
@@ -20,33 +22,39 @@ module.exports = function (internals) {
 
     return {
         /**
-         * Determines whether the specified class exists
+         * Determines whether the specified class exists.
          *
          * @see {@link https://secure.php.net/manual/en/function.class-exists.php}
-         *
-         * @param {Variable|Value} classNameReference      The name of the class to check for
-         * @param {Variable|Value} callAutoloaderReference True to invoke the autoloader, false otherwise
-         * @returns {BooleanValue}
          */
-        'class_exists': function (classNameReference, callAutoloaderReference) {
-            var className = classNameReference.getNative(),
-                callAutoloader = callAutoloaderReference ? callAutoloaderReference.getNative() : true;
+        'class_exists': internals.typeFunction(
+            'string $class, bool $autoload = true : bool',
+            function (classNameValue, callAutoloaderValue) {
+                var className = classNameValue.getNative(),
+                    callAutoloader = callAutoloaderValue ? callAutoloaderValue.getNative() : true;
 
-            // Autoload the class if not already defined and autoloading is requested
-            if (!globalNamespace.hasClass(className) && callAutoloader) {
-                classAutoloader.autoloadClass(className);
+                function getClass() {
+                    return valueFactory.createBoolean(globalNamespace.hasClass(className));
+                }
+
+                // Autoload the class if not already defined and autoloading is requested.
+                if (!globalNamespace.hasClass(className) && callAutoloader) {
+                    return classAutoloader.autoloadClass(className)
+                        .next(getClass);
+                }
+
+                return getClass();
             }
-
-            return valueFactory.createBoolean(globalNamespace.hasClass(className));
-        },
+        ),
 
         /**
-         * Fetches the name of either the current class or the class of a specified object
+         * Fetches the name of either the current class or the class of a specified object.
+         *
+         * TODO: Add the ability to specify multiple signatures so that .typeFunction(...) may be used here.
          *
          * @see {@link https://secure.php.net/manual/en/function.get-class.php}
          *
          * @param {Variable|Value} objectReference
-         * @returns {StringValue|BooleanValue}
+         * @returns {StringValue}
          */
         'get_class': function (objectReference) {
             var currentClass,
@@ -56,12 +64,10 @@ module.exports = function (internals) {
                 currentClass = callStack.getCallerScope().getCurrentClass();
 
                 if (!currentClass) {
-                    callStack.raiseError(
-                        PHPError.E_WARNING,
-                        'get_class() called without object from outside a class'
+                    callStack.raiseTranslatedError(
+                        PHPError.E_ERROR,
+                        GET_CLASS_WITHOUT_ARGS_OUTSIDE_CLASS
                     );
-
-                    return valueFactory.createBoolean(false);
                 }
 
                 return valueFactory.createString(currentClass.getName());
@@ -70,67 +76,55 @@ module.exports = function (internals) {
             objectValue = objectReference.getValue();
 
             if (objectValue.getType() !== 'object') {
-                // If specified, the value must be an object
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'get_class() expects parameter 1 to be object, ' + objectValue.getType() + ' given'
+                // If specified, the value must be an object.
+                // Null cannot be specified, the argument must instead be omitted.
+                callStack.raiseTranslatedError(
+                    PHPError.E_ERROR,
+                    INVALID_VALUE_FOR_TYPE_BUILTIN,
+                    {
+                        func: 'get_class',
+                        index: 1,
+                        name: 'object',
+                        expectedType: 'of type object',
+                        actualType: objectValue.getType()
+                    },
+                    'TypeError'
                 );
-
-                return valueFactory.createBoolean(false);
             }
 
             return valueFactory.createString(objectValue.getClassName());
         },
 
         /**
-         * Checks if the object is of this class or has this class as one of its parents
+         * Checks if the object is of this class or has this class as one of its parents.
          *
          * @see {@link https://secure.php.net/manual/en/function.is-a.php}
-         *
-         * @param {Variable|Value} objectReference
-         * @param {Variable|Value} classNameReference
-         * @param {Variable|Value} allowStringReference
-         * @returns {BooleanValue|FutureValue<BooleanValue>}
          */
-        'is_a': function (objectReference, classNameReference, allowStringReference) {
-            var allowString,
-                className,
-                classNameValue,
-                objectValue;
+        'is_a': internals.typeFunction(
+            'mixed $object_or_class, string $class, bool $allow_string = false : bool',
+            function (objectValue, classNameValue, allowStringValue) {
+                var className = classNameValue.getNative(),
+                    allowString = allowStringValue.getNative();
 
-            objectValue = objectReference.getValue();
-            classNameValue = classNameReference.getValue();
-
-            className = classNameValue.getNative();
-            allowString = allowStringReference ? allowStringReference.getNative() : false;
-
-            if (objectValue.getType() === 'object') {
-                return valueFactory.createBoolean(objectValue.classIs(className));
-            }
-
-            if (objectValue.getType() === 'string') {
-                if (!allowString) {
-                    // First arg is not allowed to be a string - just return false (no warning/notice)
-                    return valueFactory.createBoolean(false);
+                if (objectValue.getType() === 'object') {
+                    return valueFactory.createBoolean(objectValue.classIs(className));
                 }
 
-                // Fetch a Future that will resolve to the Class
-                var classFuture = globalNamespace.getClass(objectValue.getNative());
+                if (objectValue.getType() === 'string') {
+                    if (!allowString) {
+                        // First arg is not allowed to be a string - just return false (no warning/notice).
+                        return valueFactory.createBoolean(false);
+                    }
 
-                // Wrap the result as a FutureValue and not a Future
-                return valueFactory.createFuture(function (resolve, reject) {
-                    classFuture.next(
-                        function (classObject) {
-                            resolve(valueFactory.createBoolean(classObject.is(className)));
-                        },
-                        reject
-                    );
-                });
+                    return globalNamespace.getClass(objectValue.getNative())
+                        .next(function (classObject) {
+                            return valueFactory.createBoolean(classObject.is(className));
+                        });
+                }
 
+                // Invalid "object" given - just return false (no warning/notice).
+                return valueFactory.createBoolean(false);
             }
-
-            // Invalid "object" given - just return false (no warning/notice)
-            return valueFactory.createBoolean(false);
-        }
+        )
     };
 };

@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "strtolower" builtin function integration', function () {
-    it('should be able to lowercase a string', function () {
+    it('should be able to lowercase a string', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -25,11 +25,10 @@ $result[] = strtolower('this IS My STRing');
 return $result;
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             'this is my string'
         ]);
     });

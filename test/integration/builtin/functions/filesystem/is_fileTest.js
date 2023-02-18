@@ -11,87 +11,71 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
     sinon = require('sinon'),
-    syncPHPRuntime = require('../../../../../sync');
+    tools = require('../../../tools');
 
 describe('PHP "is_file" builtin function integration', function () {
+    var environment,
+        fileSystem,
+        isDirectory,
+        isFile;
+
     beforeEach(function () {
-        this.isDirectory = sinon.stub();
-        this.isFile = sinon.stub();
-        this.fileSystem = {
-            isDirectory: this.isDirectory,
-            isFile: this.isFile
+        isDirectory = sinon.stub();
+        isFile = sinon.stub();
+        fileSystem = {
+            isDirectory: isDirectory,
+            isFile: isFile
         };
-        this.isDirectory.returns(false);
-        this.isFile.returns(false);
+
+        environment = tools.createAsyncEnvironment({
+            'fileSystem': fileSystem
+        });
+
+        isDirectory.returns(false);
+        isFile.returns(false);
     });
 
-    it('should return true for a file that exists', function () {
+    it('should return true for a file that exists', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 return is_file('my-file.txt');
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
-            engine = module({
-                'fileSystem': this.fileSystem
-            });
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module({}, environment);
 
-        this.isFile.withArgs('my-file.txt').returns(true);
+        isFile.withArgs('my-file.txt').returns(true);
 
-        expect(engine.execute().getNative()).to.be.true;
+        expect((await engine.execute()).getNative()).to.be.true;
     });
 
-    it('should return false for a file that does not exist', function () {
+    it('should return false for a file that does not exist', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 return is_file('/non/existent/file.txt');
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
-            engine = module({
-                'fileSystem': this.fileSystem
-            });
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module({}, environment);
 
-        expect(engine.execute().getNative()).to.be.false;
+        expect((await engine.execute()).getNative()).to.be.false;
     });
 
-    it('should return false for a directory, even when it does exist', function () {
+    it('should return false for a directory, even when it does exist', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 return is_file('/non/existent/path');
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
-            engine = module({
-                'fileSystem': this.fileSystem
-            });
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module({}, environment);
 
-        this.isDirectory.withArgs('/non/existent/path').returns(true);
+        isDirectory.withArgs('/non/existent/path').returns(true);
 
-        expect(engine.execute().getNative()).to.be.false;
+        expect((await engine.execute()).getNative()).to.be.false;
     });
 });

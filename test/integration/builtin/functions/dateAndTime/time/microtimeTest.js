@@ -11,65 +11,54 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
     sinon = require('sinon'),
-    syncPHPRuntime = require('../../../../../../sync');
+    tools = require('../../../../tools');
 
 describe('PHP "microtime" builtin function integration', function () {
-    it('should return the current seconds+us when get_as_float = true', function () {
+    var environment,
+        getTimeInMicroseconds;
+
+    beforeEach(function () {
+        getTimeInMicroseconds = sinon.stub();
+
+        environment = tools.createAsyncEnvironment({
+            performance: {
+                getTimeInMicroseconds: getTimeInMicroseconds
+            }
+        });
+    });
+
+    it('should return the current seconds+us when get_as_float = true', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 return microtime(true);
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
-            getTimeInMicroseconds = sinon.stub(),
-            engine = module({
-                performance: {
-                    getTimeInMicroseconds: getTimeInMicroseconds
-                }
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module({}, environment),
             resultValue;
         getTimeInMicroseconds.returns(123456789);
 
-        resultValue = engine.execute();
+        resultValue = await engine.execute();
 
         expect(resultValue.getType()).to.equal('float');
         expect(resultValue.getNative()).to.equal(123.456789);
     });
 
-    it('should return the current seconds and us when get_as_float = false', function () {
+    it('should return the current seconds and us when get_as_float = false', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 return microtime(false);
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
-            getTimeInMicroseconds = sinon.stub(),
-            engine = module({
-                performance: {
-                    getTimeInMicroseconds: getTimeInMicroseconds
-                }
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module({}, environment),
             resultValue;
         getTimeInMicroseconds.returns(123456789);
 
-        resultValue = engine.execute();
+        resultValue = await engine.execute();
 
         // Result should be a string in the format "msec sec", where:
         // - sec is the number of seconds since the Unix epoch (0:00:00 January 1, 1970 GMT)

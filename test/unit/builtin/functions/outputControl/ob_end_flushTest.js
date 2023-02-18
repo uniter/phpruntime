@@ -10,69 +10,84 @@
 'use strict';
 
 var expect = require('chai').expect,
+    outputControlConstantFactory = require('../../../../../src/builtin/constants/outputControl'),
+    outputControlFunctionFactory = require('../../../../../src/builtin/functions/outputControl'),
     phpCommon = require('phpcommon'),
     sinon = require('sinon'),
-    outputControlFunctionFactory = require('../../../../../src/builtin/functions/outputControl'),
+    tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
     NoActiveOutputBufferException = require('phpcore/src/Exception/NoActiveOutputBufferException'),
-    PHPError = phpCommon.PHPError,
     Output = require('phpcore/src/Output/Output'),
-    ValueFactory = require('phpcore/src/ValueFactory').sync();
+    PHPError = phpCommon.PHPError;
 
 describe('PHP "ob_end_flush" builtin function', function () {
+    var callStack,
+        ob_end_flush,
+        output,
+        state,
+        valueFactory;
+
     beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.output = sinon.createStubInstance(Output);
-        this.valueFactory = new ValueFactory();
-        this.internals = {
-            callStack: this.callStack,
-            output: this.output,
-            valueFactory: this.valueFactory
-        };
-        this.outputControlFunctions = outputControlFunctionFactory(this.internals);
-        this.ob_end_flush = this.outputControlFunctions.ob_end_flush;
+        callStack = sinon.createStubInstance(CallStack);
+        output = sinon.createStubInstance(Output);
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack,
+            'output': output
+        }, {}, [
+            {
+                constantGroups: [
+                    outputControlConstantFactory
+                ],
+                functionGroups: [
+                    outputControlFunctionFactory
+                ]
+            }
+        ]);
+        valueFactory = state.getValueFactory();
+
+        ob_end_flush = state.getFunction('ob_end_flush');
     });
 
-    it('should flush then discard the current output buffer', function () {
-        this.ob_end_flush();
+    it('should flush then discard the current output buffer', async function () {
+        await ob_end_flush().toPromise();
 
-        expect(this.output.flushCurrentBuffer).to.have.been.calledOnce;
-        expect(this.output.popBuffer).to.have.been.calledOnce;
-        expect(this.output.popBuffer).to.have.been.calledAfter(this.output.flushCurrentBuffer);
+        expect(output.flushCurrentBuffer).to.have.been.calledOnce;
+        expect(output.popBuffer).to.have.been.calledOnce;
+        expect(output.popBuffer).to.have.been.calledAfter(output.flushCurrentBuffer);
     });
 
     describe('on success', function () {
-        it('should return true', function () {
-            var resultValue = this.ob_end_flush();
+        it('should return true', async function () {
+            var resultValue = await ob_end_flush().toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.true;
         });
 
-        it('should not raise any error', function () {
-            this.ob_end_flush();
+        it('should not raise any error', async function () {
+            await ob_end_flush().toPromise();
 
-            expect(this.callStack.raiseError).not.to.have.been.called;
+            expect(callStack.raiseError).not.to.have.been.called;
         });
     });
 
     describe('on failure', function () {
         beforeEach(function () {
-            this.output.flushCurrentBuffer.throws(new NoActiveOutputBufferException());
+            output.flushCurrentBuffer.throws(new NoActiveOutputBufferException());
         });
 
-        it('should raise a notice', function () {
-            this.ob_end_flush();
+        it('should raise a notice', async function () {
+            await ob_end_flush().toPromise();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
                 PHPError.E_NOTICE,
                 'ob_end_flush(): failed to delete and flush buffer. No buffer to delete or flush'
             );
         });
 
-        it('should return bool(false)', function () {
-            var resultValue = this.ob_end_flush();
+        it('should return bool(false)', async function () {
+            var resultValue = await ob_end_flush().toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;

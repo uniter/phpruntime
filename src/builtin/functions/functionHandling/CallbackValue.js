@@ -15,7 +15,7 @@ var _ = require('microdash'),
 
 /**
  * Represents a Value object whose reference or value
- * are fetched with a callback function
+ * are fetched with a callback function.
  *
  * @param {Function} referenceCallback
  * @param {Function} valueCallback
@@ -36,7 +36,7 @@ util.inherits(CallbackValue, Reference);
 
 _.extend(CallbackValue.prototype, {
     /**
-     * Fetches the eventual native value of this value via the provided callback
+     * Fetches the eventual native value of this value via the provided callback.
      *
      * @returns {*}
      */
@@ -45,7 +45,7 @@ _.extend(CallbackValue.prototype, {
     },
 
     /**
-     * Fetches the reference for this value via the provided callback
+     * Fetches the reference for this value via the provided callback.
      *
      * @returns {Reference|Value}
      */
@@ -54,7 +54,7 @@ _.extend(CallbackValue.prototype, {
     },
 
     /**
-     * Fetches the eventual value of this value via the provided callback
+     * Fetches the eventual value of this value via the provided callback.
      *
      * @returns {Value}
      */

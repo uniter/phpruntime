@@ -14,26 +14,26 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "array_push" builtin function integration', function () {
-    it('should be able to push one or more elements onto the end of an array', function () {
+    it('should be able to push one or more elements onto the end of an array', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 $myArray = ['first', 'two' => 'second', 'third'];
 
 $result = [];
-$result[] = array_push($myArray, 'fourth'); // Push a single new element on
-$result[] = array_push($myArray, 'fifth', 'sixth'); // Push multiple elements on at once
-$result[] = $myArray; // Check the eventual array value
+$result[] = array_push($myArray, 'fourth'); // Push a single new element on.
+$result[] = array_push($myArray, 'fifth', 'sixth'); // Push multiple elements on at once.
+$result[] = $myArray; // Check the eventual array value.
 
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            4, // Return value should be the new no. of elements in the array
-            6, // Same as above, after pushing a further two elements onto the array
+        expect((await engine.execute()).getNative()).to.deep.equal([
+            4, // Return value should be the new no. of elements in the array.
+            6, // Same as above, after pushing a further two elements onto the array.
             {
                 0: 'first',
                 two: 'second',
@@ -41,7 +41,7 @@ EOS
                 2: 'fourth',
                 3: 'fifth',
                 4: 'sixth'
-            } // Final array
+            } // Final array.
         ]);
     });
 });

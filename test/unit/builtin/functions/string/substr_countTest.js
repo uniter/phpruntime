@@ -10,174 +10,199 @@
 'use strict';
 
 var expect = require('chai').expect,
+    phpCommon = require('phpcommon'),
     sinon = require('sinon'),
+    stringBindingFactory = require('../../../../../src/builtin/bindings/string'),
     stringFunctionFactory = require('../../../../../src/builtin/functions/string'),
+    tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    ValueFactory = require('phpcore/src/ValueFactory').sync(),
-    Variable = require('phpcore/src/Variable').sync();
+    PHPError = phpCommon.PHPError;
 
 describe('PHP "substr_count" builtin function', function () {
-    beforeEach(function () {
-        this.callStack = sinon.createStubInstance(CallStack);
-        this.getBinding = sinon.stub();
-        this.valueFactory = new ValueFactory();
-        this.internals = {
-            callStack: this.callStack,
-            getBinding: this.getBinding,
-            valueFactory: this.valueFactory
-        };
-        this.stringFunctions = stringFunctionFactory(this.internals);
-        this.substr_count = this.stringFunctions.substr_count;
+    var callStack,
+        haystackVariable,
+        lengthVariable,
+        needleVariable,
+        offsetVariable,
+        state,
+        substr_count,
+        valueFactory,
+        variableFactory;
 
-        this.haystackReference = sinon.createStubInstance(Variable);
-        this.needleReference = sinon.createStubInstance(Variable);
-        this.offsetReference = sinon.createStubInstance(Variable);
-        this.lengthReference = sinon.createStubInstance(Variable);
+    beforeEach(function () {
+        callStack = sinon.createStubInstance(CallStack);
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                bindingGroups: [
+                    stringBindingFactory
+                ],
+                functionGroups: [
+                    stringFunctionFactory
+                ]
+            }
+        ]);
+        valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
+
+        substr_count = state.getFunction('substr_count');
+
+        haystackVariable = variableFactory.createVariable('myHaystack');
+        needleVariable = variableFactory.createVariable('myNeedle');
+        offsetVariable = variableFactory.createVariable('myOffset');
+        lengthVariable = variableFactory.createVariable('myLength');
     });
 
-    it('should return 0 when the haystack is empty', function () {
+    it('should return 0 when the haystack is empty', async function () {
         var result;
-        this.haystackReference.getValue.returns(this.valueFactory.createString(''));
-        this.needleReference.getValue.returns(this.valueFactory.createString('stuff'));
+        haystackVariable.setValue(valueFactory.createString(''));
+        needleVariable.setValue(valueFactory.createString('stuff'));
 
-        result = this.substr_count(this.haystackReference, this.needleReference);
+        result = await substr_count(haystackVariable, needleVariable).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(0);
     });
 
-    it('should return 3 when the substring appears 3 times, directly adjacent, in the middle of the string', function () {
+    it('should return 3 when the substring appears 3 times, directly adjacent, in the middle of the string', async function () {
         var result;
-        this.haystackReference.getValue.returns(this.valueFactory.createString('my strstrstr here'));
-        this.needleReference.getValue.returns(this.valueFactory.createString('str'));
+        haystackVariable.setValue(valueFactory.createString('my strstrstr here'));
+        needleVariable.setValue(valueFactory.createString('str'));
 
-        result = this.substr_count(this.haystackReference, this.needleReference);
+        result = await substr_count(haystackVariable, needleVariable).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(3);
     });
 
-    it('should return 4 when the substring appears 4 times, delimited by spaces, taking the entire string', function () {
+    it('should return 4 when the substring appears 4 times, delimited by spaces, taking the entire string', async function () {
         var result;
-        this.haystackReference.getValue.returns(this.valueFactory.createString('stuff stuff stuff stuff'));
-        this.needleReference.getValue.returns(this.valueFactory.createString('stuff'));
+        haystackVariable.setValue(valueFactory.createString('stuff stuff stuff stuff'));
+        needleVariable.setValue(valueFactory.createString('stuff'));
 
-        result = this.substr_count(this.haystackReference, this.needleReference);
+        result = await substr_count(haystackVariable, needleVariable).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(4);
     });
 
-    it('should support a positive offset and length, where offset cuts into a previous occurrence that should be discounted', function () {
+    it('should support a positive offset and length, where offset cuts into a previous occurrence that should be discounted', async function () {
         var result;
-        this.haystackReference.getValue.returns(this.valueFactory.createString('my stuffstuffstuff in here'));
-        this.needleReference.getValue.returns(this.valueFactory.createString('stuff'));
-        this.offsetReference.getNative.returns(4);
-        this.lengthReference.getNative.returns(14);
+        haystackVariable.setValue(valueFactory.createString('my stuffstuffstuff in here'));
+        needleVariable.setValue(valueFactory.createString('stuff'));
+        offsetVariable.setValue(valueFactory.createInteger(4));
+        lengthVariable.setValue(valueFactory.createInteger(14));
 
-        result = this.substr_count(this.haystackReference, this.needleReference, this.offsetReference, this.lengthReference);
+        result = await substr_count(haystackVariable, needleVariable, offsetVariable, lengthVariable).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(2);
     });
 
-    it('should support a positive offset and length, where offset cuts into a subsequent occurrence that should be discounted', function () {
+    it('should support a positive offset and length, where offset cuts into a subsequent occurrence that should be discounted', async function () {
         var result;
-        this.haystackReference.getValue.returns(this.valueFactory.createString('my stuffstuffstuff in here'));
-        this.needleReference.getValue.returns(this.valueFactory.createString('stuff'));
-        this.offsetReference.getNative.returns(2);
-        this.lengthReference.getNative.returns(14);
+        haystackVariable.setValue(valueFactory.createString('my stuffstuffstuff in here'));
+        needleVariable.setValue(valueFactory.createString('stuff'));
+        offsetVariable.setValue(valueFactory.createInteger(2));
+        lengthVariable.setValue(valueFactory.createInteger(14));
 
-        result = this.substr_count(this.haystackReference, this.needleReference, this.offsetReference, this.lengthReference);
+        result = await substr_count(haystackVariable, needleVariable, offsetVariable, lengthVariable).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(2);
     });
 
-    it('should support negative offsets by counting back from the end', function () {
+    it('should support negative offsets by counting back from the end', async function () {
         var result;
-        this.haystackReference.getValue.returns(this.valueFactory.createString('my stuffstuffstuff here'));
-        this.needleReference.getValue.returns(this.valueFactory.createString('stuff'));
-        this.offsetReference.getNative.returns(-12);
+        haystackVariable.setValue(valueFactory.createString('my stuffstuffstuff here'));
+        needleVariable.setValue(valueFactory.createString('stuff'));
+        offsetVariable.setValue(valueFactory.createInteger(-12));
 
-        result = this.substr_count(this.haystackReference, this.needleReference, this.offsetReference);
+        result = await substr_count(haystackVariable, needleVariable, offsetVariable).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(1);
     });
 
-    it('should support negative lengths by counting back from the end', function () {
+    it('should support negative lengths by counting back from the end', async function () {
         var result;
-        this.haystackReference.getValue.returns(this.valueFactory.createString('strstrstrstr'));
-        this.needleReference.getValue.returns(this.valueFactory.createString('str'));
-        this.offsetReference.getNative.returns(2);
-        this.lengthReference.getNative.returns(-4);
+        haystackVariable.setValue(valueFactory.createString('strstrstrstr'));
+        needleVariable.setValue(valueFactory.createString('str'));
+        offsetVariable.setValue(valueFactory.createInteger(2));
+        lengthVariable.setValue(valueFactory.createInteger(-4));
 
-        // Should search `rstrst`
-        result = this.substr_count(this.haystackReference, this.needleReference, this.offsetReference, this.lengthReference);
+        // Should search `rstrst`.
+        result = await substr_count(haystackVariable, needleVariable, offsetVariable, lengthVariable).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(1);
     });
 
-    it('should cast the needle and haystack to string', function () {
+    it('should cast the needle and haystack to string', async function () {
         var result;
-        this.haystackReference.getValue.returns(this.valueFactory.createInteger(27773));
-        this.needleReference.getValue.returns(this.valueFactory.createInteger(7));
+        haystackVariable.setValue(valueFactory.createInteger(27773));
+        needleVariable.setValue(valueFactory.createInteger(7));
 
-        result = this.substr_count(this.haystackReference, this.needleReference);
+        result = await substr_count(haystackVariable, needleVariable).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(3);
     });
 
     describe('when only the haystack is given', function () {
-        beforeEach(function () {
-            this.haystackReference.getNative.returns('my haystack');
+        var doCall,
+            resultValue;
 
-            this.doCall = function () {
-                this.resultValue = this.substr_count(this.haystackReference);
-            }.bind(this);
+        beforeEach(function () {
+            haystackVariable.setValue(valueFactory.createString('my haystack'));
+
+            doCall = async function () {
+                resultValue = await substr_count(haystackVariable).toPromise();
+            };
         });
 
-        it('should raise a warning', function () {
-            this.doCall();
+        it('should raise a warning', async function () {
+            await doCall();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
-                'Warning',
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
+                PHPError.E_WARNING,
                 'substr_count() expects at least 2 parameters, 1 given'
             );
         });
 
-        it('should return null', function () {
-            this.doCall();
+        it('should return null', async function () {
+            await doCall();
 
-            expect(this.resultValue.getType()).to.equal('null');
+            expect(resultValue.getType()).to.equal('null');
         });
     });
 
     describe('when no arguments are given', function () {
+        var doCall,
+            resultValue;
+
         beforeEach(function () {
-            this.doCall = function () {
-                this.resultValue = this.substr_count();
-            }.bind(this);
+            doCall = async function () {
+                resultValue = await substr_count().toPromise();
+            };
         });
 
-        it('should raise a warning', function () {
-            this.doCall();
+        it('should raise a warning', async function () {
+            await doCall();
 
-            expect(this.callStack.raiseError).to.have.been.calledOnce;
-            expect(this.callStack.raiseError).to.have.been.calledWith(
-                'Warning',
+            expect(callStack.raiseError).to.have.been.calledOnce;
+            expect(callStack.raiseError).to.have.been.calledWith(
+                PHPError.E_WARNING,
                 'substr_count() expects at least 2 parameters, 0 given'
             );
         });
 
-        it('should return null', function () {
-            this.doCall();
+        it('should return null', async function () {
+            await doCall();
 
-            expect(this.resultValue.getType()).to.equal('null');
+            expect(resultValue.getType()).to.equal('null');
         });
     });
 });

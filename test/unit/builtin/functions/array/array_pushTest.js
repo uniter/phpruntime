@@ -10,37 +10,64 @@
 'use strict';
 
 var expect = require('chai').expect,
-    arrayExtension = require('../../../../../src/builtin/functions/array'),
+    arrayConstantFactory = require('../../../../../src/builtin/constants/array'),
+    arrayFunctionFactory = require('../../../../../src/builtin/functions/array'),
     phpCommon = require('phpcommon'),
     sinon = require('sinon'),
     tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
     KeyValuePair = require('phpcore/src/KeyValuePair'),
-    PHPError = phpCommon.PHPError,
-    Variable = require('phpcore/src/Variable').sync();
+    PHPError = phpCommon.PHPError;
 
 describe('PHP "array_push" builtin function', function () {
     var array_push,
-        arrayReference,
+        arrayVariable,
+        callFactory,
         callStack,
-        valueFactory;
+        futureFactory,
+        globalNamespace,
+        state,
+        valueFactory,
+        variableFactory;
 
     beforeEach(function () {
-        arrayReference = sinon.createStubInstance(Variable);
         callStack = sinon.createStubInstance(CallStack);
-        valueFactory = tools.createIsolatedState().getValueFactory();
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                constantGroups: [
+                    arrayConstantFactory
+                ],
+                functionGroups: [
+                    arrayFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
+        futureFactory = state.getFutureFactory();
+        globalNamespace = state.getGlobalNamespace();
+        valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
 
-        array_push = arrayExtension({
-            callStack: callStack,
-            valueFactory: valueFactory
-        }).array_push;
+        // We need a call on the stack for any isolated scope evaluation.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
+
+        array_push = state.getFunction('array_push');
+
+        arrayVariable = variableFactory.createVariable('myArray');
     });
 
     describe('for an indexed array', function () {
         var arrayValue;
 
         beforeEach(function () {
-            arrayValue = valueFactory.createArray([
+            arrayVariable.setValue(valueFactory.createArray([
                 new KeyValuePair(
                     valueFactory.createInteger(0),
                     valueFactory.createString('my first element')
@@ -53,21 +80,18 @@ describe('PHP "array_push" builtin function', function () {
                     valueFactory.createInteger(5),
                     valueFactory.createString('my last element')
                 )
-            ]);
-            arrayReference.getValue.returns(arrayValue);
+            ]));
+            // Fetch the clone of the array that will have been taken on assignment.
+            arrayValue = arrayVariable.getValue();
         });
 
-        it('should push the new elements on just after the highest numbered key (sparse array support)', function () {
-            var newElement1 = valueFactory.createString('first new one'),
-                newElementReference1,
-                newElement2 = valueFactory.createString('second new one'),
-                newElementReference2;
-            newElementReference1 = sinon.createStubInstance(Variable);
-            newElementReference1.getValue.returns(newElement1);
-            newElementReference2 = sinon.createStubInstance(Variable);
-            newElementReference2.getValue.returns(newElement2);
+        it('should push the new elements on just after the highest numbered key (sparse array support)', async function () {
+            var newElementVariable1 = variableFactory.createVariable('myFirstArg'),
+                newElementVariable2 = variableFactory.createVariable('mySecondArg');
+            newElementVariable1.setValue(valueFactory.createString('first new one'));
+            newElementVariable2.setValue(valueFactory.createString('second new one'));
 
-            array_push(arrayReference, newElementReference1, newElementReference2);
+            await array_push(arrayVariable, newElementVariable1, newElementVariable2).toPromise();
 
             expect(arrayValue.getNative()).to.deep.equal([
                 'my first element',
@@ -76,24 +100,22 @@ describe('PHP "array_push" builtin function', function () {
                 undefined,
                 undefined,
                 'my last element',
-                // New elements - should start counting just after the highest existing index (5)
+                // New elements - should start counting just after the highest existing index (5).
                 'first new one',
                 'second new one'
             ]);
             expect(arrayValue.getLength()).to.equal(5);
         });
 
-        it('should return the new array length', function () {
-            var newElement = valueFactory.createString('first new one'),
-                newElementReference,
+        it('should return the new array length', async function () {
+            var newElementVariable = variableFactory.createVariable('myArg'),
                 result;
-            newElementReference = sinon.createStubInstance(Variable);
-            newElementReference.getValue.returns(newElement);
+            newElementVariable.setValue(valueFactory.createString('my new one'));
 
-            result = array_push(arrayReference, newElementReference);
+            result = await array_push(arrayVariable, newElementVariable).toPromise();
 
             expect(result.getType()).to.equal('int');
-            expect(result.getNative()).to.equal(4); // Original 3 + the pushed one
+            expect(result.getNative()).to.equal(4); // Original 3 + the pushed one.
         });
     });
 
@@ -101,7 +123,7 @@ describe('PHP "array_push" builtin function', function () {
         var arrayValue;
 
         beforeEach(function () {
-            arrayValue = valueFactory.createArray([
+            arrayVariable.setValue(valueFactory.createArray([
                 new KeyValuePair(
                     valueFactory.createString('my_first_key'),
                     valueFactory.createString('my first element')
@@ -114,44 +136,39 @@ describe('PHP "array_push" builtin function', function () {
                     valueFactory.createString('my_last_key'),
                     valueFactory.createString('my last element')
                 )
-            ]);
-            arrayReference.getValue.returns(arrayValue);
+            ]));
+            // Fetch the clone of the array that will have been taken on assignment.
+            arrayValue = arrayVariable.getValue();
         });
 
-        it('should index the pushed elements from 0', function () {
-            var newElement1 = valueFactory.createString('first new one'),
-                newElementReference1,
-                newElement2 = valueFactory.createString('second new one'),
-                newElementReference2;
-            newElementReference1 = sinon.createStubInstance(Variable);
-            newElementReference1.getValue.returns(newElement1);
-            newElementReference2 = sinon.createStubInstance(Variable);
-            newElementReference2.getValue.returns(newElement2);
+        it('should index the pushed elements from 0', async function () {
+            var newElementVariable1 = variableFactory.createVariable('myFirstArg'),
+                newElementVariable2 = variableFactory.createVariable('mySecondArg');
+            newElementVariable1.setValue(valueFactory.createString('first new one'));
+            newElementVariable2.setValue(valueFactory.createString('second new one'));
 
-            array_push(arrayReference, newElementReference1, newElementReference2);
+            await array_push(arrayVariable, newElementVariable1, newElementVariable2).toPromise();
 
             expect(arrayValue.getNative()).to.deep.equal({
                 'my_first_key': 'my first element',
                 'my_second_key': 'my second element',
                 'my_last_key': 'my last element',
-                // New elements - should start counting from 0
+                // New elements - should start counting from 0.
                 0: 'first new one',
                 1: 'second new one'
             });
             expect(arrayValue.getLength()).to.equal(5);
         });
 
-        it('should return the new array length', function () {
-            var newElement = valueFactory.createString('first new one'),
-                newElementReference,
+        it('should return the new array length', async function () {
+            var newElementVariable = variableFactory.createVariable('myArg'),
                 result;
-            newElementReference = sinon.createStubInstance(Variable);
-            newElementReference.getValue.returns(newElement);
+            newElementVariable.setValue(valueFactory.createString('my new one'));
 
-            result = array_push(arrayReference, newElementReference);
+            result = await array_push(arrayVariable, newElementVariable).toPromise();
 
             expect(result.getType()).to.equal('int');
-            expect(result.getNative()).to.equal(4); // Original 3 + the pushed one
+            expect(result.getNative()).to.equal(4); // Original 3 + the pushed one.
         });
     });
 
@@ -159,47 +176,43 @@ describe('PHP "array_push" builtin function', function () {
         var arrayValue;
 
         beforeEach(function () {
-            arrayValue = valueFactory.createArray([]);
-            arrayReference.getValue.returns(arrayValue);
+            arrayVariable.setValue(valueFactory.createArray([]));
+
+            // Fetch the clone of the array that will have been taken on assignment.
+            arrayValue = arrayVariable.getValue();
         });
 
-        it('should index the pushed elements from 0', function () {
-            var newElement1 = valueFactory.createString('first new one'),
-                newElementReference1,
-                newElement2 = valueFactory.createString('second new one'),
-                newElementReference2;
-            newElementReference1 = sinon.createStubInstance(Variable);
-            newElementReference1.getValue.returns(newElement1);
-            newElementReference2 = sinon.createStubInstance(Variable);
-            newElementReference2.getValue.returns(newElement2);
+        it('should index the pushed elements from 0', async function () {
+            var newElementVariable1 = variableFactory.createVariable('myFirstArg'),
+                newElementVariable2 = variableFactory.createVariable('mySecondArg');
+            newElementVariable1.setValue(valueFactory.createString('first new one'));
+            newElementVariable2.setValue(valueFactory.createString('second new one'));
 
-            array_push(arrayReference, newElementReference1, newElementReference2);
+            await array_push(arrayVariable, newElementVariable1, newElementVariable2).toPromise();
 
             expect(arrayValue.getNative()).to.deep.equal([
-                // New elements - should start counting from 0
+                // New elements - should start counting from 0.
                 'first new one',
                 'second new one'
             ]);
             expect(arrayValue.getLength()).to.equal(2);
         });
 
-        it('should return the new array length', function () {
-            var newElement = valueFactory.createString('first new one'),
-                newElementReference,
+        it('should return the new array length', async function () {
+            var newElementVariable = variableFactory.createVariable('myArg'),
                 result;
-            newElementReference = sinon.createStubInstance(Variable);
-            newElementReference.getValue.returns(newElement);
+            newElementVariable.setValue(valueFactory.createString('my new one'));
 
-            result = array_push(arrayReference, newElementReference);
+            result = await array_push(arrayVariable, newElementVariable).toPromise();
 
             expect(result.getType()).to.equal('int');
-            expect(result.getNative()).to.equal(1); // No original elements, plus the pushed one
+            expect(result.getNative()).to.equal(1); // No original elements, plus the pushed one.
         });
     });
 
     describe('when no arguments are provided', function () {
-        it('should raise a warning', function () {
-            array_push();
+        it('should raise a warning', async function () {
+            await array_push().toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
@@ -208,8 +221,8 @@ describe('PHP "array_push" builtin function', function () {
             );
         });
 
-        it('should return NULL', function () {
-            var result = array_push();
+        it('should return NULL', async function () {
+            var result = await array_push().toPromise();
 
             expect(result.getType()).to.equal('null');
         });

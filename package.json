@@ -23,21 +23,23 @@
     "test": "npm run jshint && npm run mocha"
   },
   "dependencies": {
+    "core-js-pure": "^3.28.0",
     "microdash": "^1.4.2",
-    "phpcommon": "^2.0.1",
-    "phpcore": "^7.1.0",
-    "regextend": "^1.1.0"
+    "pcremu": "^0.0.4",
+    "phpcommon": "^2.0.2",
+    "phpcore": "^8.0.0"
   },
   "devDependencies": {
-    "chai": "^4.3.6",
+    "chai": "^4.3.7",
     "chai-as-promised": "^7.1.1",
-    "jshint": "^2.13.4",
-    "mocha": "^9.2.2",
-    "mocha-bootstrap": "^1.0.2",
+    "jshint": "^2.13.6",
+    "mocha": "^10.2.0",
+    "mocha-bootstrap": "^1.0.4",
     "nowdoc": "^1.0.1",
-    "phptoast": "^9.0.1",
-    "phptojs": "^9.0.0",
-    "sinon": "^13.0.1",
+    "phptest": "^0.0.10",
+    "phptoast": "^9.1.0",
+    "phptojs": "^10.0.0",
+    "sinon": "^15.0.1",
     "sinon-chai": "^3.7.0"
   },
   "engines": {

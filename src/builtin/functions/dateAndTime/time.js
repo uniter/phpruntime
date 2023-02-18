@@ -9,10 +9,11 @@
 
 'use strict';
 
-var PHPError = require('phpcommon').PHPError;
+var phpCommon = require('phpcommon'),
+    Exception = phpCommon.Exception;
 
 module.exports = function (internals) {
-    var callStack = internals.callStack,
+    var clock = internals.getService('clock'),
         optionSet = internals.optionSet,
         valueFactory = internals.valueFactory;
 
@@ -20,7 +21,7 @@ module.exports = function (internals) {
         var performance = optionSet.getOption('performance');
 
         if (!performance) {
-            throw new Error('performance :: No `performance` option is configured');
+            throw new Exception('performance :: No `performance` option is configured');
         }
 
         return performance;
@@ -28,48 +29,47 @@ module.exports = function (internals) {
 
     return {
         /**
-         * Fetches the current Unix timestamp with microseconds
+         * Fetches the current Unix timestamp with microseconds.
          *
          * @see {@link https://secure.php.net/manual/en/function.microtime.php}
          *
          * @param {Variable|Value} getAsFloatReference Whether to return a float with seconds + us
          * @returns {FloatValue|StringValue}
          */
-        'microtime': function (getAsFloatReference) {
-            var getAsFloat,
-                getAsFloatValue = getAsFloatReference ?
-                    getAsFloatReference.getValue() :
-                    null,
-                timeInSeconds;
+        'microtime': internals.typeFunction(
+            'bool $as_float = false',
+            function (getAsFloatValue) {
+                // FIXME: Add union return type above once supported.
 
-            if (getAsFloatValue && /^(array|object)$/.test(getAsFloatValue.getType())) {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'microtime() expects parameter 1 to be boolean, ' +
-                    getAsFloatValue.getType() +
-                    ' given'
+                var getAsFloat = getAsFloatValue.getNative(),
+                    // Convert microseconds to seconds (with decimal precision to maintain microsecond accuracy).
+                    timeInSeconds = getPerformance().getTimeInMicroseconds() / 1000000;
+
+                if (getAsFloat) {
+                    // Return the time since the Unix epoch in seconds, with microsecond accuracy
+                    // as a float.
+                    return valueFactory.createFloat(timeInSeconds);
+                }
+
+                // Return the number of microseconds into the current second first, followed by
+                // the number of whole seconds since the Unix epoch.
+                return valueFactory.createString(
+                    (timeInSeconds % 1).toFixed(6) + ' ' +
+                    Math.floor(timeInSeconds)
                 );
-                return valueFactory.createNull();
             }
+        ),
 
-            // Default value (if argument is omitted) is `false`
-            getAsFloat = getAsFloatValue ? getAsFloatValue.coerceToBoolean().getNative() : false;
-
-            // Convert microseconds to seconds (with decimal precision to maintain microsecond accuracy)
-            timeInSeconds = getPerformance().getTimeInMicroseconds() / 1000000;
-
-            if (getAsFloat) {
-                // Return the time since the Unix epoch in seconds, with microsecond accuracy
-                // as a float
-                return valueFactory.createFloat(timeInSeconds);
-            }
-
-            // Return the number of microseconds into the current second first, followed by
-            // the number of whole seconds since the Unix epoch
-            return valueFactory.createString(
-                (timeInSeconds % 1).toFixed(6) + ' ' +
-                Math.floor(timeInSeconds)
-            );
-        }
+        /**
+         * Returns the current Unix timestamp;
+         * the number of seconds since the Unix Epoch (1st January 1970 00:00:00 GMT).
+         *
+         * @see {@link https://secure.php.net/manual/en/function.time.php}
+         *
+         * @returns {IntegerValue}
+         */
+        'time': internals.typeFunction(': int', function () {
+            return clock.getUnixTimestamp();
+        })
     };
 };

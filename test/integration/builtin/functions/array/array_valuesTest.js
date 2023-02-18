@@ -11,12 +11,10 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../../sync');
+    tools = require('../../../tools');
 
 describe('PHP "array_values" builtin function integration', function () {
-    it('should fetch only the values of an array, without sorting', function () {
+    it('should fetch only the values of an array, without sorting', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -27,16 +25,10 @@ $result[] = array_values(['first' => 'value 1', 'second' => 'value 2']);
 return $result;
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             ['two', 'zero', 'one'],
             ['value 1', 'value 2']
         ]);

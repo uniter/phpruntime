@@ -11,12 +11,10 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../../../sync');
+    tools = require('../../../../tools');
 
 describe('PHP "defined" builtin function integration', function () {
-    it('should be able to detect a case-sensitive constant', function () {
+    it('should be able to detect a case-sensitive constant', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 define('MY_CONST', 21);
@@ -26,31 +24,25 @@ return [
     defined('MY_CONST'),
     defined('my_CoNst'),
     defined('My\Namespaced\Constant'),
-    defined('My\Namespaced\cONstanT') // Note the constant is case-sensitive, not its namespace
+    defined('My\Namespaced\cONstanT') // Note the constant is case-sensitive, not its namespace.
 ];
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             // Global namespaced:
             true,
-            false, // Wrong case, no match
+            false, // Wrong case, no match.
 
             // Namespaced:
             true,
-            false  // Wrong case, no match
+            false  // Wrong case, no match.
         ]);
     });
 
-    it('should be able to detect a case-insensitive constant', function () {
+    it('should be able to detect a case-insensitive constant', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 define('MY_CONST', 21, true);
@@ -64,23 +56,17 @@ return [
 ];
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             // Global namespaced:
             true,
-            true, // Case-insensitive version should still match
+            true, // Case-insensitive version should still match.
 
             // Namespaced:
             true,
-            true  // Same for the namespaced one
+            true  // Same for the namespaced one.
         ]);
     });
 });

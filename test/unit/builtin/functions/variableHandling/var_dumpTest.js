@@ -17,24 +17,17 @@ var expect = require('chai').expect,
     sinon = require('sinon'),
     tools = require('../../../tools'),
     variableHandlingFunctionFactory = require('../../../../../src/builtin/functions/variableHandling'),
-    CallStack = require('phpcore/src/CallStack'),
-    ElementReference = require('phpcore/src/Reference/Element'),
-    Output = require('phpcore/src/Output/Output'),
-    Value = require('phpcore/src/Value').sync(),
-    Variable = require('phpcore/src/Variable').sync();
+    CallStack = require('phpcore/src/CallStack');
 
 describe('PHP "var_dump" builtin function', function () {
     var callStack,
         callVardump,
         flow,
         futureFactory,
-        internals,
-        output,
-        outputContents,
         state,
+        stdout,
         valueFactory,
-        valueReference,
-        variableHandlingFunctions,
+        variableFactory,
         variableReference,
         var_dump;
 
@@ -42,29 +35,22 @@ describe('PHP "var_dump" builtin function', function () {
         callStack = sinon.createStubInstance(CallStack);
         state = tools.createIsolatedState('async', {
             'call_stack': callStack
-        });
+        }, {}, [
+            {
+                functionGroups: [
+                    variableHandlingFunctionFactory
+                ]
+            }
+        ]);
         flow = state.getFlow();
         futureFactory = state.getFutureFactory();
         valueFactory = state.getValueFactory();
-        output = sinon.createStubInstance(Output);
-        outputContents = '';
-        output.write.callsFake(function (data) {
-            outputContents += data;
-        });
-        internals = {
-            callStack: callStack,
-            flow: flow,
-            futureFactory: futureFactory,
-            output: output,
-            valueFactory: valueFactory
-        };
-        variableHandlingFunctions = variableHandlingFunctionFactory(internals);
-        var_dump = variableHandlingFunctions.var_dump;
+        stdout = state.getStdout();
+        variableFactory = state.getService('variable_factory');
 
-        valueReference = sinon.createStubInstance(Value);
-        valueReference.asFuture.returns(futureFactory.createPresent(valueReference));
-        variableReference = sinon.createStubInstance(Variable);
-        variableReference.getValue.returns(valueReference);
+        var_dump = state.getFunction('var_dump');
+
+        variableReference = variableFactory.createVariable('myVar');
 
         callVardump = function () {
             return var_dump(variableReference);
@@ -72,45 +58,32 @@ describe('PHP "var_dump" builtin function', function () {
     });
 
     it('should write NULL to the output when value is null', async function () {
-        valueReference.getType.returns('null');
+        variableReference.setValue(valueFactory.createNull());
 
         await callVardump().toPromise();
 
-        expect(outputContents).to.equal('NULL\n');
+        expect(stdout.readAll()).to.equal('NULL\n');
     });
 
     it('should limit the length of dumped strings to 2048 characters', async function () {
-        valueReference.getType.returns('string');
-        valueReference.getNative.returns(repeatString('a', 2060));
+        variableReference.setValue(valueFactory.createString(repeatString('a', 2060)));
 
         await callVardump().toPromise();
 
-        expect(outputContents).to.equal('string(2060) "' + repeatString('a', 2048) + '..."\n');
+        expect(stdout.readAll()).to.equal('string(2060) "' + repeatString('a', 2048) + '..."\n');
     });
 
     it('should handle a reference to a variable containing an array assigned to an element of itself', async function () {
-        var firstElement = sinon.createStubInstance(ElementReference),
-            myselfElement = sinon.createStubInstance(ElementReference),
-            firstKey = valueFactory.createString('first'),
-            myselfKey = valueFactory.createString('myself'),
-            firstValue = valueFactory.createString('my first string');
-        valueReference.getLength.returns(2);
-        valueReference.getNative.callsFake(function () {
-            // Array.getNative() always returns a new JS array object
-            return [];
-        });
-        valueReference.getType.returns('array');
-        valueReference.getKeys = sinon.stub().returns([firstKey, myselfKey]);
-        valueReference.getElementByKey.withArgs(sinon.match.same(firstKey)).returns(firstElement);
-        valueReference.getElementByKey.withArgs(sinon.match.same(myselfKey)).returns(myselfElement);
-        firstElement.getValue.returns(firstValue);
-        firstElement.isReference.returns(false);
-        myselfElement.getValue.returns(valueReference);
-        myselfElement.isReference.returns(true);
+        var arrayValue = valueFactory.createArray([]),
+            firstElement = arrayValue.getElementByKey(valueFactory.createString('first')),
+            myselfElement = arrayValue.getElementByKey(valueFactory.createString('myself'));
+        firstElement.setValue(valueFactory.createString('my first string'));
+        myselfElement.setReference(variableReference.getReference());
+        variableReference.setValue(arrayValue);
 
         await callVardump().toPromise();
 
-        expect(outputContents).to.equal(
+        expect(stdout.readAll()).to.equal(
             nowdoc(function () {/*<<<EOS
 array(2) {
   ["first"]=>
@@ -130,30 +103,18 @@ EOS
     });
 
     it('should handle array elements with references to variables containing strings', async function () {
-        var firstElement = sinon.createStubInstance(ElementReference),
-            secondElement = sinon.createStubInstance(ElementReference),
-            firstKey = valueFactory.createString('first'),
-            secondKey = valueFactory.createString('second'),
-            firstValue = valueFactory.createString('my first string'),
-            secondValue = valueFactory.createString('my second string');
-        valueReference.getLength.returns(2);
-        valueReference.getNative.callsFake(function () {
-            // Array.getNative() always returns a new JS array object
-            return [];
-        });
-        valueReference.getType.returns('array');
-        valueReference.getKeys = sinon.stub().returns([firstKey, secondKey]);
-        valueReference.getElementByKey.withArgs(sinon.match.same(firstKey)).returns(firstElement);
-        valueReference.getElementByKey.withArgs(sinon.match.same(secondKey)).returns(secondElement);
-        firstElement.getValue.returns(firstValue);
-        firstElement.isReference.returns(false);
-
-        secondElement.getValue.returns(secondValue);
-        secondElement.isReference.returns(true);
+        var arrayValue = valueFactory.createArray([]),
+            firstElement = arrayValue.getElementByKey(valueFactory.createString('first')),
+            secondElement = arrayValue.getElementByKey(valueFactory.createString('second')),
+            referencedVariable = variableFactory.createVariable('referredVar');
+        firstElement.setValue(valueFactory.createString('my first string'));
+        referencedVariable.setValue(valueFactory.createString('my second string'));
+        secondElement.setReference(referencedVariable.getReference());
+        variableReference.setValue(arrayValue);
 
         await callVardump().toPromise();
 
-        expect(outputContents).to.equal(
+        expect(stdout.readAll()).to.equal(
             nowdoc(function () {/*<<<EOS
 array(2) {
   ["first"]=>

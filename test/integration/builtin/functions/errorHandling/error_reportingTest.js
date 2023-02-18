@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "error_reporting" builtin function integration', function () {
-    it('should be able to get and set the "error_reporting" INI option', function () {
+    it('should be able to get and set the "error_reporting" INI option', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -31,19 +31,19 @@ $result[] = ini_get('error_reporting');
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            22519, // Initial read with error_reporting() after no changes
-            22519, // Read with ini_get(...) after no changes
-            22519, // Call to error_reporting(...) to set - returns old value
-            12345, // Read of new value with error_reporting()
-            12345  // Read of new value with ini_get(...)
+        expect((await engine.execute()).getNative()).to.deep.equal([
+            22519, // Initial read with error_reporting() after no changes.
+            22519, // Read with ini_get(...) after no changes.
+            22519, // Call to error_reporting(...) to set - returns old value.
+            12345, // Read of new value with error_reporting().
+            12345  // Read of new value with ini_get(...).
         ]);
     });
 
-    it('should coerce a non-string "error_reporting" INI option to integer', function () {
+    it('should coerce a non-string "error_reporting" INI option to integer', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -57,12 +57,12 @@ $result[] = error_reporting();
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            '1234.21 and random text', // Read of value with ini_get(...),
-            1234                       // Read of value with error_reporting()
+        expect((await engine.execute()).getNative()).to.deep.equal([
+            '1234.21 and random text', // Read of value with ini_get(...).
+            1234                       // Read of value with error_reporting().
         ]);
     });
 });

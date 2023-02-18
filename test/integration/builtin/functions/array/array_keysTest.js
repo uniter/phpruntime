@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "array_keys" builtin function integration', function () {
-    it('should be able to fetch all keys defined by an array', function () {
+    it('should be able to fetch all keys defined by an array', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -28,10 +28,10 @@ $myArray = [
 return array_keys($myArray);
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile(null, php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             0,
             'my_element',
             'my_null_element',

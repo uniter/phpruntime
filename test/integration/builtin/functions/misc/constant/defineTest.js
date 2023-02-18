@@ -11,18 +11,16 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../../../sync');
+    tools = require('../../../../tools');
 
 describe('PHP "define" builtin function integration', function () {
-    it('should be able to define a case-sensitive constant', function () {
+    it('should be able to define a case-sensitive constant', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 define('MY_CONST', 21);
 define('my_const', 57);
 define('My\Namespaced\CONSTANT', 101);
-define('My\Namespaced\cONStant', 60); // Note the constant is case-sensitive, not its namespace
+define('My\Namespaced\cONStant', 60); // Note the constant is case-sensitive, not its namespace.
 
 return [
     MY_CONST,
@@ -30,22 +28,16 @@ return [
 ];
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             21,
             101
         ]);
     });
 
-    it('should be able to define a case-insensitive constant', function () {
+    it('should be able to define a case-insensitive constant', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 define('MY_CONST', 101, true);
@@ -57,16 +49,10 @@ return [
 ];
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             101,
             21
         ]);

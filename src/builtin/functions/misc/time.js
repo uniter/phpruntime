@@ -59,9 +59,11 @@ module.exports = function (internals) {
                 // Efficient version, if we're using async mode
 
                 return valueFactory.createFuture(function (resolve) {
+                    var milliseconds = microsecondsValue.getNative() / 1000;
+
                     setTimeout(function () {
                         resolve();
-                    }, microsecondsValue.getNative() / 1000);
+                    }, milliseconds);
                 });
             }
 

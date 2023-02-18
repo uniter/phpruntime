@@ -14,51 +14,56 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "gettype" builtin function integration', function () {
-    it('should be able to fetch the type of all the builtin value types', function () {
+    it('should be able to fetch the type of all the builtin value types', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 $result = [];
 
 $value = true;
-$result[] = gettype($value);
+$result['bool'] = gettype($value);
 
 $value = 21;
-$result[] = gettype($value);
+$result['int'] = gettype($value);
 
 $value = 101.222;
-$result[] = gettype($value);
+$result['float'] = gettype($value);
 
 $value = 'hello world';
-$result[] = gettype($value);
+$result['string'] = gettype($value);
 
 $value = [27, 31];
-$result[] = gettype($value);
+$result['array'] = gettype($value);
 
 $value = new stdClass;
-$result[] = gettype($value);
+$result['object'] = gettype($value);
 
-// Skipping "resource" type as we have no support yet
+$value = create_my_resource('my_resource_type');
+$result['valid resource'] = gettype($value);
 
 $value = null;
-$result[] = gettype($value);
+$result['null'] = gettype($value);
 
 // Skipping "unknown type" as we have no support yet (usually returned for closed file descriptors etc.)
 
 return $result;
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php);
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module();
+        engine.defineCoercingFunction('create_my_resource', function (type) {
+            return this.valueFactory.createResource(type, {});
+        });
 
-        expect(module().execute().getNative()).to.deep.equal([
-            'boolean',
-            'int',
-            'double', // For historical reasons "double" is returned rather than "float"
-            'string',
-            'array',
-            'object',
-            'NULL'
-        ]);
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            'bool': 'boolean',
+            'int': 'int',
+            'float': 'double', // For historical reasons "double" is returned rather than "float".
+            'string': 'string',
+            'array': 'array',
+            'object': 'object',
+            'valid resource': 'resource',
+            'null': 'NULL'
+        });
     });
 });

@@ -12,15 +12,21 @@
 var FormatConverter = require('./string/FormatConverter'),
     FormatParser = require('./string/FormatParser'),
     Formatter = require('./string/Formatter'),
-    NativeFormatter = require('./string/NativeFormatter');
+    NativeFormatter = require('./string/NativeFormatter'),
+    Trimmer = require('./string/Trimmer');
 
 /**
  * String handling bindings
  */
-module.exports = function () {
+module.exports = function (internals) {
+    var callStack = internals.callStack;
+
     return {
         stringFormatter: function () {
             return new Formatter(new NativeFormatter(new FormatParser(), new FormatConverter()));
+        },
+        stringTrimmer: function () {
+            return new Trimmer(callStack);
         }
     };
 };

@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "LogicException" builtin class integration', function () {
-    it('should extend the Exception base class', function () {
+    it('should extend the Exception base class', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 $exception = new LogicException('Oops');
@@ -22,13 +22,13 @@ $exception = new LogicException('Oops');
 return $exception instanceof Exception;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.be.true;
+        expect((await engine.execute()).getNative()).to.be.true;
     });
 
-    it('should set the message on the Exception', function () {
+    it('should set the message on the Exception', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 $exception = new LogicException('Oops');
@@ -36,9 +36,9 @@ $exception = new LogicException('Oops');
 return $exception->getMessage();
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.equal('Oops');
+        expect((await engine.execute()).getNative()).to.equal('Oops');
     });
 });

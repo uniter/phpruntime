@@ -10,56 +10,77 @@
 'use strict';
 
 var expect = require('chai').expect,
-    errorHandlingExtension = require('../../../../../src/builtin/functions/errorHandling'),
+    errorHandlingFunctionFactory = require('../../../../../src/builtin/functions/errorHandling'),
+    phpCommon = require('phpcommon'),
     sinon = require('sinon'),
     tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    Variable = require('phpcore/src/Variable').sync();
+    PHPError = phpCommon.PHPError;
 
 describe('PHP "trigger_error" builtin function', function () {
-    var callStack,
-        getConstant,
+    var callFactory,
+        callStack,
+        state,
         trigger_error,
-        valueFactory;
+        valueFactory,
+        variableFactory,
+
+        E_USER_DEPRECATED,
+        E_USER_ERROR,
+        E_USER_NOTICE,
+        E_USER_WARNING;
 
     beforeEach(function () {
         callStack = sinon.createStubInstance(CallStack);
-        getConstant = sinon.stub();
-        valueFactory = tools.createIsolatedState().getValueFactory();
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                functionGroups: [
+                    errorHandlingFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
+        valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
+        E_USER_DEPRECATED = state.getConstantValue('E_USER_DEPRECATED');
+        E_USER_ERROR = state.getConstantValue('E_USER_ERROR');
+        E_USER_NOTICE = state.getConstantValue('E_USER_NOTICE');
+        E_USER_WARNING = state.getConstantValue('E_USER_WARNING');
 
-        getConstant.withArgs('E_USER_DEPRECATED').returns(16384);
-        getConstant.withArgs('E_USER_ERROR').returns(256);
-        getConstant.withArgs('E_USER_NOTICE').returns(1024);
-        getConstant.withArgs('E_USER_WARNING').returns(512);
+        // We need a call on the stack for any isolated scope evaluation.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
 
-        trigger_error = errorHandlingExtension({
-            callStack: callStack,
-            getConstant: getConstant,
-            valueFactory: valueFactory
-        }).trigger_error;
+        trigger_error = state.getFunction('trigger_error');
     });
 
     describe('when E_USER_WARNING is given as the error type', function () {
-        var errorMessageReference,
-            errorTypeReference;
+        var errorMessageVariable,
+            errorTypeVariable;
 
         beforeEach(function () {
-            errorMessageReference = new Variable(callStack, valueFactory, 'errorMessageVar');
-            errorTypeReference = new Variable(callStack, valueFactory, 'errorTypeVar');
+            errorMessageVariable = variableFactory.createVariable('errorMessageVar');
+            errorTypeVariable = variableFactory.createVariable('errorTypeVar');
 
-            errorMessageReference.setValue(valueFactory.createString('My error message'));
-            errorTypeReference.setValue(valueFactory.createInteger(512));
+            errorMessageVariable.setValue(valueFactory.createString('My error message'));
+            errorTypeVariable.setValue(valueFactory.createInteger(512));
         });
 
-        it('should raise the correct error', function () {
-            trigger_error(errorMessageReference, errorTypeReference);
+        it('should raise the correct error', async function () {
+            await trigger_error(errorMessageVariable, errorTypeVariable).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith('Warning', 'My error message');
         });
 
-        it('should return bool(true)', function () {
-            var result = trigger_error(errorMessageReference, errorTypeReference);
+        it('should return bool(true)', async function () {
+            var result = await trigger_error(errorMessageVariable, errorTypeVariable).toPromise();
 
             expect(result.getType()).to.equal('boolean');
             expect(result.getNative()).to.be.true;
@@ -67,23 +88,26 @@ describe('PHP "trigger_error" builtin function', function () {
     });
 
     describe('when no error type is given', function () {
-        var errorMessageReference;
+        var errorMessageVariable;
 
         beforeEach(function () {
-            errorMessageReference = new Variable(callStack, valueFactory, 'errorMessageVar');
+            errorMessageVariable = variableFactory.createVariable('errorMessageVar');
 
-            errorMessageReference.setValue(valueFactory.createString('My implicit notice'));
+            errorMessageVariable.setValue(valueFactory.createString('My implicit notice'));
         });
 
-        it('should raise a notice, by default', function () {
-            trigger_error(errorMessageReference);
+        it('should raise a notice, by default', async function () {
+            await trigger_error(errorMessageVariable).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
-            expect(callStack.raiseError).to.have.been.calledWith('Notice', 'My implicit notice');
+            expect(callStack.raiseError).to.have.been.calledWith(
+                PHPError.E_NOTICE,
+                'My implicit notice'
+            );
         });
 
-        it('should return bool(true)', function () {
-            var result = trigger_error(errorMessageReference);
+        it('should return bool(true)', async function () {
+            var result = await trigger_error(errorMessageVariable).toPromise();
 
             expect(result.getType()).to.equal('boolean');
             expect(result.getNative()).to.be.true;
@@ -91,26 +115,29 @@ describe('PHP "trigger_error" builtin function', function () {
     });
 
     describe('when an invalid error type is given', function () {
-        var errorMessageReference,
-            errorTypeReference;
+        var errorMessageVariable,
+            errorTypeVariable;
 
         beforeEach(function () {
-            errorMessageReference = new Variable(callStack, valueFactory, 'errorMessageVar');
-            errorTypeReference = new Variable(callStack, valueFactory, 'errorTypeVar');
+            errorMessageVariable = variableFactory.createVariable('errorMessageVar');
+            errorTypeVariable = variableFactory.createVariable('errorTypeVar');
 
-            errorMessageReference.setValue(valueFactory.createString('My error message'));
-            errorTypeReference.setValue(valueFactory.createInteger(9999999));
+            errorMessageVariable.setValue(valueFactory.createString('My error message'));
+            errorTypeVariable.setValue(valueFactory.createInteger(9999999));
         });
 
-        it('should raise a special warning', function () {
-            trigger_error(errorMessageReference, errorTypeReference);
+        it('should raise a special warning', async function () {
+            await trigger_error(errorMessageVariable, errorTypeVariable).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
-            expect(callStack.raiseError).to.have.been.calledWith('Warning', 'Invalid error type specified');
+            expect(callStack.raiseError).to.have.been.calledWith(
+                PHPError.E_WARNING,
+                'Invalid error type specified'
+            );
         });
 
-        it('should return bool(false)', function () {
-            var result = trigger_error(errorMessageReference, errorTypeReference);
+        it('should return bool(false)', async function () {
+            var result = await trigger_error(errorMessageVariable, errorTypeVariable).toPromise();
 
             expect(result.getType()).to.equal('boolean');
             expect(result.getNative()).to.be.false;

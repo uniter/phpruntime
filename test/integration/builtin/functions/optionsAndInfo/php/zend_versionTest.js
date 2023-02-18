@@ -11,27 +11,19 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../../../sync');
+    tools = require('../../../../tools');
 
 describe('PHP "zend_version" builtin function integration', function () {
-    it('should return the correct version string', function () {
+    it('should return the correct version string', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 return zend_version();
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.equal('2.5.0');
+        expect((await engine.execute()).getNative()).to.equal('2.5.0');
     });
 });

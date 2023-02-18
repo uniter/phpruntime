@@ -14,15 +14,16 @@ module.exports = function (internals) {
 
     return {
         /**
-         * Fetches the names of all extension modules that have been loaded
+         * Fetches the names of all extension modules that have been loaded.
          *
          * @see {@link https://secure.php.net/manual/en/function.get-loaded-extensions.php}
-         *
-         * @param {Reference|Value|Variable|null} onlyZendExtensions
-         * @return {ArrayValue}
          */
-        'get_loaded_extensions': function (/* onlyZendExtensions */) {
-            return valueFactory.createArray([]);
-        }
+        'get_loaded_extensions': internals.typeFunction(
+            'bool $zend_extensions = false : array',
+            function (/* onlyZendExtensionsValue */) {
+                // TODO: Implement extensions on top of PHPCore "addons".
+                return valueFactory.createArray([]);
+            }
+        )
     };
 };

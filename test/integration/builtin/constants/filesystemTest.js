@@ -11,32 +11,24 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../sync');
+    tools = require('../../tools');
 
 describe('PHP filesystem constants integration', function () {
-    it('should support all the filesystem constants', function () {
+    it('should support all the filesystem constants', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 return [
-    DIRECTORY_SEPARATOR,
-    PATH_SEPARATOR
+    'DIRECTORY_SEPARATOR' => DIRECTORY_SEPARATOR,
+    'PATH_SEPARATOR' => PATH_SEPARATOR
 ];
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            '/', // DIRECTORY_SEPARATOR
-            ':'  // PATH_SEPARATOR
-        ]);
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            'DIRECTORY_SEPARATOR': '/',
+            'PATH_SEPARATOR': ':'
+        });
     });
 });

@@ -13,11 +13,13 @@ var arrayConstants = require('./constants/array'),
     arrayFunctions = require('./functions/array'),
     baseConversionMathFunctions = require('./functions/math/baseConversion'),
     classFunctions = require('./functions/class'),
+    clockServices = require('./services/clock'),
     configOptionsAndInfoFunctions = require('./functions/optionsAndInfo/config'),
     constantFunctions = require('./functions/misc/constant'),
     Countable = require('./interfaces/SPL/Countable'),
     environmentFunctions = require('./functions/optionsAndInfo/environment'),
     errorHandlingFunctions = require('./functions/errorHandling'),
+    errorMessages = require('./messages/error.en_GB'),
     extensionOptionsAndInfoFunctions = require('./functions/optionsAndInfo/extension'),
     filesystemConstants = require('./constants/filesystem'),
     filesystemFunctions = require('./functions/filesystem'),
@@ -25,18 +27,26 @@ var arrayConstants = require('./constants/array'),
     htmlStringFunctions = require('./functions/string/html'),
     InvalidArgumentException = require('./classes/Exception/InvalidArgumentException'),
     LogicException = require('./classes/Exception/LogicException'),
+    outputControlConstants = require('./constants/outputControl'),
     outputControlFunctions = require('./functions/outputControl'),
     pcreCommonFunctions = require('./functions/pcre/common'),
     pcreConstants = require('./constants/pcre'),
     phpConstants = require('./constants/php'),
     phpOptionsAndInfoFunctions = require('./functions/optionsAndInfo/php'),
+    roundingMathFunctions = require('./functions/math/rounding'),
+    Serializable = require('./interfaces/SPL/Serializable'),
     splFunctions = require('./functions/spl'),
+    SplDoublyLinkedList = require('./classes/SPL/Datastructures/SplDoublyLinkedList'),
+    SplObjectStorage = require('./classes/SPL/Datastructures/SplObjectStorage'),
+    SplQueue = require('./classes/SPL/Datastructures/SplQueue'),
     stringBindings = require('./bindings/string'),
     stringConstants = require('./constants/string'),
     stringFunctions = require('./functions/string'),
     timeDateAndTimeFunctions = require('./functions/dateAndTime/time'),
     timeFunctions = require('./functions/misc/time'),
-    variableHandlingFunctions = require('./functions/variableHandling');
+    urlFunctions = require('./functions/url'),
+    variableHandlingFunctions = require('./functions/variableHandling'),
+    warningMessages = require('./messages/warning.en_GB');
 
 module.exports = {
     bindingGroups: [
@@ -45,23 +55,28 @@ module.exports = {
     classGroups: [
         function () {
             return {
-                'Countable': Countable
+                'Countable': Countable,
+                'LogicException': LogicException,
+                'Serializable': Serializable
             };
         },
         function () {
             return {
-                'LogicException': LogicException
+                'SplDoublyLinkedList': SplDoublyLinkedList
             };
         },
         function () {
             return {
-                'InvalidArgumentException': InvalidArgumentException
+                'InvalidArgumentException': InvalidArgumentException,
+                'SplObjectStorage': SplObjectStorage,
+                'SplQueue': SplQueue
             };
         }
     ],
     constantGroups: [
         arrayConstants,
         filesystemConstants,
+        outputControlConstants,
         pcreConstants,
         phpConstants,
         stringConstants
@@ -81,10 +96,19 @@ module.exports = {
         outputControlFunctions,
         pcreCommonFunctions,
         phpOptionsAndInfoFunctions,
+        roundingMathFunctions,
         splFunctions,
         stringFunctions,
         timeDateAndTimeFunctions,
         timeFunctions,
+        urlFunctions,
         variableHandlingFunctions
+    ],
+    serviceGroups: [
+        clockServices
+    ],
+    translationCatalogues: [
+        errorMessages,
+        warningMessages
     ]
 };

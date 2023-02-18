@@ -21,19 +21,18 @@ var phpCommon = require('phpcommon'),
  * @return {object}
  */
 module.exports = function (internals) {
-    var callStack = internals.callStack,
+    var PHP_OUTPUT_HANDLER_STDFLAGS = internals.getConstant('PHP_OUTPUT_HANDLER_STDFLAGS'),
+        callStack = internals.callStack,
         output = internals.output,
         valueFactory = internals.valueFactory;
 
     return {
         /**
-         * Erases the current output buffer without turning it off
+         * Erases the current output buffer without turning it off.
          *
          * @see {@link https://secure.php.net/manual/en/function.ob-clean.php}
-         *
-         * @returns {BooleanValue} Returns true on success or false on failure
          */
-        'ob_clean': function () {
+        'ob_clean': internals.typeFunction(': bool', function () {
             try {
                 output.cleanCurrentBuffer();
             } catch (error) {
@@ -50,17 +49,14 @@ module.exports = function (internals) {
             }
 
             return valueFactory.createBoolean(true);
-        },
+        }),
 
         /**
-         * Erases the output buffer and then turns it off, essentially discarding the current buffer
+         * Erases the output buffer and then turns it off, essentially discarding the current buffer.
          *
          * @see {@link https://secure.php.net/manual/en/function.ob-end-clean.php}
-         * @TODO: Output E_NOTICE on failure
-         *
-         * @returns {BooleanValue} Returns true on success or false on failure
          */
-        'ob_end_clean': function () {
+        'ob_end_clean': internals.typeFunction(': bool', function () {
             try {
                 output.popBuffer();
             } catch (error) {
@@ -73,18 +69,16 @@ module.exports = function (internals) {
             }
 
             return valueFactory.createBoolean(true);
-        },
+        }),
 
         /**
          * Sends the output buffer to the next buffer in the chain, then turns off the output buffer.
          * If the next one in the chain is the default StdoutBuffer, then the buffer contents
-         * will be written to stdout
+         * will be written to stdout.
          *
          * @see {@link https://secure.php.net/manual/en/function.ob-end-flush.php}
-         *
-         * @returns {BooleanValue} Returns true on success or false on failure
          */
-        'ob_end_flush': function () {
+        'ob_end_flush': internals.typeFunction(': bool', function () {
             try {
                 output.flushCurrentBuffer();
                 output.popBuffer();
@@ -102,18 +96,16 @@ module.exports = function (internals) {
             }
 
             return valueFactory.createBoolean(true);
-        },
+        }),
 
         /**
          * Sends the output buffer to the next buffer in the chain.
          * If the next one in the chain is the default StdoutBuffer, then the buffer contents
-         * will be written to stdout
+         * will be written to stdout.
          *
          * @see {@link https://secure.php.net/manual/en/function.ob-flush.php}
-         *
-         * @returns {BooleanValue} Returns true on success or false on failure
          */
-        'ob_flush': function () {
+        'ob_flush': internals.typeFunction(': bool', function () {
             try {
                 output.flushCurrentBuffer();
             } catch (error) {
@@ -126,11 +118,13 @@ module.exports = function (internals) {
             }
 
             return valueFactory.createBoolean(true);
-        },
+        }),
 
         /**
          * Fetches the contents of the output buffer and deletes the current buffer
-         * (essentially executing `ob_get_contents()` and then `ob_end_clean()`)
+         * (essentially executing `ob_get_contents()` and then `ob_end_clean()`).
+         *
+         * TODO: Type this function once union "|false" return types are supported.
          *
          * @see {@link https://secure.php.net/manual/en/function.ob-get-clean.php}
          *
@@ -140,7 +134,7 @@ module.exports = function (internals) {
             var contents;
 
             if (output.getDepth() === 0) {
-                // No buffer is active (except the default StdoutBuffer, which does not count for this)
+                // No buffer is active (except the default StdoutBuffer, which does not count for this).
                 return valueFactory.createBoolean(false);
             }
 
@@ -151,7 +145,9 @@ module.exports = function (internals) {
         },
 
         /**
-         * Fetches the contents of the output buffer without clearing it
+         * Fetches the contents of the output buffer without clearing it.
+         *
+         * TODO: Type this function once union "|false" return types are supported.
          *
          * @see {@link https://secure.php.net/manual/en/function.ob-get-contents.php}
          *
@@ -161,7 +157,7 @@ module.exports = function (internals) {
             var contents;
 
             if (output.getDepth() === 0) {
-                // No buffer is active (except the default StdoutBuffer, which does not count for this)
+                // No buffer is active (except the default StdoutBuffer, which does not count for this).
                 return valueFactory.createBoolean(false);
             }
 
@@ -171,7 +167,9 @@ module.exports = function (internals) {
         },
 
         /**
-         * Flushes the output buffer, returns it as a string and turns off output buffering
+         * Flushes the output buffer, returns it as a string and turns off output buffering.
+         *
+         * TODO: Type this function once union "|false" return types are supported.
          *
          * @see {@link https://secure.php.net/manual/en/function.ob-get-flush.php}
          *
@@ -186,7 +184,7 @@ module.exports = function (internals) {
                     'ob_get_flush(): failed to delete and flush buffer. No buffer to delete or flush'
                 );
 
-                // No buffer is active (except the default StdoutBuffer, which does not count for this)
+                // No buffer is active (except the default StdoutBuffer, which does not count for this).
                 return valueFactory.createBoolean(false);
             }
 
@@ -197,29 +195,37 @@ module.exports = function (internals) {
         },
 
         /**
-         * Fetches the nesting level of the output buffering mechanism
+         * Fetches the nesting level of the output buffering mechanism.
          *
          * @see {@link https://secure.php.net/manual/en/function.ob-get-level.php}
-         *
-         * @returns {IntegerValue} Returns the nesting level of the output buffering mechanism
          */
-        'ob_get_level': function () {
+        'ob_get_level': internals.typeFunction(': int', function () {
             return valueFactory.createInteger(output.getDepth());
-        },
+        }),
 
         /**
-         * Turns on output buffering, or adds a new buffer to the stack if it is already on
+         * Turns on output buffering, or adds a new buffer to the stack if it is already on.
          *
          * @see {@link https://secure.php.net/manual/en/function.ob-start.php}
-         *
-         * @param {Variable|Value} outputCallbackReference
          */
-        'ob_start': function (outputCallbackReference, chunkSizeReference, flagsReference) {
-            if (outputCallbackReference || chunkSizeReference || flagsReference) {
-                throw new Exception('ob_start() :: No arguments are supported yet');
-            }
+        'ob_start': internals.typeFunction(
+            'callable $callback = null, int $chunk_size = 0, int $flags = PHP_OUTPUT_HANDLER_STDFLAGS : bool',
+            function (outputCallbackValue, chunkSizeValue, flagsValue) {
+                var chunkSize = chunkSizeValue.getNative(),
+                    flags = flagsValue.getNative();
 
-            output.pushBuffer();
-        }
+                if (
+                    outputCallbackValue.getType() !== 'null' ||
+                    chunkSize !== 0 ||
+                    flags !== PHP_OUTPUT_HANDLER_STDFLAGS
+                ) {
+                    throw new Exception('ob_start() :: No arguments are supported yet');
+                }
+
+                output.pushBuffer();
+
+                return valueFactory.createBoolean(true);
+            }
+        )
     };
 };

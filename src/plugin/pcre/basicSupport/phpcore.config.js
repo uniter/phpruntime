@@ -12,7 +12,7 @@
 var basicLevelPcreAddon = require('../../../addon/pcre/basicSupport');
 
 /**
- * PCRE preg_* functions support using the builtin JS RegExp class
+ * PCRE preg_* functions support, using PCREmu.
  */
 module.exports = {
     addons: [

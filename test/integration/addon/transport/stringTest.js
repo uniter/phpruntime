@@ -17,13 +17,7 @@ var expect = require('chai').expect,
     Exception = phpCommon.Exception;
 
 describe('PHP string transport integration', function () {
-    var syncRuntime;
-
-    beforeEach(function () {
-        syncRuntime = tools.createSyncRuntime();
-    });
-
-    it('should allow include transports to return a PHP code string', function () {
+    it('should allow include transports to return a PHP code string', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -35,39 +29,39 @@ $result[] = require __DIR__ . '/my_second_include.php';
 return $result;
 EOS
 */;}), //jshint ignore:line
-            environment = syncRuntime.createEnvironment({
+            environment = tools.createAsyncEnvironment({
                 include: function (path, promise) {
                     promise.resolve('<?php return "my path is: " . ' + JSON.stringify(path) + ';');
                 }
             }, [
                 stringTransportAddon
             ]),
-            module = tools.transpile(syncRuntime, '/my/path/to/my_script.php', php),
+            module = tools.asyncTranspile('/my/path/to/my_script.php', php),
             engine = module({}, environment);
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             'my path is: /my/path/to/my_first_include.php',
             'my path is: /my/path/to/my_second_include.php'
         ]);
         expect(engine.getStderr().readAll()).to.equal('');
     });
 
-    it('should correctly raise an error when an include is performed with no chained transport configured', function () {
+    it('should correctly raise an error when an include is performed with no chained transport configured', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 require __DIR__ . '/my_include.php';
 EOS
 */;}), //jshint ignore:line
-            environment = syncRuntime.createEnvironment({}, [
+            environment = tools.createAsyncEnvironment({
+                // Note the chained transport is not configured.
+            }, [
                 stringTransportAddon
             ]),
-            module = tools.transpile(syncRuntime, '/my/path/to/my_script.php', php),
+            module = tools.asyncTranspile('/my/path/to/my_script.php', php),
             engine = module({}, environment);
 
-        expect(function () {
-            engine.execute();
-        }).to.throw(
+        await expect(engine.execute()).to.eventually.be.rejectedWith(
             Exception,
             'PHP Fatal error: require(): Failed opening \'/my/path/to/my_include.php\' for inclusion in /my/path/to/my_script.php on line 3'
         );
@@ -81,7 +75,7 @@ EOS
         );
     });
 
-    it('should correctly raise a ParseError when invalid syntax is returned by the chained transport', function () {
+    it('should correctly raise a ParseError when invalid syntax is returned by the chained transport', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -106,7 +100,7 @@ myFunction();
 return $result;
 EOS
 */;}), //jshint ignore:line
-            environment = syncRuntime.createEnvironment({
+            environment = tools.createAsyncEnvironment({
                 include: function (path, promise) {
                     // Note the deliberate invalid PHP syntax here
                     promise.resolve('<?php \n\nmy invalid syntax here!');
@@ -114,10 +108,10 @@ EOS
             }, [
                 stringTransportAddon
             ]),
-            module = tools.transpile(syncRuntime, '/my/path/to/my_script.php', php),
+            module = tools.asyncTranspile('/my/path/to/my_script.php', php),
             engine = module({}, environment);
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             // Error class name
             'ParseError',
 

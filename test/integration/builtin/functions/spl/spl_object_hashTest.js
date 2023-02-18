@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "spl_object_hash" builtin function integration', function () {
-    it('should always generate the same hash for the same object', function () {
+    it('should always generate the same hash for the same object', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -30,14 +30,14 @@ $result[] = spl_object_hash($secondObject);
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             '00000000000000000000000000000001',
             '00000000000000000000000000000002',
-            '00000000000000000000000000000001', // Should be the same as the first hash
-            '00000000000000000000000000000002'  // Should be the same as the second hash
+            '00000000000000000000000000000001', // Should be the same as the first hash.
+            '00000000000000000000000000000002'  // Should be the same as the second hash.
         ]);
         expect(engine.getStdout().readAll()).to.equal('');
         expect(engine.getStderr().readAll()).to.equal('');

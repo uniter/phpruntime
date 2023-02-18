@@ -14,7 +14,7 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "is_a" builtin function integration', function () {
-    it('should be able to determine whether an object or class is the same as or inherits from another', function () {
+    it('should be able to determine whether an object or class is the same as or inherits from another', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
@@ -59,24 +59,23 @@ namespace
 }
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            // <object> is_a <class name>
+        expect((await engine.execute()).getNative()).to.deep.equal([
+            // <object> is_a <class name>.
             true,
             true,
             true,
             true,
             false,
 
-            // <class name> is_a <other class name>
-            true, // Unlike is_subclass_of(...), passing the same class name in should return true
+            // <class name> is_a <other class name>.
+            true, // Unlike is_subclass_of(...), passing the same class name in should return true.
             true,
             false,
 
-            // <class name> is_a <other class name> when string is not allowed
+            // <class name> is_a <other class name> when string is not allowed.
             false
         ]);
     });

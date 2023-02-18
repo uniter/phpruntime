@@ -14,28 +14,61 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "key" builtin function integration', function () {
-    it('should return the current key for an array', function () {
+    it('should return the current key for an array', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 $result = [];
 $myArray = ['first' => 'a', 'second' => 'b', 'third' => 'c', 'fourth' => 'd'];
 
-$result[] = key($myArray);
+$result['first key'] = key($myArray);
 
 next($myArray);
-$result[] = key($myArray);
+$result['second key'] = key($myArray);
+
+end($myArray);
+next($myArray);
+$result['past end of array'] = key($myArray);
 
 return $result;
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            'first',
-            'second'
-        ]);
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            'first key': 'first',
+            'second key': 'second',
+            'past end of array': null
+        });
+    });
+
+    it('should return the current key for an object', async function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+
+$result = [];
+$myObject = (object)['first' => 'a', 'second' => 'b', 'third' => 'c', 'fourth' => 'd'];
+
+$result['first key'] = key($myObject);
+
+next($myObject);
+$result['second key'] = key($myObject);
+
+end($myObject);
+next($myObject);
+$result['past end of object'] = key($myObject);
+
+return $result;
+EOS
+*/;}), //jshint ignore:line
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module();
+
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            'first key': 'first',
+            'second key': 'second',
+            'past end of object': null
+        });
     });
 });

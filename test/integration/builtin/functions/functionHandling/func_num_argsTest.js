@@ -14,13 +14,13 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "func_num_args" builtin function integration', function () {
-    it('should be able to fetch the number of both formal and informal arguments passed to a function', function () {
+    it('should be able to fetch the number of both formal and informal arguments passed to a function', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 $result = [];
 
-// With two formal args
+// With two formal args.
 function add($num1, $num2) {
     global $result;
 
@@ -29,7 +29,7 @@ function add($num1, $num2) {
     return $num1 + $num2;
 }
 
-// With no formal args
+// With no formal args.
 function doSomethingWithAllOfThese() {
     global $result;
 
@@ -45,10 +45,10 @@ $result[] = doSomethingWithAllOfThese(4, 8, 100);
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
+        expect((await engine.execute()).getNative()).to.deep.equal([
             2,
             10 + 21,
             4,

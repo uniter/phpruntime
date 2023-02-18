@@ -10,197 +10,146 @@
 'use strict';
 
 var expect = require('chai').expect,
-    basicSupportExtension = require('../../../../../../src/builtin/functions/pcre/basicSupport'),
+    basicSupportFunctionFactory = require('../../../../../../src/builtin/functions/pcre/basicSupport'),
+    pcreConstantFactory = require('../../../../../../src/builtin/constants/pcre'),
+    phpCommon = require('phpcommon'),
     sinon = require('sinon'),
     tools = require('../../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    Variable = require('phpcore/src/Variable').sync();
+    PHPError = phpCommon.PHPError;
 
 describe('PHP "preg_replace" basic-level builtin function', function () {
-    var callStack,
-        getConstant,
+    var callFactory,
+        callStack,
         preg_replace,
-        valueFactory;
+        state,
+        valueFactory,
+        variableFactory,
+        PREG_OFFSET_CAPTURE;
 
     beforeEach(function () {
         callStack = sinon.createStubInstance(CallStack);
-        getConstant = sinon.stub();
-        valueFactory = tools.createIsolatedState().getValueFactory();
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                constantGroups: [
+                    pcreConstantFactory
+                ],
+                functionGroups: [
+                    basicSupportFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
+        valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
+        PREG_OFFSET_CAPTURE = state.getConstantValue('PREG_OFFSET_CAPTURE');
 
-        getConstant.withArgs('PREG_OFFSET_CAPTURE').returns(256);
-        getConstant.withArgs('PREG_PATTERN_ORDER').returns(1);
-        getConstant.withArgs('PREG_SET_ORDER').returns(2);
+        // We need a call on the stack for any isolated scope evaluation.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
 
-        preg_replace = basicSupportExtension({
-            callStack: callStack,
-            getConstant: getConstant,
-            valueFactory: valueFactory
-        }).preg_replace;
+        preg_replace = state.getFunction('preg_replace');
     });
 
     describe('on a successful replacement of a single pattern for a single subject', function () {
         var doCall,
-            patternReference,
-            replacementReference,
+            patternVariable,
+            replacementVariable,
             resultValue,
-            subjectReference;
+            subjectVariable;
 
         beforeEach(function () {
-            patternReference = sinon.createStubInstance(Variable);
-            replacementReference = sinon.createStubInstance(Variable);
-            subjectReference = sinon.createStubInstance(Variable);
-            patternReference.getValue.returns(valueFactory.createString('/hel{2}o/'));
-            replacementReference.getValue.returns(valueFactory.createString('goodbye'));
-            subjectReference.getValue.returns(valueFactory.createString('well hello!'));
+            patternVariable = variableFactory.createVariable('myPattern');
+            replacementVariable = variableFactory.createVariable('myReplacement');
+            subjectVariable = variableFactory.createVariable('mySubject');
+            patternVariable.setValue(valueFactory.createString('/hel{2}o/'));
+            replacementVariable.setValue(valueFactory.createString('goodbye'));
+            subjectVariable.setValue(valueFactory.createString('well hello!'));
 
-            doCall = function () {
-                resultValue = preg_replace(
-                    patternReference,
-                    replacementReference,
-                    subjectReference
-                );
+            doCall = async function () {
+                resultValue = await preg_replace(
+                    patternVariable,
+                    replacementVariable,
+                    subjectVariable
+                ).toPromise();
             };
         });
 
-        it('should return the resulting string', function () {
-            doCall();
+        it('should return the resulting string', async function () {
+            await doCall();
 
             expect(resultValue.getType()).to.equal('string');
             expect(resultValue.getNative()).to.equal('well goodbye!');
         });
 
-        it('should not raise any warnings', function () {
-            doCall();
+        it('should not raise any warnings', async function () {
+            await doCall();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
 
-        it('should populate the count variable if specified', function () {
-            var countVariable = new Variable(callStack, valueFactory, 'count'),
-                limitReference = sinon.createStubInstance(Variable);
-            limitReference.getValue.returns(valueFactory.createInteger(-1));
+        it('should populate the count variable if specified', async function () {
+            var countVariable = variableFactory.createVariable('myCount'),
+                limitReference = variableFactory.createVariable('myLimit');
+            limitReference.setValue(valueFactory.createInteger(-1));
 
-            preg_replace(
-                patternReference,
-                replacementReference,
-                subjectReference,
+            await preg_replace(
+                patternVariable,
+                replacementVariable,
+                subjectVariable,
                 limitReference,
                 countVariable
-            );
+            ).toPromise();
 
             expect(countVariable.getValue().getType()).to.equal('int');
             expect(countVariable.getValue().getNative()).to.equal(1);
         });
     });
 
-    describe('when not enough args are given', function () {
-        var doCall,
-            patternReference,
-            resultValue;
-
-        beforeEach(function () {
-            patternReference = sinon.createStubInstance(Variable);
-            patternReference.getValue.returns(valueFactory.createString('/hel{2}o/'));
-
-            doCall = function () {
-                resultValue = preg_replace(patternReference);
-            };
-        });
-
-        it('should raise a warning', function () {
-            doCall();
-
-            expect(callStack.raiseError).to.have.been.calledOnce;
-            expect(callStack.raiseError).to.have.been.calledWith(
-                'Warning',
-                'preg_replace() expects at least 3 parameters, 1 given'
-            );
-        });
-
-        it('should return null', function () {
-            doCall();
-
-            expect(resultValue.getType()).to.equal('null');
-        });
-    });
-
-    describe('when a non-string pattern is given', function () {
-        it('should throw an error (coercion not yet supported here)', function () {
-            expect(function () {
-                preg_replace(
-                    valueFactory.createInteger(1001),
-                    valueFactory.createString('my replacement'),
-                    valueFactory.createString('my subject'),
-                    sinon.createStubInstance(Variable)
-                );
-            }).to.throw('preg_replace(): Non-array/string pattern not yet supported');
-        });
-    });
-
-    describe('when a non-string replacement is given', function () {
-        it('should throw an error (coercion not yet supported here)', function () {
-            expect(function () {
-                preg_replace(
-                    valueFactory.createString('/my pattern/'),
-                    valueFactory.createInteger(1001),
-                    valueFactory.createString('my subject'),
-                    sinon.createStubInstance(Variable)
-                );
-            }).to.throw('preg_replace(): Non-array/string replacement not yet supported');
-        });
-    });
-
-    describe('when a non-string subject is given', function () {
-        it('should throw an error (coercion not yet supported here)', function () {
-            expect(function () {
-                preg_replace(
-                    valueFactory.createString('/my pattern/'),
-                    valueFactory.createString('my replacement'),
-                    valueFactory.createInteger(1001),
-                    sinon.createStubInstance(Variable)
-                );
-            }).to.throw('preg_replace(): Non-array/string subject not yet supported');
-        });
-    });
-
     describe('when an invalid regex is given', function () {
         var doCall,
-            patternReference,
-            replacementReference,
+            patternVariable,
+            replacementVariable,
             resultValue,
-            subjectReference;
+            subjectVariable;
 
         beforeEach(function () {
-            patternReference = sinon.createStubInstance(Variable);
-            replacementReference = sinon.createStubInstance(Variable);
-            subjectReference = sinon.createStubInstance(Variable);
-            patternReference.getValue.returns(valueFactory.createString('/? invalid regex/'));
-            replacementReference.getValue.returns(valueFactory.createString('some replacement'));
-            subjectReference.getValue.returns(valueFactory.createString('some subject'));
+            patternVariable = variableFactory.createVariable('myPattern');
+            replacementVariable = variableFactory.createVariable('myReplacement');
+            subjectVariable = variableFactory.createVariable('mySubject');
+            patternVariable.setValue(valueFactory.createString('/? invalid regex/'));
+            replacementVariable.setValue(valueFactory.createString('some replacement'));
+            subjectVariable.setValue(valueFactory.createString('some subject'));
 
-            doCall = function () {
-                resultValue = preg_replace(
-                    patternReference,
-                    replacementReference,
-                    subjectReference
-                );
+            doCall = async function () {
+                resultValue = await preg_replace(
+                    patternVariable,
+                    replacementVariable,
+                    subjectVariable
+                ).toPromise();
             };
         });
 
-        it('should raise a warning', function () {
-            doCall();
+        it('should raise a warning', async function () {
+            await doCall();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
-                'Warning',
+                PHPError.E_WARNING,
                 'preg_replace(): Compilation failed [Uniter]: only basic-level preg support is enabled, ' +
                 '"/? invalid regex/" may be a valid but unsupported PCRE regex. ' +
-                'JS RegExp error: SyntaxError: Invalid regular expression: /? invalid regex/: Nothing to repeat'
+                'PCREmu error: Error: Parser.parse() :: No match'
             );
         });
 
-        it('should return null', function () {
-            doCall();
+        it('should return null', async function () {
+            await doCall();
 
             expect(resultValue.getType()).to.equal('null');
         });
@@ -208,40 +157,40 @@ describe('PHP "preg_replace" basic-level builtin function', function () {
 
     describe('when no ending delimiter is given', function () {
         var doCall,
-            patternReference,
-            replacementReference,
+            patternVariable,
+            replacementVariable,
             resultValue,
-            subjectReference;
+            subjectVariable;
 
         beforeEach(function () {
-            patternReference = sinon.createStubInstance(Variable);
-            replacementReference = sinon.createStubInstance(Variable);
-            subjectReference = sinon.createStubInstance(Variable);
-            patternReference.getValue.returns(valueFactory.createString('@invalid preg pattern'));
-            replacementReference.getValue.returns(valueFactory.createString('some replacement'));
-            subjectReference.getValue.returns(valueFactory.createString('some subject'));
+            patternVariable = variableFactory.createVariable('myPattern');
+            replacementVariable = variableFactory.createVariable('myReplacement');
+            subjectVariable = variableFactory.createVariable('mySubject');
+            patternVariable.setValue(valueFactory.createString('@invalid preg pattern'));
+            replacementVariable.setValue(valueFactory.createString('some replacement'));
+            subjectVariable.setValue(valueFactory.createString('some subject'));
 
-            doCall = function () {
-                resultValue = preg_replace(
-                    patternReference,
-                    replacementReference,
-                    subjectReference
-                );
+            doCall = async function () {
+                resultValue = await preg_replace(
+                    patternVariable,
+                    replacementVariable,
+                    subjectVariable
+                ).toPromise();
             };
         });
 
-        it('should raise a warning', function () {
-            doCall();
+        it('should raise a warning', async function () {
+            await doCall();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
-                'Warning',
+                PHPError.E_WARNING,
                 'preg_replace(): No ending delimiter \'@\' found'
             );
         });
 
-        it('should return null', function () {
-            doCall();
+        it('should return null', async function () {
+            await doCall();
 
             expect(resultValue.getType()).to.equal('null');
         });
@@ -249,40 +198,40 @@ describe('PHP "preg_replace" basic-level builtin function', function () {
 
     describe('when an unknown modifier is given', function () {
         var doCall,
-            patternReference,
-            replacementReference,
+            patternVariable,
+            replacementVariable,
             resultValue,
-            subjectReference;
+            subjectVariable;
 
         beforeEach(function () {
-            patternReference = sinon.createStubInstance(Variable);
-            replacementReference = sinon.createStubInstance(Variable);
-            subjectReference = sinon.createStubInstance(Variable);
-            patternReference.getValue.returns(valueFactory.createString('/invalid preg modifier/a'));
-            replacementReference.getValue.returns(valueFactory.createString('some replacement'));
-            subjectReference.getValue.returns(valueFactory.createString('some subject'));
+            patternVariable = variableFactory.createVariable('myPattern');
+            replacementVariable = variableFactory.createVariable('myReplacement');
+            subjectVariable = variableFactory.createVariable('mySubject');
+            patternVariable.setValue(valueFactory.createString('/invalid preg modifier/a'));
+            replacementVariable.setValue(valueFactory.createString('some replacement'));
+            subjectVariable.setValue(valueFactory.createString('some subject'));
 
-            doCall = function () {
-                resultValue = preg_replace(
-                    patternReference,
-                    replacementReference,
-                    subjectReference
-                );
+            doCall = async function () {
+                resultValue = await preg_replace(
+                    patternVariable,
+                    replacementVariable,
+                    subjectVariable
+                ).toPromise();
             };
         });
 
-        it('should raise a warning', function () {
-            doCall();
+        it('should raise a warning', async function () {
+            await doCall();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
-                'Warning',
+                PHPError.E_WARNING,
                 'preg_replace(): Unknown modifier \'a\''
             );
         });
 
-        it('should return null', function () {
-            doCall();
+        it('should return null', async function () {
+            await doCall();
 
             expect(resultValue.getType()).to.equal('null');
         });
@@ -290,40 +239,40 @@ describe('PHP "preg_replace" basic-level builtin function', function () {
 
     describe('when the invalid, implicit global match modifier "g" is given', function () {
         var doCall,
-            patternReference,
-            replacementReference,
+            patternVariable,
+            replacementVariable,
             resultValue,
-            subjectReference;
+            subjectVariable;
 
         beforeEach(function () {
-            patternReference = sinon.createStubInstance(Variable);
-            replacementReference = sinon.createStubInstance(Variable);
-            subjectReference = sinon.createStubInstance(Variable);
-            patternReference.getValue.returns(valueFactory.createString('/invalid preg modifier/g'));
-            replacementReference.getValue.returns(valueFactory.createString('some replacement'));
-            subjectReference.getValue.returns(valueFactory.createString('some subject'));
+            patternVariable = variableFactory.createVariable('myPattern');
+            replacementVariable = variableFactory.createVariable('myReplacement');
+            subjectVariable = variableFactory.createVariable('mySubject');
+            patternVariable.setValue(valueFactory.createString('/invalid preg modifier/g'));
+            replacementVariable.setValue(valueFactory.createString('some replacement'));
+            subjectVariable.setValue(valueFactory.createString('some subject'));
 
-            doCall = function () {
-                resultValue = preg_replace(
-                    patternReference,
-                    replacementReference,
-                    subjectReference
-                );
+            doCall = async function () {
+                resultValue = await preg_replace(
+                    patternVariable,
+                    replacementVariable,
+                    subjectVariable
+                ).toPromise();
             };
         });
 
-        it('should raise a warning', function () {
-            doCall();
+        it('should raise a warning', async function () {
+            await doCall();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
-                'Warning',
+                PHPError.E_WARNING,
                 'preg_replace(): Unknown modifier \'g\''
             );
         });
 
-        it('should return null', function () {
-            doCall();
+        it('should return null', async function () {
+            await doCall();
 
             expect(resultValue.getType()).to.equal('null');
         });

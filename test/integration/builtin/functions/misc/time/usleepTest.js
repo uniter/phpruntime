@@ -31,16 +31,15 @@ log('end');
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.asyncTranspile(null, php, {
-                phpCore: {
-                    performance: {
-                        getTimeInMicroseconds: function () {
-                            return Date.now() * 1000;
-                        }
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            environment = tools.createAsyncEnvironment({
+                performance: {
+                    getTimeInMicroseconds: function () {
+                        return Date.now() * 1000;
                     }
                 }
             }),
-            engine = module(),
+            engine = module({}, environment),
             log = [];
         this.timeout(5000);
 
@@ -53,15 +52,17 @@ EOS
             var result = resultValue.getNative();
 
             // Ensure that execution was successfully paused and control
-            // returned to the caller (ie. ensure we didn't fall into the busy-wait loop)
+            // returned to the caller (ie. ensure we didn't fall into the busy-wait loop).
             expect(log).to.deep.equal([
                 '[before execute]',
-                '[log]: start',
                 '[after execute]',
+                // Due to the async-opcode behaviour enforced by PHPTest,
+                // the promise executor will return before the program reaches the first log() call.
+                '[log]: start',
                 '[log]: end'
             ]);
             // Ensure we slept for at least the 1500ms delay (will almost certainly
-            // be greater due to other statements taking a non-negligible amount of time)
+            // be greater due to other statements taking a non-negligible amount of time).
             expect(result.after - result.before).to.be.at.least(1.5);
             done();
         }).catch(done);
@@ -85,16 +86,15 @@ log('end');
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php, {
-                phpCore: {
-                    performance: {
-                        getTimeInMicroseconds: function () {
-                            return Date.now() * 1000;
-                        }
+            module = tools.syncTranspile('/path/to/my_module.php', php),
+            environment = tools.createSyncEnvironment({
+                performance: {
+                    getTimeInMicroseconds: function () {
+                        return Date.now() * 1000;
                     }
                 }
             }),
-            engine = module(),
+            engine = module({}, environment),
             log = [],
             result;
 
@@ -104,16 +104,18 @@ EOS
 
         log.push('[before execute]');
         result = engine.execute().getNative();
+        log.push('[after execute]');
 
         // Ensure that execution was successfully paused and control
-        // returned to the caller (ie. ensure we didn't fall into the busy-wait loop)
+        // returned to the caller (ie. ensure we didn't fall into the busy-wait loop).
         expect(log).to.deep.equal([
             '[before execute]',
             '[log]: start',
-            '[log]: end'
+            '[log]: end',
+            '[after execute]'
         ]);
         // Ensure we slept for at least the 1500ms delay (will almost certainly
-        // be greater due to other statements taking a non-negligible amount of time)
+        // be greater due to other statements taking a non-negligible amount of time).
         expect(result.after - result.before).to.be.at.least(1.5);
     });
 });

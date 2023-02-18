@@ -14,27 +14,26 @@ var expect = require('chai').expect,
     tools = require('../../../../tools');
 
 describe('PHP "get_html_translation_table" builtin function integration', function () {
-    it('should be able to fetch the various tables', function () {
+    it('should be able to fetch the various tables', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 $result = [];
 
-$result[] = get_html_translation_table(); // Should default to htmlspecialchars, ENT_COMPAT | ENT_HTML401, UTF-8
+$result[] = get_html_translation_table(); // Should default to htmlspecialchars, ENT_COMPAT | ENT_HTML401, UTF-8.
 
-$result[] = get_html_translation_table(HTML_SPECIALCHARS, ENT_COMPAT | ENT_HTML401, 'UTF-8'); // Explicit version
+$result[] = get_html_translation_table(HTML_SPECIALCHARS, ENT_COMPAT | ENT_HTML401, 'UTF-8'); // Explicit version.
 
 $result[] = get_html_translation_table(HTML_ENTITIES);
 
 return $result;
 EOS
 */;}), //jshint ignore:line
-            syncRuntime = tools.createSyncRuntime(),
-            module = tools.transpile(syncRuntime, null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            // Defaults
+        expect((await engine.execute()).getNative()).to.deep.equal([
+            // Defaults.
             {
                 '"': '&quot;',
                 '&': '&amp;',
@@ -42,7 +41,7 @@ EOS
                 '>': '&gt;'
             },
 
-            // Explicitly requesting the defaults
+            // Explicitly requesting the defaults.
             {
                 '"': '&quot;',
                 '&': '&amp;',
@@ -50,14 +49,14 @@ EOS
                 '>': '&gt;'
             },
 
-            // Fetching the htmlentities(...) table
+            // Fetching the htmlentities(...) table.
             {
                 '"': '&quot;',
                 '&': '&amp;',
                 '<': '&lt;',
                 '>': '&gt;',
 
-                '£': '&pound;' // TODO: Add remaining entities via addons
+                '£': '&pound;' // TODO: Add remaining entities via addons.
             }
         ]);
     });

@@ -14,28 +14,47 @@ var expect = require('chai').expect,
     tools = require('../../../tools');
 
 describe('PHP "array_map" builtin function integration', function () {
-    it('should be able to map one array to another', function () {
+    it('should be able to map one array to another', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 $result = [];
 
-$inputArray = [21, 27, 101];
-$result[] = array_map(function ($item) {
-    return $item * 2;
-}, $inputArray);
+$indexedArray = [21, 27, 101];
+$result['with a closure'] = array_map(
+    function ($item) {
+        return $item * 2;
+    },
+    $indexedArray
+);
+$result['with a normal function'] = array_map('strtoupper', ['first', 'SEcond', 'thIRD']);
 
-$result[] = array_map('strtoupper', ['first', 'SEcond', 'thIRD']);
+$associativeArray = ['first' => 'one', 'second' => 'two', 'third' => 'three'];
+$result['associative array'] = array_map(
+    function ($item) {
+        return $item . ' [mapped]';
+    },
+    $associativeArray
+);
 
 return $result;
 EOS
 */;}), //jshint ignore:line
-            module = tools.syncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            [42, 54, 202], // Using a closure as the callback
-            ['FIRST', 'SECOND', 'THIRD'] // Using a normal function as the callback
-        ]);
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            // Using a closure as the callback.
+            'with a closure': [42, 54, 202],
+
+            // Using a normal function as the callback.
+            'with a normal function': ['FIRST', 'SECOND', 'THIRD'],
+
+            'associative array': {
+                'first': 'one [mapped]',
+                'second': 'two [mapped]',
+                'third': 'three [mapped]'
+            }
+        });
     });
 });

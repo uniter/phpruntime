@@ -21,7 +21,7 @@ var _ = require('microdash'),
  * @constructor
  */
 function FailureException() {
-    Exception.call(this, 'Failed');
+    Exception.call(this, 'PCRE match failed');
 }
 
 util.inherits(FailureException, Exception);

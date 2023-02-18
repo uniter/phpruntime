@@ -11,32 +11,32 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    phpToAST = require('phptoast'),
-    phpToJS = require('phptojs'),
-    syncPHPRuntime = require('../../../../sync');
+    tools = require('../../tools');
 
 describe('PHP array constants integration', function () {
-    it('should support all the array constants', function () {
+    it('should support all the array constants', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 return [
-    COUNT_NORMAL,
-    COUNT_RECURSIVE
+    'COUNT_NORMAL' => COUNT_NORMAL,
+    'COUNT_RECURSIVE' => COUNT_RECURSIVE,
+
+    'SORT_REGULAR' => SORT_REGULAR,
+    'SORT_STRING' => SORT_STRING,
+    'SORT_NATURAL' => SORT_NATURAL
 ];
 EOS
 */;}), //jshint ignore:line
-            js = phpToJS.transpile(phpToAST.create().parse(php)),
-            module = new Function(
-                'require',
-                'return ' + js
-            )(function () {
-                return syncPHPRuntime;
-            }),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect(engine.execute().getNative()).to.deep.equal([
-            0, // COUNT_NORMAL
-            1  // COUNT_RECURSIVE
-        ]);
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            'COUNT_NORMAL': 0,
+            'COUNT_RECURSIVE': 1,
+
+            'SORT_REGULAR': 0,
+            'SORT_STRING': 2,
+            'SORT_NATURAL': 6
+        });
     });
 });

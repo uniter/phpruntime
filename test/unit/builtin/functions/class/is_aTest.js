@@ -9,45 +9,59 @@
 
 'use strict';
 
-var expect = require('chai').expect,
-    classExtension = require('../../../../../src/builtin/functions/class'),
+var classFunctionFactory = require('../../../../../src/builtin/functions/class'),
+    expect = require('chai').expect,
     sinon = require('sinon'),
     tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    Class = require('phpcore/src/Class').sync(),
-    ClassAutoloader = require('phpcore/src/ClassAutoloader').sync(),
-    Namespace = require('phpcore/src/Namespace').sync(),
-    Variable = require('phpcore/src/Variable').sync();
+    Class = require('phpcore/src/Class').sync();
 
 describe('PHP "is_a" builtin function', function () {
-    var allowStringReference,
+    var allowStringVariable,
+        callFactory,
         callStack,
-        classAutoloader,
-        classNameReference,
+        classNameVariable,
         futureFactory,
         globalNamespace,
         is_a,
-        objectReference,
+        objectOrClassVariable,
         state,
-        valueFactory;
+        valueFactory,
+        variableFactory;
 
     beforeEach(function () {
-        allowStringReference = sinon.createStubInstance(Variable);
         callStack = sinon.createStubInstance(CallStack);
-        classNameReference = sinon.createStubInstance(Variable);
-        classAutoloader = sinon.createStubInstance(ClassAutoloader);
-        globalNamespace = sinon.createStubInstance(Namespace);
-        objectReference = sinon.createStubInstance(Variable);
-        state = tools.createIsolatedState();
+        state = tools.createIsolatedState('async', {
+            'call_stack': callStack
+        }, {}, [
+            {
+                functionGroups: [
+                    classFunctionFactory
+                ]
+            }
+        ]);
+        callFactory = state.getCallFactory();
         futureFactory = state.getFutureFactory();
+        globalNamespace = state.getGlobalNamespace();
         valueFactory = state.getValueFactory();
+        variableFactory = state.getService('variable_factory');
 
-        is_a = classExtension({
-            callStack: callStack,
-            classAutoloader: classAutoloader,
-            globalNamespace: globalNamespace,
-            valueFactory: valueFactory
-        }).is_a;
+        // We need a call on the stack for any isolated scope evaluation.
+        callStack.getCurrent.returns(
+            callFactory.create(
+                state.getGlobalScope(),
+                state.getService('global_namespace_scope')
+            )
+        );
+
+        // TODO: Get rid of this partial stub, instead allow easier injection of stub Class instances.
+        sinon.stub(globalNamespace, 'getClass').callThrough();
+
+        is_a = state.getFunction('is_a');
+
+        allowStringVariable = variableFactory.createVariable('myAllowString');
+        classNameVariable = variableFactory.createVariable('myClassName');
+        objectOrClassVariable = variableFactory.createVariable('myObjectOrClass');
     });
 
     describe('when an object is given', function () {
@@ -55,19 +69,19 @@ describe('PHP "is_a" builtin function', function () {
             objectValue;
 
         beforeEach(function () {
-            // The class of the object (1st arg)
+            // The class of the object (1st arg).
             classObject = sinon.createStubInstance(Class);
             classObject.getName.returns('My\\Namespaced\\MyClass');
             classObject.is.withArgs('My\\Namespaced\\MyClass').returns(true);
             objectValue = valueFactory.createObject({}, classObject);
-            objectReference.getValue.returns(objectValue);
+            objectOrClassVariable.setValue(objectValue);
 
-            // The class name given (2nd arg)
-            classNameReference.getValue.returns(valueFactory.createString('My\\Namespaced\\MyClass'));
+            // The class name given (2nd arg).
+            classNameVariable.setValue(valueFactory.createString('My\\Namespaced\\MyClass'));
         });
 
         it('should return true when it or an ancestor class implements the given class', async function () {
-            var resultValue = await is_a(objectReference, classNameReference).toPromise();
+            var resultValue = await is_a(objectOrClassVariable, classNameVariable).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.true;
@@ -77,14 +91,14 @@ describe('PHP "is_a" builtin function', function () {
             var resultValue;
             classObject.is.withArgs('My\\Namespaced\\MyClass').returns(false);
 
-            resultValue = await is_a(objectReference, classNameReference).toPromise();
+            resultValue = await is_a(objectOrClassVariable, classNameVariable).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;
         });
 
         it('should not raise any error/warning/notice', async function () {
-            await is_a(objectReference, classNameReference).toPromise();
+            await is_a(objectOrClassVariable, classNameVariable).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
@@ -94,7 +108,7 @@ describe('PHP "is_a" builtin function', function () {
         var classObject;
 
         beforeEach(function () {
-            allowStringReference.getNative.returns(true);
+            allowStringVariable.setValue(valueFactory.createBoolean(true));
             classObject = sinon.createStubInstance(Class);
             classObject.getName.returns('My\\Namespaced\\MyClass');
             classObject.is.withArgs('My\\Namespaced\\MyClass').returns(true);
@@ -102,15 +116,15 @@ describe('PHP "is_a" builtin function', function () {
                 .withArgs('My\\Namespaced\\MyClass')
                 .returns(futureFactory.createPresent(classObject));
 
-            // A class name rather than object as "object" (1st arg)
-            objectReference.getValue.returns(valueFactory.createString('My\\Namespaced\\MyClass'));
+            // A class name rather than object as "object" (1st arg).
+            objectOrClassVariable.setValue(valueFactory.createString('My\\Namespaced\\MyClass'));
 
-            // The class name given (2nd arg)
-            classNameReference.getValue.returns(valueFactory.createString('My\\Namespaced\\MyClass'));
+            // The class name given (2nd arg).
+            classNameVariable.setValue(valueFactory.createString('My\\Namespaced\\MyClass'));
         });
 
         it('should return true when it or an ancestor class implements the given class', async function () {
-            var resultValue = await is_a(objectReference, classNameReference, allowStringReference).toPromise();
+            var resultValue = await is_a(objectOrClassVariable, classNameVariable, allowStringVariable).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.true;
@@ -120,14 +134,14 @@ describe('PHP "is_a" builtin function', function () {
             var resultValue;
             classObject.is.withArgs('My\\Namespaced\\MyClass').returns(false);
 
-            resultValue = await is_a(objectReference, classNameReference).toPromise();
+            resultValue = await is_a(objectOrClassVariable, classNameVariable).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;
         });
 
         it('should not raise any error/warning/notice', async function () {
-            await is_a(objectReference, classNameReference, allowStringReference).toPromise();
+            await is_a(objectOrClassVariable, classNameVariable, allowStringVariable).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
@@ -137,7 +151,7 @@ describe('PHP "is_a" builtin function', function () {
         var classObject;
 
         beforeEach(function () {
-            allowStringReference.getNative.returns(false);
+            allowStringVariable.setValue(valueFactory.createBoolean(false));
             classObject = sinon.createStubInstance(Class);
             classObject.getName.returns('My\\Namespaced\\MyClass');
             classObject.is.withArgs('My\\Namespaced\\MyClass').returns(true);
@@ -145,22 +159,22 @@ describe('PHP "is_a" builtin function', function () {
                 .withArgs('My\\Namespaced\\MyClass')
                 .returns(futureFactory.createPresent(classObject));
 
-            // A class name rather than object as "object" (1st arg)
-            objectReference.getValue.returns(valueFactory.createString('My\\Namespaced\\MyClass'));
+            // A class name rather than object as "object" (1st arg).
+            objectOrClassVariable.setValue(valueFactory.createString('My\\Namespaced\\MyClass'));
 
-            // The class name given (2nd arg)
-            classNameReference.getValue.returns(valueFactory.createString('My\\Namespaced\\MyClass'));
+            // The class name given (2nd arg).
+            classNameVariable.setValue(valueFactory.createString('My\\Namespaced\\MyClass'));
         });
 
         it('should return false, even when it implements the given class exactly', async function () {
-            var resultValue = await is_a(objectReference, classNameReference, allowStringReference).toPromise();
+            var resultValue = await is_a(objectOrClassVariable, classNameVariable, allowStringVariable).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;
         });
 
         it('should not raise any error/warning/notice', async function () {
-            await is_a(objectReference, classNameReference, allowStringReference).toPromise();
+            await is_a(objectOrClassVariable, classNameVariable, allowStringVariable).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
@@ -170,28 +184,28 @@ describe('PHP "is_a" builtin function', function () {
         var classObject;
 
         beforeEach(function () {
-            allowStringReference.getNative.returns(false);
+            allowStringVariable.setValue(valueFactory.createBoolean(false));
             classObject = sinon.createStubInstance(Class);
             classObject.getName.returns('My\\Namespaced\\MyClass');
             classObject.is.withArgs('My\\Namespaced\\MyClass').returns(true);
             globalNamespace.getClass.withArgs('My\\Namespaced\\MyClass').returns(classObject);
 
-            // A number rather than object as "object" (1st arg)
-            objectReference.getValue.returns(valueFactory.createInteger(1234));
+            // A number rather than object as "object" (1st arg).
+            objectOrClassVariable.setValue(valueFactory.createInteger(1234));
 
-            // The class name given (2nd arg)
-            classNameReference.getValue.returns(valueFactory.createString('My\\Namespaced\\MyClass'));
+            // The class name given (2nd arg).
+            classNameVariable.setValue(valueFactory.createString('My\\Namespaced\\MyClass'));
         });
 
         it('should return false', async function () {
-            var resultValue = await is_a(objectReference, classNameReference, allowStringReference).toPromise();
+            var resultValue = await is_a(objectOrClassVariable, classNameVariable, allowStringVariable).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;
         });
 
         it('should not raise any error/warning/notice even though the value is invalid', async function () {
-            await is_a(objectReference, classNameReference, allowStringReference).toPromise();
+            await is_a(objectOrClassVariable, classNameVariable, allowStringVariable).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
