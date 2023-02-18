@@ -13,6 +13,7 @@
 var _ = require('microdash'),
     pcremu = require('pcremu').default,
     phpCommon = require('phpcommon'),
+    replaceAll = require('core-js-pure/actual/string/replace-all'),
     FailureException = require('./Exception/FailureException'),
     KeyValuePair = require('phpcore/src/KeyValuePair'),
     PHPError = phpCommon.PHPError;
@@ -77,7 +78,7 @@ module.exports = function (internals) {
         }
 
         // Unescape any escaped occurrences of the delimiter inside the pattern.
-        pattern = pattern.replaceAll('\\' + delimiter, delimiter);
+        pattern = replaceAll(pattern, '\\' + delimiter, delimiter);
 
         flags.anchored = modifiers.indexOf('A') > -1;
         flags.caseless = modifiers.indexOf('i') > -1;
