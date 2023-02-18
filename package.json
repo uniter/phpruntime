@@ -23,10 +23,10 @@
     "test": "npm run jshint && npm run mocha"
   },
   "dependencies": {
-    "core-js-pure": "^3.27.2",
+    "core-js-pure": "^3.28.0",
     "microdash": "^1.4.2",
-    "pcremu": "^0.0.3",
-    "phpcommon": "^2.0.1",
+    "pcremu": "^0.0.4",
+    "phpcommon": "^2.0.2",
     "phpcore": "^8.0.0"
   },
   "devDependencies": {
