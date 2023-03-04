@@ -80,7 +80,7 @@ module.exports = function (internals) {
          *
          * @see {@link https://secure.php.net/manual/en/function.strlen.php}
          */
-        'strlen': internals.typeFunction('string $string : int', function (stringValue) {
+        'strlen': internals.typeFunction('string $str : int', function (stringValue) {
             return valueFactory.createInteger(stringValue.getLength());
         }),
 
