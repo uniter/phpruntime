@@ -20,7 +20,5 @@ module.exports = function () {
 
     }
 
-    return {
-        'Serializable': Serializable
-    };
+    return Serializable;
 };

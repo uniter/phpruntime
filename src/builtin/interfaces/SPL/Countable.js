@@ -14,7 +14,5 @@ module.exports = function () {
 
     }
 
-    return {
-        'Countable': Countable
-    };
+    return Countable;
 };
