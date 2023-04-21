@@ -15,8 +15,28 @@ var _ = require('microdash'),
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
+        flow = internals.flow,
+        futureFactory = internals.futureFactory,
         globalNamespace = internals.globalNamespace,
-        valueFactory = internals.valueFactory;
+        referenceFactory = internals.referenceFactory,
+        valueFactory = internals.valueFactory,
+
+        /**
+         * Creates a new CallbackValue.
+         *
+         * @param {Function} referenceCallback
+         * @param {Function} valueCallback
+         * @returns {CallbackValue}
+         */
+        createCallbackValue = function (referenceCallback, valueCallback) {
+            return new CallbackValue(
+                referenceFactory,
+                futureFactory,
+                flow,
+                referenceCallback,
+                valueCallback
+            );
+        };
 
     return {
         /**
@@ -35,7 +55,7 @@ module.exports = function (internals) {
                 argumentValues = _.map(
                     [].slice.call(arguments, 1),
                     function (argumentReference, argumentIndex) {
-                        return new CallbackValue(
+                        return createCallbackValue(
                             function () {
                                 expectedReferenceArgumentIndex = argumentIndex;
                                 throw expectedReferenceError;

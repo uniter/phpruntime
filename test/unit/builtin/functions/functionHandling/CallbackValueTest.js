@@ -11,6 +11,7 @@
 
 var expect = require('chai').expect,
     sinon = require('sinon'),
+    tools = require('../../../tools'),
     CallbackValue = require('../../../../../src/builtin/functions/functionHandling/CallbackValue'),
     Reference = require('phpcore/src/Reference/Reference'),
     Value = require('phpcore/src/Value').sync();
@@ -18,13 +19,21 @@ var expect = require('chai').expect,
 describe('CallbackValue', function () {
     var callbackValue,
         referenceCallback,
+        state,
         valueCallback;
 
     beforeEach(function () {
+        state = tools.createIsolatedState('async');
         referenceCallback = sinon.stub();
         valueCallback = sinon.stub();
 
-        callbackValue = new CallbackValue(referenceCallback, valueCallback);
+        callbackValue = new CallbackValue(
+            state.getReferenceFactory(),
+            state.getFutureFactory(),
+            state.getFlow(),
+            referenceCallback,
+            valueCallback
+        );
     });
 
     describe('getNative()', function () {

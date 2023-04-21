@@ -17,11 +17,22 @@ var _ = require('microdash'),
  * Represents a Value object whose reference or value
  * are fetched with a callback function.
  *
+ * @param {ReferenceFactory} referenceFactory
+ * @param {FutureFactory} futureFactory
+ * @param {Flow} flow
  * @param {Function} referenceCallback
  * @param {Function} valueCallback
  * @constructor
  */
-function CallbackValue(referenceCallback, valueCallback) {
+function CallbackValue(
+    referenceFactory,
+    futureFactory,
+    flow,
+    referenceCallback,
+    valueCallback
+) {
+    Reference.call(this, referenceFactory, futureFactory, flow);
+
     /**
      * @type {Function}
      */
