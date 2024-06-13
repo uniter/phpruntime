@@ -13,7 +13,7 @@ var expect = require('chai').expect,
     sinon = require('sinon'),
     functionHandlingFunctionFactory = require('../../../../../src/builtin/functions/functionHandling'),
     tools = require('../../../tools'),
-    CallbackValue = require('../../../../../src/builtin/functions/functionHandling/CallbackValue'),
+    AccessorReference = require('phpcore/src/Reference/AccessorReference'),
     CallStack = require('phpcore/src/CallStack'),
     ObjectValue = require('phpcore/src/Value/Object').sync(),
     PHPError = require('phpcommon').PHPError;
@@ -74,7 +74,7 @@ describe('PHP "call_user_func" builtin function', function () {
         expect(callbackValue.call).to.have.been.calledOnce;
     });
 
-    it('should call the function with the resolved arguments passed as CallbackValues', async function () {
+    it('should call the function with the resolved arguments passed as AccessorReferences', async function () {
         var argumentVariable1 = variableFactory.createVariable('myFirstArgument'),
             argumentValue1 = valueFactory.createString('my first arg'),
             argumentVariable2 = variableFactory.createVariable('mySecondArgument'),
@@ -84,9 +84,9 @@ describe('PHP "call_user_func" builtin function', function () {
 
         await call_user_func(callbackVariable, argumentVariable1, argumentVariable2).toPromise();
 
-        expect(callbackValue.call.args[0][0][0]).to.be.an.instanceof(CallbackValue);
+        expect(callbackValue.call.args[0][0][0]).to.be.an.instanceof(AccessorReference);
         expect(callbackValue.call.args[0][0][0].getValue()).to.equal(argumentValue1);
-        expect(callbackValue.call.args[0][0][1]).to.be.an.instanceof(CallbackValue);
+        expect(callbackValue.call.args[0][0][1]).to.be.an.instanceof(AccessorReference);
         expect(callbackValue.call.args[0][0][1].getValue()).to.equal(argumentValue2);
     });
 

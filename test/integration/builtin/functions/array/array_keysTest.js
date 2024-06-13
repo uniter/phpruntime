@@ -28,14 +28,14 @@ $myArray = [
 return array_keys($myArray);
 EOS
 */;}), //jshint ignore:line
-            module = tools.asyncTranspile(null, php),
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
         expect((await engine.execute()).getNative()).to.deep.equal([
             0,
             'my_element',
             'my_null_element',
-            1 // Even when there are some assoc. elements in between, indexing is separate
+            1 // Even when there are some assoc. elements in between, indexing is separate.
         ]);
     });
 });

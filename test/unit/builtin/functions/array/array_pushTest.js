@@ -12,12 +12,10 @@
 var expect = require('chai').expect,
     arrayConstantFactory = require('../../../../../src/builtin/constants/array'),
     arrayFunctionFactory = require('../../../../../src/builtin/functions/array'),
-    phpCommon = require('phpcommon'),
     sinon = require('sinon'),
     tools = require('../../../tools'),
     CallStack = require('phpcore/src/CallStack'),
-    KeyValuePair = require('phpcore/src/KeyValuePair'),
-    PHPError = phpCommon.PHPError;
+    KeyValuePair = require('phpcore/src/KeyValuePair');
 
 describe('PHP "array_push" builtin function', function () {
     var array_push,
@@ -207,24 +205,6 @@ describe('PHP "array_push" builtin function', function () {
 
             expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(1); // No original elements, plus the pushed one.
-        });
-    });
-
-    describe('when no arguments are provided', function () {
-        it('should raise a warning', async function () {
-            await array_push().toPromise();
-
-            expect(callStack.raiseError).to.have.been.calledOnce;
-            expect(callStack.raiseError).to.have.been.calledWith(
-                PHPError.E_WARNING,
-                'array_push() expects at least 2 parameters, 0 given'
-            );
-        });
-
-        it('should return NULL', async function () {
-            var result = await array_push().toPromise();
-
-            expect(result.getType()).to.equal('null');
         });
     });
 });

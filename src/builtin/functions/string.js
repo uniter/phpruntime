@@ -12,6 +12,7 @@
 var _ = require('microdash'),
     phpCommon = require('phpcommon'),
     MissingFormatArgumentException = require('../bindings/string/Exception/MissingFormatArgumentException'),
+    ARGUMENTS_MISSING = 'core.arguments_missing',
     PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {
@@ -88,27 +89,35 @@ module.exports = function (internals) {
          * Builds and returns a formatted string.
          *
          * @see {@link https://secure.php.net/manual/en/function.sprintf.php}
-         *
-         * @param {Reference|Value|Variable} templateReference  The template format string
-         * @returns {StringValue|BooleanValue} The built string on success, or false on failure
          */
-        'sprintf': function (templateReference) {
-            var args = [].slice.call(arguments, 1);
+        'sprintf': internals.typeFunction(
+            'string $format, mixed ...$values : string',
+            function (formatValue) {
+                var values = [].slice.call(arguments, 1);
 
-            try {
-                return valueFactory.createString(
-                    formatter.format(templateReference.getNative(), args)
-                );
-            } catch (error) {
-                if (error instanceof MissingFormatArgumentException) {
-                    callStack.raiseError(PHPError.E_WARNING, 'sprintf(): Too few arguments');
+                try {
+                    return valueFactory.createString(
+                        formatter.format(formatValue.getNative(), values)
+                    );
+                } catch (error) {
+                    if (error instanceof MissingFormatArgumentException) {
+                        callStack.raiseTranslatedError(
+                            PHPError.E_ERROR,
+                            ARGUMENTS_MISSING,
+                            {
+                                // Indices given in the error message must take the pattern argument itself
+                                // into account, so we must add one to each.
+                                required: error.getParameterCount() + 1,
+                                given: error.getArgumentPosition() + 1
+                            },
+                            'ArgumentCountError'
+                        );
+                    }
 
-                    return valueFactory.createBoolean(false);
+                    throw error;
                 }
-
-                throw error;
             }
-        },
+        ),
 
         /**
          * Replaces all occurrences of the search string in the subject(s) with the replacement string.

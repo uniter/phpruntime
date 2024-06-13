@@ -25,10 +25,11 @@ var _ = require('microdash'),
         'u': 'unsigned-decimal',
         'x': 'lower-hexadecimal',
         'X': 'upper-hexadecimal'
-    };
+    },
+    DirectiveSet = require('./DirectiveSet');
 
 /**
- * Parses strings that use the format supported by the printf(...) family of functions
+ * Parses strings that use the format supported by the `printf(...)` family of functions.
  *
  * @constructor
  */
@@ -37,10 +38,10 @@ function FormatParser() {
 
 _.extend(FormatParser.prototype, {
     /**
-     * Parses the provided format string to a list of directives
+     * Parses the provided format string to a list of directives.
      *
      * @param {string} formatString
-     * @returns {object[]}
+     * @returns {DirectiveSet}
      */
     parse: function (formatString) {
         var alignmentSpecifier,
@@ -51,6 +52,7 @@ _.extend(FormatParser.prototype, {
             nextArgumentPosition = 0,
             regex = /%(?:(\d+)\$)?(\+)?(?:([ 0])|'(.))?(-)?(\d+)?(?:\.(\D)?(\d+))?([%bcdeEfFgGosuxX])/g,
             paddingCharacter,
+            parameterCount = 0,
             precisionSpecifier,
             showPositiveNumberSigns,
             typeSpecifier,
@@ -119,6 +121,10 @@ _.extend(FormatParser.prototype, {
 
             if (explicitArgumentPosition === null) {
                 nextArgumentPosition++;
+
+                parameterCount = Math.max(parameterCount, nextArgumentPosition);
+            } else {
+                parameterCount = Math.max(parameterCount, explicitArgumentPosition + 1);
             }
 
             lastMatchEnd = match.index + match[0].length;
@@ -133,7 +139,7 @@ _.extend(FormatParser.prototype, {
             });
         }
 
-        return directives;
+        return new DirectiveSet(directives, parameterCount);
     }
 });
 

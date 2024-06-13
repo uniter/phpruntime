@@ -11,7 +11,9 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    tools = require('../../../tools');
+    phpCommon = require('phpcommon'),
+    tools = require('../../../tools'),
+    PHPFatalError = phpCommon.PHPFatalError;
 
 describe('PHP "implode" builtin function integration', function () {
     it('should be able to join strings together', async function () {
@@ -22,7 +24,6 @@ $result = [];
 
 $myArray = ['first', 'second', 'third'];
 $result['with array of strings and delimiter'] = implode('@', $myArray);
-$result['with array of strings, delimiter and args in reverse order'] = implode($myArray, '@');
 
 class MyClass {
     public function __toString() {
@@ -42,10 +43,36 @@ EOS
 
         expect((await engine.execute()).getNative()).to.deep.equal({
             'with array of strings and delimiter': 'first@second@third',
-            // Note that this legacy signature was deprecated as of PHP v7.4.0 and removed as of PHP v8.0.0.
-            'with array of strings, delimiter and args in reverse order': 'first@second@third',
             // Note that __toString() will be called for this one.
             'with array of string, stringifiable object and delimiter': 'my string -OBJ- {my object}'
         });
+    });
+
+    it('should raise a TypeError when the deprecated & removed legacy signature is used', async function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+
+$result = [];
+
+$myArray = ['first', 'second', 'third'];
+
+// Note that this legacy signature was deprecated as of PHP v7.4.0 and removed as of PHP v8.0.0.
+implode($myArray, '@');
+
+EOS
+*/;}), //jshint ignore:line
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module();
+
+        await expect(engine.execute()).to.eventually.be.rejectedWith(
+            PHPFatalError,
+            /*
+             * Note that technically this should be
+             * "Uncaught TypeError: implode(): Argument #2 ($array) must be of type ?array, string given"
+             * to match the reference implementation, for some reason.
+             */
+            'PHP Fatal error: Uncaught TypeError: implode(): Argument #1 ($separator) must be of type string, ' +
+            'array given in /path/to/my_module.php:8'
+        );
     });
 });

@@ -56,6 +56,14 @@ describe('PHP "sprintf" builtin function', function () {
         valueFactory = state.getValueFactory();
         variableFactory = state.getService('variable_factory');
 
+        callStack.raiseTranslatedError
+            .withArgs(PHPError.E_ERROR)
+            .callsFake(function (level, translationKey, placeholderVariables) {
+                throw new Error(
+                    'Fake PHP ' + level + ' for #' + translationKey + ' with ' + JSON.stringify(placeholderVariables || {})
+                );
+            });
+
         sprintf = state.getFunction('sprintf');
 
         templateVariable = variableFactory.createVariable('myTemplate');
@@ -63,11 +71,12 @@ describe('PHP "sprintf" builtin function', function () {
     });
 
     it('should return a string with the result from the formatter when it returns one', async function () {
-        var argVariable = variableFactory.createVariable('myArg'),
+        var argValue = valueFactory.createString('formatted'),
+            argVariable = variableFactory.createVariable('myArg'),
             resultValue;
-        argVariable.setValue(valueFactory.createString('formatted'));
+        argVariable.setValue(argValue);
         formatter.format
-            .withArgs('my %s string', [sinon.match.same(argVariable)])
+            .withArgs('my %s string', [sinon.match.same(argValue)])
             .returns('my formatted string');
 
         resultValue = await sprintf(templateVariable, argVariable).toPromise();
@@ -77,26 +86,13 @@ describe('PHP "sprintf" builtin function', function () {
     });
 
     describe('when the formatter throws a MissingFormatArgumentException', function () {
-        it('should raise a warning', async function () {
-            formatter.format.throws(new MissingFormatArgumentException(27));
+        it('should raise an ArgumentCountError', async function () {
+            formatter.format.throws(new MissingFormatArgumentException(27, 30));
 
-            await sprintf(templateVariable).toPromise();
-
-            expect(callStack.raiseError).to.have.been.calledOnce;
-            expect(callStack.raiseError).to.have.been.calledWith(
-                PHPError.E_WARNING,
-                'sprintf(): Too few arguments'
-            );
-        });
-
-        it('should return boolean false', async function () {
-            var resultValue;
-            formatter.format.throws(new MissingFormatArgumentException(27));
-
-            resultValue = await sprintf(templateVariable).toPromise();
-
-            expect(resultValue.getType()).to.equal('boolean');
-            expect(resultValue.getNative()).to.be.false;
+            await expect(sprintf(templateVariable).toPromise())
+                .to.eventually.be.rejectedWith(
+                    'Fake PHP Fatal error for #core.arguments_missing with {"required":31,"given":28}'
+                );
         });
     });
 

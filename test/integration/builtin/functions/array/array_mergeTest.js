@@ -25,6 +25,7 @@ $result = [];
 
 $result['two arrays'] = array_merge($firstArray, $secondArray);
 $result['three arrays'] = array_merge($firstArray, $secondArray, $thirdArray);
+$result['no arrays'] = array_merge();
 
 return $result;
 EOS
@@ -46,7 +47,8 @@ EOS
                 11,
                 97,
                 98
-            ]
+            ],
+            'no arrays': []
         });
     });
 

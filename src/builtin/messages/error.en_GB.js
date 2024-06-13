@@ -15,6 +15,7 @@
 module.exports = {
     'en_GB': {
         'core': {
+            'arguments_missing': '${required} arguments are required, ${given} given',
             'cannot_pop_from_empty_datastructure': 'Can\'t pop from an empty datastructure',
             'cannot_shift_from_empty_datastructure': 'Can\'t shift from an empty datastructure',
             'cannot_start_already_started_fiber': 'Cannot start a fiber that has already been started',

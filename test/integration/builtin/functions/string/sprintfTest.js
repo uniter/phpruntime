@@ -37,4 +37,52 @@ EOS
             'A padded number: ~~~21 and a string: (hello!) in here'
         ]);
     });
+
+    it('should correctly handle errors formatting the string', async function () {
+        var php = nowdoc(function () {/*<<<EOS
+<?php
+ini_set('error_reporting', E_ALL);
+
+$result = [];
+
+function tryCall(callable $callback) {
+    $result = null;
+    $throwable = null;
+
+    try {
+        $result = $callback();
+    } catch (\Throwable $caughtThrowable) {
+        $throwable = $caughtThrowable::class . ' :: ' . $caughtThrowable->getMessage();
+    }
+
+    return [
+        'result' => $result,
+        'throwable' => $throwable
+    ];
+}
+
+$result['missing argument for implicit parameter'] = tryCall(function () {
+    return sprintf('hello %s there');
+});
+$result['missing argument for explicit parameter'] = tryCall(function () {
+    return sprintf('hello %21$d there', 100, 200, 300);
+});
+
+return $result;
+EOS
+*/;}), //jshint ignore:line
+            module = tools.asyncTranspile('/path/to/my_module.php', php),
+            engine = module();
+
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            'missing argument for implicit parameter': {
+                'result': null,
+                'throwable': 'ArgumentCountError :: 2 arguments are required, 1 given'
+            },
+            'missing argument for explicit parameter': {
+                'result': null,
+                'throwable': 'ArgumentCountError :: 22 arguments are required, 4 given'
+            }
+        });
+    });
 });

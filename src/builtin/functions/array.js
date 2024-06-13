@@ -30,89 +30,52 @@ module.exports = function (internals) {
     methods = {
         /**
          * Determines the difference between arrays. A new array will be returned,
-         * with all the elements of the first array that are not present in any of the other arrays
+         * with all the elements of the first array that are not present in any of the other arrays.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-diff.php}
-         *
-         * @returns {ArrayValue|NullValue}
          */
-        'array_diff': function () {
-            var firstArrayValue,
-                remainingElementPairs,
-                returnNull = false;
+        'array_diff': internals.typeFunction(
+            'array $array, array ...$arrays : array',
+            function (firstArrayValue) {
+                var remainingElementPairs;
 
-            if (arguments.length < 2) {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'array_diff() expects at least 2 parameters, ' + arguments.length + ' given'
-                );
-                return valueFactory.createNull();
-            }
-
-            firstArrayValue = arguments[0].getValue();
-
-            if (firstArrayValue.getType() !== 'array') {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'array_diff(): Argument #0 is not an array'
-                );
-                return valueFactory.createNull();
-            }
-
-            // Start with the key-value pairs for the elements of the first array,
-            // as for each successive array we will compare their values against the values
-            // of this first one.
-            remainingElementPairs = firstArrayValue.getKeys().map(function (keyValue) {
-                return firstArrayValue.getElementPairByKey(keyValue);
-            });
-
-            return flow
-                .eachAsync(slice.call(arguments, 1), function (arraySnapshot, argumentIndex) {
-                    var arrayValue = arraySnapshot.getValue();
-
-                    if (arrayValue.getType() !== 'array') {
-                        callStack.raiseError(
-                            PHPError.E_WARNING,
-                            'array_diff(): Argument #' + (argumentIndex + 2) + ' is not an array'
-                        );
-                        returnNull = true;
-
-                        return false;
-                    }
-
-                    return flow.eachAsync(arrayValue.getKeys(), function (keyValue) {
-                        var elementValue = arrayValue.getElementByKey(keyValue).getValue(),
-                            filteredElementPairs = [];
-
-                        return flow
-                            .eachAsync(remainingElementPairs, function (remainingElementPair) {
-                                return elementValue.isNotEqualTo(remainingElementPair.getValue())
-                                    .next(function (inequalityValue) {
-                                        if (inequalityValue.getNative()) {
-                                            filteredElementPairs.push(remainingElementPair);
-                                        }
-                                    });
-                            })
-                            .next(function () {
-                                remainingElementPairs = filteredElementPairs;
-                            });
-                    });
-                })
-                .next(function () {
-                    if (returnNull) {
-                        return valueFactory.createNull();
-                    }
-
-                    return valueFactory.createArray(remainingElementPairs);
+                // Start with the key-value pairs for the elements of the first array,
+                // as for each successive array we will compare their values against the values
+                // of this first one.
+                remainingElementPairs = firstArrayValue.getKeys().map(function (keyValue) {
+                    return firstArrayValue.getElementPairByKey(keyValue);
                 });
-        },
+
+                return flow
+                    .eachAsync(slice.call(arguments, 1), function (arrayValue) {
+                        return flow.eachAsync(arrayValue.getKeys(), function (keyValue) {
+                            var elementValue = arrayValue.getElementByKey(keyValue).getValue(),
+                                filteredElementPairs = [];
+
+                            return flow
+                                .eachAsync(remainingElementPairs, function (remainingElementPair) {
+                                    return elementValue.isNotEqualTo(remainingElementPair.getValue())
+                                        .next(function (inequalityValue) {
+                                            if (inequalityValue.getNative()) {
+                                                filteredElementPairs.push(remainingElementPair);
+                                            }
+                                        });
+                                })
+                                .next(function () {
+                                    remainingElementPairs = filteredElementPairs;
+                                });
+                        });
+                    })
+                    .next(function () {
+                        return valueFactory.createArray(remainingElementPairs);
+                    });
+            }
+        ),
 
         /**
          * Filters the elements of an array, optionally using a callback function.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-filter.php}
-         *
-         * @returns {ArrayValue}
          */
         'array_filter': internals.typeFunction(
             'array $array, ?callable $callback, int $mode = 0 : array',
@@ -144,8 +107,7 @@ module.exports = function (internals) {
                 })
                     .next(function () {
                         return valueFactory.createArray(resultPairs);
-                    })
-                    .asValue();
+                    });
             }
         ),
 
@@ -197,88 +159,69 @@ module.exports = function (internals) {
         ),
 
         /**
-         * Fetch all keys (or a subset of the keys) in an array
+         * Fetches all keys (or a subset of the keys) in an array.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-keys.php}
-         *
-         * @param {Variable|ArrayValue} arrayReference
-         * @param {Variable|Value} searchValueReference
-         * @param {Variable|BooleanValue} strictMatchReference
-         * @returns {ArrayValue}
          */
-        'array_keys': function (arrayReference, searchValueReference, strictMatchReference) {
-            var arrayValue;
-
-            if (searchValueReference || strictMatchReference) {
-                throw new Exception('array_keys() :: Search functionality is not yet supported');
-            }
-
-            arrayValue = arrayReference.getValue();
-
-            return valueFactory.createArray(arrayValue.getKeys());
-        },
+        'array_keys': internals.typeOverloadedFunction([
+            internals.typeFunction(
+                'array $array : array',
+                function (arrayValue) {
+                    return valueFactory.createArray(arrayValue.getKeys());
+                }
+            ),
+            internals.typeFunction(
+                'array $array, mixed $filter_value, bool $strict = false : array',
+                function () {
+                    throw new Exception('array_keys() :: Search functionality is not yet supported');
+                }
+            )
+        ]),
 
         /**
          * Maps one or more arrays to a new array.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-map.php}
-         *
-         * @param {Variable|Value} callbackReference
-         * @param {Variable|ArrayValue} firstArrayReference
-         * @returns {ArrayValue|FutureValue<ArrayValue>}
          */
-        'array_map': function (callbackReference, firstArrayReference) {
-            var callbackValue = callbackReference.getValue(),
-                firstArrayValue = firstArrayReference.getValue();
+        'array_map': internals.typeFunction(
+            '?callable $callback, array $array, array ...$arrays : array',
+            function (callbackValue, firstArrayValue) {
+                if (arguments.length > 2) {
+                    return valueFactory.createRejection(
+                        new Exception('array_map() :: Multiple input arrays are not yet supported')
+                    );
+                }
 
-            if (arguments.length > 2) {
-                return valueFactory.createRejection(
-                    new Exception('array_map() :: Multiple input arrays are not yet supported')
-                );
+                return flow
+                    .mapAsync(firstArrayValue.getKeys(), function (keyValue) {
+                        // Pass the global namespace as the namespace scope -
+                        // any normal function callback will need to be fully-qualified.
+                        var elementValue = firstArrayValue.getElementByKey(keyValue);
+
+                        return callbackValue.call([elementValue], globalNamespace)
+                            .next(function (mappedElementValue) {
+                                return new KeyValuePair(keyValue, mappedElementValue);
+                            });
+                    })
+                    .next(function (keyValuePairs) {
+                        return valueFactory.createArray(keyValuePairs);
+                    });
             }
-
-            return flow
-                .mapAsync(firstArrayValue.getKeys(), function (keyValue) {
-                    // Pass the global namespace as the namespace scope -
-                    // any normal function callback will need to be fully-qualified.
-                    var elementValue = firstArrayValue.getElementByKey(keyValue);
-
-                    return callbackValue.call([elementValue], globalNamespace)
-                        .next(function (mappedElementValue) {
-                            return new KeyValuePair(keyValue, mappedElementValue);
-                        });
-                })
-                .next(function (keyValuePairs) {
-                    return valueFactory.createArray(keyValuePairs);
-                })
-                .asValue();
-        },
+        ),
 
         /**
          * Merges one or more arrays together, returning a new array with the result.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-merge.php}
-         *
-         * @returns {IntegerValue}
          */
-        'array_merge': function () {
+        'array_merge': internals.typeFunction('array ...$arrays : array', function () {
             var nativeKeyToElementMap = {},
                 mergedElements,
                 nativeKeys = [],
                 nextIndex = 0,
                 returnNull = false;
 
-            if (arguments.length === 0) {
-                callStack.raiseError(
-                    PHPError.E_WARNING,
-                    'array_merge() expects at least 1 parameter, 0 given'
-                );
-                return valueFactory.createNull();
-            }
-
-            return flow.eachAsync(arguments, function (arrayVariable, argumentIndex) {
-                var arrayValue = arrayVariable.getValue();
-
+            return flow.eachAsync(arguments, function (arrayValue, argumentIndex) {
                 if (arrayValue.getType() !== 'array') {
                     callStack.raiseError(
                         PHPError.E_WARNING,
@@ -307,18 +250,19 @@ module.exports = function (internals) {
 
                     nativeKeyToElementMap[nativeKey] = arrayValue.getElementPairByKey(key, mergedKey);
                 });
-            }).next(function () {
-                if (returnNull) {
-                    return valueFactory.createNull();
-                }
+            })
+                .next(function () {
+                    if (returnNull) {
+                        return valueFactory.createNull();
+                    }
 
-                mergedElements = _.map(nativeKeys, function (nativeKey) {
-                    return nativeKeyToElementMap[nativeKey];
+                    mergedElements = _.map(nativeKeys, function (nativeKey) {
+                        return nativeKeyToElementMap[nativeKey];
+                    });
+
+                    return valueFactory.createArray(mergedElements);
                 });
-
-                return valueFactory.createArray(mergedElements);
-            });
-        },
+        }),
 
         /**
          * Pops the last element off the end of an array and returns it.
@@ -337,31 +281,26 @@ module.exports = function (internals) {
         ),
 
         /**
-         * Pushes one or more elements onto the end of an array
+         * Pushes one or more elements onto the end of an array.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-push.php}
          *
-         * @param {Variable|ArrayValue} arrayReference
-         * @returns {IntegerValue} The new length of the array after pushing
+         * @returns {IntegerValue} The new length of the array after pushing.
          */
-        'array_push': function (arrayReference) {
-            var arrayValue;
+        'array_push': internals.typeFunction(
+            'array &$array, mixed ...$values : int',
+            function (arraySnapshot) {
+                var arrayValue = arraySnapshot.getValue();
 
-            if (!arrayReference) {
-                callStack.raiseError(PHPError.E_WARNING, 'array_push() expects at least 2 parameters, 0 given');
-                return valueFactory.createNull();
+                return flow
+                    .eachAsync(slice.call(arguments, 1), function (value) {
+                        return arrayValue.push(value);
+                    })
+                    .next(function () {
+                        return valueFactory.createInteger(arrayValue.getLength());
+                    });
             }
-
-            arrayValue = arrayReference.getValue();
-
-            return flow
-                .eachAsync(slice.call(arguments, 1), function (reference) {
-                    return arrayValue.push(reference.getValue());
-                })
-                .next(function () {
-                    return valueFactory.createInteger(arrayValue.getLength());
-                });
-        },
+        ),
 
         /**
          * Searches for a value in an array, returning the first key with that value.
@@ -415,18 +354,15 @@ module.exports = function (internals) {
         ),
 
         /**
-         * Shifts an element off the beginning of an array
+         * Shifts an element off the beginning of an array.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-shift.php}
-         *
-         * @param {Variable|ArrayValue} arrayReference
-         * @returns {ArrayValue}
          */
-        'array_shift': function (arrayReference) {
-            var arrayValue = arrayReference.getValue();
+        'array_shift': internals.typeFunction('array &$array : mixed', function (arraySnapshot) {
+            var arrayValue = arraySnapshot.getValue();
 
             return arrayValue.shift();
-        },
+        }),
 
         /**
          * Returns a new array without duplicate values from a source array.
@@ -559,41 +495,46 @@ module.exports = function (internals) {
         /**
          * Joins substrings (the "pieces") together with a given delimiter (the "glue").
          *
-         * TODO: Support 2nd variant with glue arg omitted.
-         *
          * @see {@link https://secure.php.net/manual/en/function.implode.php}
-         *
-         * @param {Variable|Value} glueReference
-         * @param {Variable|Value} piecesReference
-         * @returns {FutureValue<StringValue>}
          */
-        'implode': function (glueReference, piecesReference) {
-            var glueValue = glueReference.getValue(),
-                piecesValue = piecesReference.getValue(),
-                tmp,
-                values;
+        'implode': internals.typeOverloadedFunction([
+            internals.typeFunction(
+                'string $separator, array $array : string',
+                function (glueValue, piecesValue) {
+                    var values = piecesValue.getValues();
 
-            // For backwards-compatibility, PHP supports receiving args in either order.
-            if (glueValue.getType() === 'array') {
-                tmp = glueValue;
-                glueValue = piecesValue;
-                piecesValue = tmp;
-            }
+                    return flow
+                        .mapAsync(values, function (value) {
+                            return value.coerceToString();
+                        })
+                        .next(function (pieceStringValues) {
+                            var pieceStrings = pieceStringValues.map(function (pieceStringValue) {
+                                return pieceStringValue.getNative();
+                            });
 
-            values = piecesValue.getValues();
+                            return valueFactory.createString(pieceStrings.join(glueValue.getNative()));
+                        });
+                }
+            ),
+            internals.typeFunction(
+                'array $array : string',
+                function (piecesValue) {
+                    var values = piecesValue.getValues();
 
-            return flow
-                .mapAsync(values, function (value) {
-                    return value.coerceToString();
-                })
-                .next(function (pieceStringValues) {
-                    var pieceStrings = pieceStringValues.map(function (pieceStringValue) {
-                        return pieceStringValue.getNative();
-                    });
+                    return flow
+                        .mapAsync(values, function (value) {
+                            return value.coerceToString();
+                        })
+                        .next(function (pieceStringValues) {
+                            var pieceStrings = pieceStringValues.map(function (pieceStringValue) {
+                                return pieceStringValue.getNative();
+                            });
 
-                    return valueFactory.createString(pieceStrings.join(glueValue.getNative()));
-                });
-        },
+                            return valueFactory.createString(pieceStrings.join(''));
+                        });
+                }
+            )
+        ]),
 
         /**
          * Determines whether a value (the "needle") exists in a given array (the "haystack").

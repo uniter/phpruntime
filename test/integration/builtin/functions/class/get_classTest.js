@@ -85,7 +85,10 @@ EOS
         await expect(engine.execute()).to.eventually.be.rejectedWith(
             PHPFatalError,
             'PHP Fatal error: Uncaught TypeError: get_class(): Argument #1 ($object) must be of type object, int given ' +
-            'in /path/to/my_module.php on line 3'
+            'in /path/to/my_module.php:3' +
+            // NB: Extraneous context info here is added by PHPFatalError (PHPError),
+            //     but not output to stdout/stderr.
+            ' in /path/to/my_module.php on line 3'
         );
     });
 
@@ -102,7 +105,10 @@ EOS
         await expect(engine.execute()).to.eventually.be.rejectedWith(
             PHPFatalError,
             'PHP Fatal error: Uncaught TypeError: get_class(): Argument #1 ($object) must be of type object, null given ' +
-            'in /path/to/my_module.php on line 3'
+            'in /path/to/my_module.php:3' +
+            // NB: Extraneous context info here is added by PHPFatalError (PHPError),
+            //     but not output to stdout/stderr.
+            ' in /path/to/my_module.php on line 3'
         );
     });
 });
