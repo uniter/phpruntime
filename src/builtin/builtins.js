@@ -21,6 +21,8 @@ var arrayConstants = require('./constants/array'),
     errorHandlingFunctions = require('./functions/errorHandling'),
     errorMessages = require('./messages/error.en_GB'),
     extensionOptionsAndInfoFunctions = require('./functions/optionsAndInfo/extension'),
+    Fiber = require('./classes/Fiber/Fiber'),
+    FiberError = require('./classes/Error/FiberError'),
     filesystemConstants = require('./constants/filesystem'),
     filesystemFunctions = require('./functions/filesystem'),
     functionHandlingFunctions = require('./functions/functionHandling'),
@@ -56,6 +58,8 @@ module.exports = {
         function () {
             return {
                 'Countable': Countable,
+                'Fiber': Fiber,
+                'FiberError': FiberError,
                 'LogicException': LogicException,
                 'Serializable': Serializable
             };

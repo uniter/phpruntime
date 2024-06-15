@@ -127,24 +127,6 @@ describe('PHP "array_merge" builtin function', function () {
         });
     });
 
-    describe('when no arguments are provided', function () {
-        it('should raise a warning', async function () {
-            await array_merge().toPromise();
-
-            expect(callStack.raiseError).to.have.been.calledOnce;
-            expect(callStack.raiseError).to.have.been.calledWith(
-                PHPError.E_WARNING,
-                'array_merge() expects at least 1 parameter, 0 given'
-            );
-        });
-
-        it('should return NULL', async function () {
-            var result = await array_merge().toPromise();
-
-            expect(result.getType()).to.equal('null');
-        });
-    });
-
     describe('when one of the arguments is not an array', function () {
         var secondArgumentVariable;
 

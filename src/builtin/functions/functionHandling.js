@@ -10,80 +10,61 @@
 'use strict';
 
 var _ = require('microdash'),
-    CallbackValue = require('./functionHandling/CallbackValue'),
+    slice = [].slice,
     PHPError = require('phpcommon').PHPError;
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
-        flow = internals.flow,
-        futureFactory = internals.futureFactory,
         globalNamespace = internals.globalNamespace,
         referenceFactory = internals.referenceFactory,
-        valueFactory = internals.valueFactory,
-
-        /**
-         * Creates a new CallbackValue.
-         *
-         * @param {Function} referenceCallback
-         * @param {Function} valueCallback
-         * @returns {CallbackValue}
-         */
-        createCallbackValue = function (referenceCallback, valueCallback) {
-            return new CallbackValue(
-                referenceFactory,
-                futureFactory,
-                flow,
-                referenceCallback,
-                valueCallback
-            );
-        };
+        valueFactory = internals.valueFactory;
 
     return {
         /**
          * Calls the specified function, returning its result.
          *
          * @see {@link https://secure.php.net/manual/en/function.call-user-func.php}
-         *
-         * @param {Variable|Value} callbackReference       The function or callable to call
-         * @param {...Variable|...Value} argumentReference Variable no. of arguments to pass to the callable
-         * @returns {FutureValue}
          */
-        'call_user_func': function (callbackReference, argumentReference) { //jshint ignore:line
-            var callbackValue = callbackReference.getValue(),
-                expectedReferenceArgumentIndex = null,
-                expectedReferenceError = {call_user_func_expectedReferenceError: true},
-                argumentValues = _.map(
-                    [].slice.call(arguments, 1),
-                    function (argumentReference, argumentIndex) {
-                        return createCallbackValue(
-                            function () {
-                                expectedReferenceArgumentIndex = argumentIndex;
-                                throw expectedReferenceError;
-                            },
-                            function () {
-                                return argumentReference.getValue();
-                            }
-                        );
-                    }
-                );
-
-            return callbackValue.call(argumentValues, globalNamespace)
-                .catch(function (error) {
-                    // Allow any other errors through.
-                    if (error !== expectedReferenceError) {
-                        throw error;
-                    }
-
-                    callStack.raiseError(
-                        PHPError.E_WARNING,
-                        'Parameter ' + (expectedReferenceArgumentIndex + 1) +
-                        ' to ' + callbackValue.getCallableName(globalNamespace) +
-                        '() expected to be a reference, value given'
+        'call_user_func': internals.typeFunction(
+            'callable $callback, mixed ...$args : mixed',
+            function (callbackValue) {
+                var expectedReferenceArgumentIndex = null,
+                    expectedReferenceError = {call_user_func_expectedReferenceError: true},
+                    argumentValues = _.map(
+                        slice.call(arguments, 1),
+                        function (argumentReference, argumentIndex) {
+                            return referenceFactory.createAccessor(
+                                function valueCallback() {
+                                    return argumentReference.getValue();
+                                },
+                                null,
+                                null,
+                                function referenceCallback() {
+                                    expectedReferenceArgumentIndex = argumentIndex;
+                                    throw expectedReferenceError;
+                                }
+                            );
+                        }
                     );
 
-                    return valueFactory.createNull();
-                });
-        },
+                return callbackValue.call(argumentValues, globalNamespace)
+                    .catch(function (error) {
+                        // Allow any other errors through.
+                        if (error !== expectedReferenceError) {
+                            throw error;
+                        }
+
+                        callStack.raiseError(
+                            PHPError.E_WARNING,
+                            'Parameter ' + (expectedReferenceArgumentIndex + 1) +
+                            ' to ' + callbackValue.getCallableName(globalNamespace) +
+                            '() expected to be a reference, value given'
+                        );
+
+                        return valueFactory.createNull();
+                    });
+            }
+        ),
 
         /**
          * Calls the specified function, returning its result.

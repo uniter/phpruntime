@@ -13,14 +13,16 @@ var expect = require('chai').expect,
     FormatConverter = require('../../../../../src/builtin/bindings/string/FormatConverter');
 
 describe('FormatConverter', function () {
+    var converter;
+
     beforeEach(function () {
-        this.converter = new FormatConverter();
+        converter = new FormatConverter();
     });
 
     describe('convert()', function () {
         describe('for a string conversion specification', function () {
             it('should just return the string value unchanged', function () {
-                expect(this.converter.convert('my string here', {
+                expect(converter.convert('my string here', {
                     kind: 'conversion-specification',
                     argumentPosition: 1,
                     type: 'string'
@@ -31,7 +33,7 @@ describe('FormatConverter', function () {
 
         describe('for a signed decimal conversion specification', function () {
             it('should add a leading plus sign when specified and positive', function () {
-                expect(this.converter.convert(21, {
+                expect(converter.convert(21, {
                     kind: 'conversion-specification',
                     argumentPosition: 1,
                     type: 'signed-decimal',
@@ -45,7 +47,7 @@ describe('FormatConverter', function () {
             });
 
             it('should not add a leading plus sign when specified but negative', function () {
-                expect(this.converter.convert(-21, {
+                expect(converter.convert(-21, {
                     kind: 'conversion-specification',
                     argumentPosition: 1,
                     type: 'signed-decimal',
@@ -59,7 +61,7 @@ describe('FormatConverter', function () {
             });
 
             it('should not add a leading plus sign when specified but zero', function () {
-                expect(this.converter.convert(0, {
+                expect(converter.convert(0, {
                     kind: 'conversion-specification',
                     argumentPosition: 1,
                     type: 'signed-decimal',
@@ -73,7 +75,7 @@ describe('FormatConverter', function () {
             });
 
             it('should not add a leading plus sign when negative and not specified', function () {
-                expect(this.converter.convert(-27, {
+                expect(converter.convert(-27, {
                     kind: 'conversion-specification',
                     argumentPosition: 1,
                     type: 'signed-decimal',
@@ -87,7 +89,7 @@ describe('FormatConverter', function () {
             });
 
             it('should truncate/round down a float', function () {
-                expect(this.converter.convert(123.889, {
+                expect(converter.convert(123.889, {
                     kind: 'conversion-specification',
                     argumentPosition: 1,
                     type: 'signed-decimal',
@@ -101,7 +103,7 @@ describe('FormatConverter', function () {
             });
 
             it('should support padding width and left-alignment/justification', function () {
-                expect(this.converter.convert(4567, {
+                expect(converter.convert(4567, {
                     kind: 'conversion-specification',
                     argumentPosition: 1,
                     type: 'signed-decimal',
@@ -115,7 +117,7 @@ describe('FormatConverter', function () {
             });
 
             it('should support padding width and right-alignment/justification', function () {
-                expect(this.converter.convert(1234, {
+                expect(converter.convert(1234, {
                     kind: 'conversion-specification',
                     argumentPosition: 1,
                     type: 'signed-decimal',
@@ -131,12 +133,12 @@ describe('FormatConverter', function () {
 
         it('should throw when the conversion specification\'s type is not supported', function () {
             expect(function () {
-                this.converter.convert(21, {
+                converter.convert(21, {
                     kind: 'conversion-specification',
                     argumentPosition: 1,
                     type: 'unsupported-type'
                 });
-            }.bind(this)).to.throw('Unsupported conversion specification type "unsupported-type"');
+            }).to.throw('Unsupported conversion specification type "unsupported-type"');
         });
     });
 });

@@ -13,28 +13,38 @@ var expect = require('chai').expect,
     phpCommon = require('phpcommon'),
     sinon = require('sinon'),
     Exception = phpCommon.Exception,
+    DirectiveSet = require('../../../../../src/builtin/bindings/string/DirectiveSet'),
     FormatConverter = require('../../../../../src/builtin/bindings/string/FormatConverter'),
     FormatParser = require('../../../../../src/builtin/bindings/string/FormatParser'),
     MissingFormatArgumentException = require('../../../../../src/builtin/bindings/string/Exception/MissingFormatArgumentException'),
     NativeFormatter = require('../../../../../src/builtin/bindings/string/NativeFormatter');
 
 describe('NativeFormatter', function () {
-    beforeEach(function () {
-        this.formatConverter = sinon.createStubInstance(FormatConverter);
-        this.formatParser = sinon.createStubInstance(FormatParser);
+    var formatConverter,
+        formatParser,
+        formatter;
 
-        this.formatter = new NativeFormatter(this.formatParser, this.formatConverter);
+    beforeEach(function () {
+        formatConverter = sinon.createStubInstance(FormatConverter);
+        formatParser = sinon.createStubInstance(FormatParser);
+
+        formatter = new NativeFormatter(formatParser, formatConverter);
     });
 
     describe('format()', function () {
         it('should just return a single ordinary character directive (plain string) unchanged', function () {
-            this.formatParser.parse
+            formatParser.parse
                 .withArgs('my string with no specs')
-                .returns([
-                    {kind: 'ordinary', text: 'my string with no specs'}
-                ]);
+                .returns(
+                    new DirectiveSet(
+                        [
+                            {kind: 'ordinary', text: 'my string with no specs'}
+                        ],
+                        0
+                    )
+                );
 
-            expect(this.formatter.format('my string with no specs')).to.equal('my string with no specs');
+            expect(formatter.format('my string with no specs')).to.equal('my string with no specs');
         });
 
         it('should just return a single processed conversion specification directive', function () {
@@ -43,16 +53,14 @@ describe('NativeFormatter', function () {
                 argumentPosition: 0,
                 type: 'string'
             };
-            this.formatParser.parse
+            formatParser.parse
                 .withArgs('%s')
-                .returns([
-                    stringConversionSpecification
-                ]);
-            this.formatConverter.convert
+                .returns(new DirectiveSet([stringConversionSpecification], 1));
+            formatConverter.convert
                 .withArgs('my string', sinon.match.same(stringConversionSpecification))
                 .returns('my string');
 
-            expect(this.formatter.format('%s', ['my string'])).to.equal('my string');
+            expect(formatter.format('%s', ['my string'])).to.equal('my string');
         });
 
         it('should join a mix of directives together', function () {
@@ -78,48 +86,66 @@ describe('NativeFormatter', function () {
                     kind: 'ordinary',
                     text: ' third'
                 };
-            this.formatParser.parse
+            formatParser.parse
                 .withArgs('first %s second %d third')
-                .returns([
-                    firstOrdinaryCharacterDirective,
-                    stringConversionSpecification,
-                    secondOrdinaryCharacterDirective,
-                    numberConversionSpecification,
-                    thirdOrdinaryCharacterDirective
-                ]);
-            this.formatConverter.convert
+                .returns(
+                    new DirectiveSet(
+                        [
+                            firstOrdinaryCharacterDirective,
+                            stringConversionSpecification,
+                            secondOrdinaryCharacterDirective,
+                            numberConversionSpecification,
+                            thirdOrdinaryCharacterDirective
+                        ],
+                        2
+                    )
+                );
+            formatConverter.convert
                 .withArgs('my string', sinon.match.same(stringConversionSpecification))
                 .returns('my string');
-            this.formatConverter.convert
+            formatConverter.convert
                 .withArgs(27, sinon.match.same(numberConversionSpecification))
                 .returns('27');
 
-            expect(this.formatter.format('first %s second %d third', ['my string', 27]))
+            expect(formatter.format('first %s second %d third', ['my string', 27]))
                 .to.equal('first my string second 27 third');
         });
 
         it('should throw when a conversion specification references a missing arg', function () {
-            this.formatParser.parse
+            formatParser.parse
                 .withArgs('my string with no specs')
-                .returns([
-                    {kind: 'conversion-specification', argumentPosition: 10, type: 'string'}
-                ]);
+                .returns(
+                    new DirectiveSet(
+                        [
+                            {kind: 'conversion-specification', argumentPosition: 3, type: 'string'}
+                        ],
+                        10
+                    )
+                );
 
             expect(function () {
-                this.formatter.format('my string with no specs');
-            }.bind(this)).to.throw(MissingFormatArgumentException);
+                formatter.format('my string with no specs');
+            }).to.throw(
+                MissingFormatArgumentException,
+                'Missing argument #1 of 10'
+            );
         });
 
         it('should throw when an invalid kind of directive is returned by the format parser', function () {
-            this.formatParser.parse
+            formatParser.parse
                 .withArgs('my string')
-                .returns([
-                    {kind: 'invalid-directive-kind', someArg: 21}
-                ]);
+                .returns(
+                    new DirectiveSet(
+                        [
+                            {kind: 'invalid-directive-kind', someArg: 21}
+                        ],
+                        0
+                    )
+                );
 
             expect(function () {
-                this.formatter.format('my string');
-            }.bind(this)).to.throw(Exception, 'Unsupported directive kind "invalid-directive-kind"');
+                formatter.format('my string');
+            }).to.throw(Exception, 'Unsupported directive kind "invalid-directive-kind"');
         });
     });
 });

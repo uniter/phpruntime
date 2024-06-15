@@ -11,8 +11,7 @@
 
 var phpCommon = require('phpcommon'),
     PHPError = phpCommon.PHPError,
-    GET_CLASS_WITHOUT_ARGS_OUTSIDE_CLASS = 'core.get_class_without_args_outside_class',
-    INVALID_VALUE_FOR_TYPE_BUILTIN = 'core.invalid_value_for_type_builtin';
+    GET_CLASS_WITHOUT_ARGS_OUTSIDE_CLASS = 'core.get_class_without_args_outside_class';
 
 module.exports = function (internals) {
     var callStack = internals.callStack,
@@ -49,51 +48,29 @@ module.exports = function (internals) {
         /**
          * Fetches the name of either the current class or the class of a specified object.
          *
-         * TODO: Add the ability to specify multiple signatures so that .typeFunction(...) may be used here.
-         *
          * @see {@link https://secure.php.net/manual/en/function.get-class.php}
-         *
-         * @param {Variable|Value} objectReference
-         * @returns {StringValue}
          */
-        'get_class': function (objectReference) {
-            var currentClass,
-                objectValue;
+        'get_class': internals.typeFunction(
+            'object $object = ?',
+            function (objectValue) {
+                var currentClass;
 
-            if (!objectReference) {
-                currentClass = callStack.getCallerScope().getCurrentClass();
+                if (objectValue.getUnderlyingType() === 'missing') {
+                    currentClass = callStack.getCallerScope().getCurrentClass();
 
-                if (!currentClass) {
-                    callStack.raiseTranslatedError(
-                        PHPError.E_ERROR,
-                        GET_CLASS_WITHOUT_ARGS_OUTSIDE_CLASS
-                    );
+                    if (!currentClass) {
+                        callStack.raiseTranslatedError(
+                            PHPError.E_ERROR,
+                            GET_CLASS_WITHOUT_ARGS_OUTSIDE_CLASS
+                        );
+                    }
+
+                    return valueFactory.createString(currentClass.getName());
                 }
 
-                return valueFactory.createString(currentClass.getName());
+                return valueFactory.createString(objectValue.getClassName());
             }
-
-            objectValue = objectReference.getValue();
-
-            if (objectValue.getType() !== 'object') {
-                // If specified, the value must be an object.
-                // Null cannot be specified, the argument must instead be omitted.
-                callStack.raiseTranslatedError(
-                    PHPError.E_ERROR,
-                    INVALID_VALUE_FOR_TYPE_BUILTIN,
-                    {
-                        func: 'get_class',
-                        index: 1,
-                        name: 'object',
-                        expectedType: 'of type object',
-                        actualType: objectValue.getType()
-                    },
-                    'TypeError'
-                );
-            }
-
-            return valueFactory.createString(objectValue.getClassName());
-        },
+        ),
 
         /**
          * Checks if the object is of this class or has this class as one of its parents.

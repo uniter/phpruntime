@@ -15,7 +15,7 @@ var _ = require('microdash'),
     MissingFormatArgumentException = require('./Exception/MissingFormatArgumentException');
 
 /**
- * Formats a string according to the format supported by the printf(...) family of functions
+ * Formats a string according to the format supported by the `printf(...)` family of functions.
  *
  * @param {FormatParser} formatParser
  * @param {FormatConverter} formatConverter
@@ -34,7 +34,7 @@ function NativeFormatter(formatParser, formatConverter) {
 
 _.extend(NativeFormatter.prototype, {
     /**
-     * Builds and returns the provided format string populated with the given arguments
+     * Builds and returns the provided format string populated with the given arguments.
      *
      * @param {string} formatString
      * @param {array} args
@@ -42,25 +42,28 @@ _.extend(NativeFormatter.prototype, {
      */
     format: function (formatString, args) {
         var formatter = this,
-            directives = formatter.formatParser.parse(formatString);
+            directiveSet = formatter.formatParser.parse(formatString);
 
         args = args || [];
 
-        return directives
+        if (args.length < directiveSet.getParameterCount()) {
+            throw new MissingFormatArgumentException(
+                args.length,
+                directiveSet.getParameterCount()
+            );
+        }
+
+        return directiveSet.getDirectives()
             .map(function (directive) {
                 var arg;
 
                 if (directive.kind === 'ordinary') {
-                    // Plain text - just output as it was in the format string
+                    // Plain text - just output as it was in the format string.
                     return directive.text;
                 }
 
                 if (directive.kind === 'conversion-specification') {
                     // Conversion specifications are the placeholders "%s", "%d" etc.
-
-                    if (directive.argumentPosition >= args.length) {
-                        throw new MissingFormatArgumentException(directive.argumentPosition);
-                    }
 
                     arg = args[directive.argumentPosition];
 
