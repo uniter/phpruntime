@@ -31,8 +31,8 @@ EOS
         expect((await engine.execute()).getNative()).to.deep.equal({
             'PHP_OS': 'Uniter',
             'PHP_SAPI': 'cli',
-            'PHP_VERSION': '5.4.0',
-            'PHP_VERSION_ID': 50400
+            'PHP_VERSION': '8.3.8',
+            'PHP_VERSION_ID': 80308
         });
     });
 });

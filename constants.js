@@ -13,22 +13,22 @@ module.exports = {
     sapi: 'cli',
 
     operatingSystem: {
-        name: 'Uniter',           // Operating system name. eg. FreeBSD
-        hostName: 'localhost',    // Host name. eg. localhost.example.com
-        releaseName: '1.0.0',     // Release name. eg. 5.1.2-RELEASE
-        versionInfo: '(Generic)', // Version information. Varies a lot between operating systems
-        machineType: 'JavaScript' // Machine type. eg. i386
+        name: 'Uniter',           // Operating system name. eg. FreeBSD.
+        hostName: 'localhost',    // Host name. eg. localhost.example.com.
+        releaseName: '1.0.0',     // Release name. e.g. 5.1.2-RELEASE.
+        versionInfo: '(Generic)', // Version information. Varies a lot between operating systems.
+        machineType: 'JavaScript' // Machine type. e.g. i386.
     },
 
     phpVersion: {
-        major: 5,
-        minor: 4,
-        release: 0
+        major: 8,
+        minor: 3,
+        release: 8
     },
 
     zendVersion: {
-        major: 2,
-        minor: 5,
-        release: 0
+        major: 4,
+        minor: 3,
+        release: 8
     }
 };

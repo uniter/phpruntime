@@ -24,6 +24,6 @@ EOS
             module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect((await engine.execute()).getNative()).to.equal('2.5.0');
+        expect((await engine.execute()).getNative()).to.equal('4.3.8');
     });
 });
