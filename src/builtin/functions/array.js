@@ -112,6 +112,29 @@ module.exports = function (internals) {
         ),
 
         /**
+         * Exchanges all element keys with their values, creating a new array.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-flip.php}
+         */
+        'array_flip': internals.typeFunction(
+            'array $array : array',
+            function (arrayValue) {
+                var resultArray = valueFactory.createArray([]);
+
+                return flow
+                    .eachAsync(arrayValue.getKeys(), function (keyValue) {
+                        return arrayValue.getElementByKey(keyValue).getValue()
+                            .next(function (elementValue) {
+                                return resultArray.getElementByKey(elementValue).setValue(keyValue);
+                            });
+                    })
+                    .next(function () {
+                        return resultArray;
+                    });
+            }
+        ),
+
+        /**
          * Associative sort - sorts an array in-place, by value, in ascending order,
          * maintaining key->value associations.
          *
