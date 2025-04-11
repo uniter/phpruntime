@@ -66,7 +66,7 @@ module.exports = function (internals) {
         modifiers = modifiers.replace(/u/g, '');
 
         // Note the "study" modifier "S" is allowed but ignored.
-        invalidModifiers = modifiers.replace(/[AimSsx]/g, '');
+        invalidModifiers = modifiers.replace(/[ADimSsx]/g, '');
 
         if (invalidModifiers !== '') {
             callStack.raiseError(
@@ -83,6 +83,7 @@ module.exports = function (internals) {
         flags.anchored = modifiers.indexOf('A') > -1;
         flags.caseless = modifiers.indexOf('i') > -1;
         flags.multiline = modifiers.indexOf('m') > -1;
+        flags.dollarEndOnly = modifiers.indexOf('D') > -1;
         flags.dotAll = modifiers.indexOf('s') > -1;
         flags.extended = modifiers.indexOf('x') > -1;
 

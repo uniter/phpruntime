@@ -47,6 +47,12 @@ $result[] = $matches;
 $result[] = preg_match('/he..o/A', 'hello world hevvo world', $matches, 0, 12);
 $result[] = $matches;
 
+// Test dollar-end-only modifier.
+$result[] = preg_match('/hello$/D', "hello", $matches);
+$result[] = $matches;
+$result[] = preg_match('/hello$/D', "hello\n", $matches);
+$result[] = $matches;
+
 // Test dotall modifier.
 $result[] = preg_match('/h[e.]l.o w.rld/s', "hel\no world", $matches);
 $result[] = $matches;
@@ -94,6 +100,12 @@ EOS
             [
                 'hevvo'
             ],
+            1, // Dollar-end-only modifier.
+            [
+                'hello'
+            ],
+            0,
+            [],
             1, // Dotall modifier.
             [
                 'hel\no world'
