@@ -56,6 +56,22 @@ module.exports = function (internals) {
         ),
 
         /**
+         * Makes a string's first character lowercase.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.lcfirst.php}
+         */
+        'lcfirst': internals.typeFunction(
+            'string $string : string',
+            function (stringValue) {
+                var nativeString = stringValue.getNative();
+
+                return valueFactory.createString(
+                    nativeString.charAt(0).toLowerCase() + nativeString.substring(1)
+                );
+            }
+        ),
+
+        /**
          * Strip whitespace or other characters from the end of a string.
          *
          * @see {@link https://secure.php.net/manual/en/function.rtrim.php}
