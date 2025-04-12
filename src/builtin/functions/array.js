@@ -326,6 +326,31 @@ module.exports = function (internals) {
         ),
 
         /**
+         * Replaces elements from passed arrays into the first array.
+         * If a key from the first array exists in the second array, its value will be replaced by the value from the second array.
+         * If the key exists in the second array, and not the first, it will be created in the returned array.
+         * If a key only exists in the first array, it will be left as is.
+         * If multiple arrays are passed for replacement, they will be processed in order, the later arrays overwriting previous values.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-replace.php}
+         */
+        'array_replace': internals.typeFunction('array $array, array ...$replacements : array', function (arrayValue) {
+            var resultArray = arrayValue.getForAssignment(),
+                replacementArrays = slice.call(arguments, 1);
+
+            return flow
+                .eachAsync(replacementArrays, function (replacementArray) {
+                    return flow.eachAsync(replacementArray.getKeys(), function (key) {
+                        var elementPair = replacementArray.getElementPairByKey(key);
+                        return resultArray.getElementByKey(key).setValue(elementPair.getValue());
+                    });
+                })
+                .next(function () {
+                    return resultArray;
+                });
+        }),
+
+        /**
          * Searches for a value in an array, returning the first key with that value.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-search.php}
