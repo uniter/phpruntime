@@ -17,7 +17,9 @@ var arrayConstants = require('./constants/array'),
     configOptionsAndInfoFunctions = require('./functions/optionsAndInfo/config'),
     constantFunctions = require('./functions/misc/constant'),
     Countable = require('./interfaces/SPL/Countable'),
+    environmentBindings = require('./bindings/environment'),
     environmentFunctions = require('./functions/optionsAndInfo/environment'),
+    environmentSuperglobalInitialiser = require('./initialisers/superglobal/env'),
     errorHandlingFunctions = require('./functions/errorHandling'),
     errorMessages = require('./messages/error.en_GB'),
     extensionOptionsAndInfoFunctions = require('./functions/optionsAndInfo/extension'),
@@ -52,6 +54,7 @@ var arrayConstants = require('./constants/array'),
 
 module.exports = {
     bindingGroups: [
+        environmentBindings,
         stringBindings
     ],
     classGroups: [
@@ -107,6 +110,9 @@ module.exports = {
         timeFunctions,
         urlFunctions,
         variableHandlingFunctions
+    ],
+    initialiserGroups: [
+        environmentSuperglobalInitialiser
     ],
     serviceGroups: [
         clockServices

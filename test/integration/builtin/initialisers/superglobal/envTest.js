@@ -11,25 +11,23 @@
 
 var expect = require('chai').expect,
     nowdoc = require('nowdoc'),
-    tools = require('../../../../tools');
+    tools = require('../../../tools');
 
-describe('PHP "getenv" builtin function integration', function () {
-    it('should just return all environment variables when no name is provided', async function () {
+describe('PHP $_ENV superglobal initialiser integration', function () {
+    it('should be populated with environment variables', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
-$environmentVariables = getenv();
+$result = [];
+$result['is_array'] = is_array($_ENV);
+$result['count'] = count($_ENV);
+$result['result'] = $_ENV;
 
-return [
-    'is_array' => is_array($environmentVariables),
-    'count' => count($environmentVariables),
-    'result' => $environmentVariables
-];
+return $result;
 EOS
 */;}), //jshint ignore:line
             module = tools.asyncTranspile('/path/to/my_module.php', php),
             environment = tools.createAsyncEnvironment({
-                // Define the environment using the `env` option.
                 env: {
                     'MY_VAR': 'my_value'
                 }
@@ -45,14 +43,15 @@ EOS
         });
     });
 
-    it('should return the value of the specified environment variable when a name is provided', async function () {
+    it('should allow modification of environment variables without affecting getenv()', async function () {
         var php = nowdoc(function () {/*<<<EOS
 <?php
 
 $result = [];
-
-$name = 'MY_VAR';
-$result[] = getenv($name);
+$result['initial'] = $_ENV['MY_VAR'];
+$_ENV['MY_VAR'] = 'new_value';
+$result['modified'] = $_ENV['MY_VAR'];
+$result['getenv'] = getenv('MY_VAR'); // Should still return original value.
 
 return $result;
 EOS
@@ -65,28 +64,10 @@ EOS
             }),
             engine = module({}, environment);
 
-        expect((await engine.execute()).getNative()).to.deep.equal([
-            'my_value'
-        ]);
-    });
-
-    it('should return false when trying to fetch a non-existent environment variable', async function () {
-        var php = nowdoc(function () {/*<<<EOS
-<?php
-
-$result = [];
-
-$name = 'MY_VAR';
-$result[] = getenv($name);
-
-return $result;
-EOS
-*/;}), //jshint ignore:line
-            module = tools.asyncTranspile('/path/to/my_module.php', php),
-            engine = module();
-
-        expect((await engine.execute()).getNative()).to.deep.equal([
-            false
-        ]);
+        expect((await engine.execute()).getNative()).to.deep.equal({
+            'initial': 'my_value',
+            'modified': 'new_value',
+            'getenv': 'my_value'
+        });
     });
 });
