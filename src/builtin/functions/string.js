@@ -494,6 +494,22 @@ module.exports = function (internals) {
 
                 return valueFactory.createString(nativeString.replace(characterMaskRegex, ''));
             }
+        ),
+
+        /**
+         * Makes a string's first character uppercase.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.ucfirst.php}
+         */
+        'ucfirst': internals.typeFunction(
+            'string $string : string',
+            function (stringValue) {
+                var nativeString = stringValue.getNative();
+
+                return valueFactory.createString(
+                    nativeString.charAt(0).toUpperCase() + nativeString.substring(1)
+                );
+            }
         )
     };
 };
