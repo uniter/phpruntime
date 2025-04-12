@@ -9,9 +9,6 @@
 
 'use strict';
 
-var phpCommon = require('phpcommon'),
-    Exception = phpCommon.Exception;
-
 module.exports = function (internals) {
     var valueFactory = internals.valueFactory;
 
@@ -33,9 +30,7 @@ module.exports = function (internals) {
                     return valueFactory.createString('/pseudo/uniter/php.ini');
                 }
 
-                throw new Exception(
-                    'Cannot fetch option "' + optionName + '" - only cfg_file_path config option is currently supported'
-                );
+                return valueFactory.createBoolean(false);
             }
         )
     };
