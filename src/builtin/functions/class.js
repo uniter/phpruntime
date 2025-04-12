@@ -10,6 +10,7 @@
 'use strict';
 
 var phpCommon = require('phpcommon'),
+    Exception = phpCommon.Exception,
     PHPError = phpCommon.PHPError,
     GET_CLASS_WITHOUT_ARGS_OUTSIDE_CLASS = 'core.get_class_without_args_outside_class';
 
@@ -101,6 +102,33 @@ module.exports = function (internals) {
 
                 // Invalid "object" given - just return false (no warning/notice).
                 return valueFactory.createBoolean(false);
+            }
+        ),
+
+        /**
+         * Determines whether the given method is defined for the class of the given object
+         * or the class name provided.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.method-exists.php}
+         */
+        'method_exists': internals.typeFunction(
+            'object|string $object_or_class, string $method : bool',
+            function (objectValue, methodNameValue) {
+                var methodName = methodNameValue.getNative();
+
+                if (objectValue.getType() === 'object') {
+                    return valueFactory.createBoolean(objectValue.isMethodDefined(methodName));
+                }
+
+                if (objectValue.getType() === 'string') {
+                    return globalNamespace.getClass(objectValue.getNative())
+                        .next(function (classObject) {
+                            return valueFactory.createBoolean(classObject.getMethodSpec(methodName) !== null);
+                        });
+                }
+
+                // Should never happen, but just in case.
+                throw new Exception('Invalid $object_or_class value given');
             }
         )
     };
