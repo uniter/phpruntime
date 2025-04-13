@@ -23,6 +23,27 @@ module.exports = function (internals) {
 
     return {
         /**
+         * Returns trailing name component of path.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.basename.php}
+         */
+        'basename': internals.typeFunction(
+            'string $path, string $suffix = "" : string',
+            function (pathValue, suffixValue) {
+                var path = pathValue.getNative(),
+                    suffix = suffixValue.getNative(),
+                    lastSlashIndex = path.lastIndexOf('/'),
+                    basename = lastSlashIndex === -1 ? path : path.substring(lastSlashIndex + 1);
+
+                if (suffix !== '' && basename.endsWith(suffix)) {
+                    basename = basename.substring(0, basename.length - suffix.length);
+                }
+
+                return valueFactory.createString(basename);
+            }
+        ),
+
+        /**
          * Split a string into an array by a certain substring.
          *
          * @see {@link https://secure.php.net/manual/en/function.explode.php}
