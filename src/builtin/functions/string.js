@@ -157,6 +157,25 @@ module.exports = function (internals) {
         ),
 
         /**
+         * Repeat a string a given number of times.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.str-repeat.php}
+         */
+        'str_repeat': internals.typeFunction(
+            'string $string, int $times : string',
+            function (stringValue, timesValue) {
+                var string = stringValue.getNative(),
+                    times = timesValue.getNative();
+
+                if (times < 0) {
+                    times = 0;
+                }
+
+                return valueFactory.createString(string.repeat(times));
+            }
+        ),
+
+        /**
          * Replaces all occurrences of the search string in the subject(s) with the replacement string.
          * Optionally captures the number of replacements performed if $count is specified.
          *
