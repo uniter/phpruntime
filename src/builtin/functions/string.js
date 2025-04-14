@@ -272,6 +272,37 @@ module.exports = function (internals) {
         ),
 
         /**
+         * Binary-safe case-insensitive string comparison.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.strcasecmp.php}
+         */
+        'strcasecmp': internals.typeFunction(
+            'string $string1, string $string2 : int',
+            function (string1Value, string2Value) {
+                var string1 = string1Value.getNative().toLowerCase(),
+                    string2 = string2Value.getNative().toLowerCase(),
+                    minLength = Math.min(string1.length, string2.length),
+                    i;
+
+                if (string1 === string2) {
+                    // Fast case: strings are identical.
+                    return valueFactory.createInteger(0);
+                }
+
+                for (i = 0; i < minLength; i++) {
+                    var char1 = string1.charCodeAt(i),
+                        char2 = string2.charCodeAt(i);
+
+                    if (char1 !== char2) {
+                        return valueFactory.createInteger(char1 - char2);
+                    }
+                }
+
+                return valueFactory.createInteger(string1.length - string2.length);
+            }
+        ),
+
+        /**
          * Finds the position of the first occurrence of a substring.
          *
          * @see {@link https://secure.php.net/manual/en/function.strpos.php}
