@@ -20,8 +20,6 @@ module.exports = function (internals) {
          * Parses the components of a URL into an array.
          *
          * @see {@link https://secure.php.net/manual/en/function.parse-url.php}
-         *
-         * @returns {Value}
          */
         'parse_url': internals.typeFunction(
             'string $url, int $component = -1',
@@ -76,6 +74,37 @@ module.exports = function (internals) {
 
                 return valueFactory.createFromNativeArray(components);
             }
-        )
+        ),
+
+        /**
+         * Decodes strings URL-encoded according to RFC 3986.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.rawurldecode.php}
+         */
+        'rawurldecode': internals.typeFunction('string $string : string', function (stringValue) {
+            var string = stringValue.getNative();
+
+            // Replace %xx sequences with their corresponding characters.
+            string = string.replace(/%([0-9A-F]{2})/gi, function (match, hex) {
+                return String.fromCharCode(parseInt(hex, 16));
+            });
+
+            return valueFactory.createString(string);
+        }),
+
+        /**
+         * Encodes a string according to RFC 3986.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.rawurlencode.php}
+         */
+        'rawurlencode': internals.typeFunction('string $string : string', function (stringValue) {
+            var string = stringValue.getNative(),
+                encoded = encodeURIComponent(string)
+                    .replace(/[!'()*]/g, function(char) {
+                        return '%' + char.charCodeAt(0).toString(16).toUpperCase();
+                    });
+
+            return valueFactory.createString(encoded);
+        })
     };
 };
