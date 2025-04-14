@@ -303,6 +303,38 @@ module.exports = function (internals) {
         ),
 
         /**
+         * Finds the position of the first occurrence of a case-insensitive substring.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.stripos.php}
+         */
+        'stripos': internals.typeFunction(
+            'string $haystack, string $needle, int $offset = 0 : int|bool',
+            function (haystackValue, needleValue, offsetValue) {
+                // TODO: Add "int|false" return type above once supported.
+                var haystack = haystackValue.getNative(),
+                    needle = needleValue.getNative(),
+                    offset = offsetValue.getNative(),
+                    position;
+
+                if (needle === '') {
+                    return valueFactory.createInteger(0);
+                }
+
+                if (offset < 0) {
+                    offset = haystack.length + offset;
+                }
+
+                position = haystack.toLowerCase().indexOf(needle.toLowerCase(), offset);
+
+                if (position === -1) {
+                    return valueFactory.createBoolean(false);
+                }
+
+                return valueFactory.createInteger(position);
+            }
+        ),
+
+        /**
          * Finds the position of the first occurrence of a substring.
          *
          * @see {@link https://secure.php.net/manual/en/function.strpos.php}
