@@ -10,7 +10,7 @@
   "author": "Dan Phillimore <dan@ovms.co> (http://ovms.co)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/uniter/phpruntime"
+    "url": "git+https://github.com/uniter/phpruntime.git"
   },
   "bugs": {
     "email": "dan@ovms.co",
@@ -23,20 +23,20 @@
     "test": "npm run jshint && npm run mocha"
   },
   "dependencies": {
-    "core-js-pure": "^3.37.1",
+    "core-js-pure": "^3.41.0",
     "microdash": "^1.4.2",
-    "pcremu": "^0.0.4",
+    "pcremu": "^0.0.5",
     "phpcommon": "^2.0.2",
-    "phpcore": "^8.0.4"
+    "phpcore": "^8.1.2"
   },
   "devDependencies": {
     "chai": "^4.3.10",
     "chai-as-promised": "^7.1.1",
     "jshint": "^2.13.6",
-    "mocha": "^10.4.0",
-    "mocha-bootstrap": "^1.0.6",
+    "mocha": "^11.1.0",
+    "mocha-bootstrap": "^1.1.1",
     "nowdoc": "^1.0.1",
-    "phptest": "^0.0.10",
+    "phptest": "^0.0.11",
     "phptoast": "^9.3.0",
     "phptojs": "^10.2.0",
     "sinon": "^17.0.1",
