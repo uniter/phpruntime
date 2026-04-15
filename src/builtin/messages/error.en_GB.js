@@ -25,7 +25,8 @@ module.exports = {
             'fiber_not_suspended': 'Cannot resume a fiber that is not suspended',
             'fiber_threw_exception': 'Cannot get fiber return value: The fiber threw an exception',
             'get_class_without_args_outside_class': 'get_class() without arguments must be called from within a class',
-            'offset_out_of_range': 'Offset invalid or out of range'
+            'offset_out_of_range': 'Offset invalid or out of range',
+            'reflection_method_not_found': 'Method ${className}::${methodName}() does not exist'
         }
     }
 };
