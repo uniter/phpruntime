@@ -91,7 +91,7 @@ describe('PHP "array_map" builtin function', function () {
         });
 
         it('should map each element\'s value with the callback', async function () {
-            var mappedArrayValue = await array_map(callbackVariable, firstArrayVariable).toPromise();
+            var mappedArrayValue = await array_map.call([callbackVariable, firstArrayVariable]).toPromise();
 
             expect(mappedArrayValue.getType()).to.equal('array');
             expect(mappedArrayValue.getNative()).to.deep.equal([
@@ -120,7 +120,7 @@ describe('PHP "array_map" builtin function', function () {
                 )
             ]));
 
-            mappedArrayValue = await array_map(callbackVariable, firstArrayVariable).toPromise();
+            mappedArrayValue = await array_map.call([callbackVariable, firstArrayVariable]).toPromise();
 
             expect(mappedArrayValue.getType()).to.equal('array');
             expect(mappedArrayValue.getNative()).to.deep.equal({
@@ -135,7 +135,7 @@ describe('PHP "array_map" builtin function', function () {
         it('should throw an error, as this is not yet supported', async function () {
             var secondArrayVariable = variableFactory.createVariable('mySecondArray');
 
-            await expect(array_map(callbackVariable, firstArrayVariable, secondArrayVariable).toPromise())
+            await expect(array_map.call([callbackVariable, firstArrayVariable, secondArrayVariable]).toPromise())
                 .to.eventually.be.rejectedWith(
                     Exception,
                     'array_map() :: Multiple input arrays are not yet supported'
@@ -148,7 +148,7 @@ describe('PHP "array_map" builtin function', function () {
             var result;
             firstArrayVariable.setValue(valueFactory.createArray([]));
 
-            result = await array_map(callbackVariable, firstArrayVariable).toPromise();
+            result = await array_map.call([callbackVariable, firstArrayVariable]).toPromise();
 
             expect(result.getType()).to.equal('array');
             expect(result.getNative()).to.deep.equal([]);

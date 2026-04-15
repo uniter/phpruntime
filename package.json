@@ -26,19 +26,19 @@
     "core-js-pure": "^3.41.0",
     "microdash": "^1.4.2",
     "pcremu": "^0.0.5",
-    "phpcommon": "^2.0.2",
-    "phpcore": "^8.1.2"
+    "phpcommon": "^2.0.3",
+    "phpcore": "^8.2.0"
   },
   "devDependencies": {
     "chai": "^4.3.10",
     "chai-as-promised": "^7.1.1",
     "jshint": "^2.13.6",
-    "mocha": "^11.1.0",
+    "mocha": "^11.7.5",
     "mocha-bootstrap": "^1.1.1",
     "nowdoc": "^1.0.1",
-    "phptest": "^0.0.11",
-    "phptoast": "^9.3.0",
-    "phptojs": "^10.2.0",
+    "phptest": "^0.0.12",
+    "phptoast": "^9.4.0",
+    "phptojs": "^10.3.0",
     "sinon": "^17.0.1",
     "sinon-chai": "^3.7.0"
   },

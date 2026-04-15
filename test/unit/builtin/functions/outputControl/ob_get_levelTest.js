@@ -49,7 +49,7 @@ describe('PHP "ob_get_level" builtin function', function () {
         var resultValue;
         output.getDepth.returns(0);
 
-        resultValue = await ob_get_level().toPromise();
+        resultValue = await ob_get_level.call([]).toPromise();
 
         expect(resultValue.getType()).to.equal('int');
         expect(resultValue.getNative()).to.equal(0);
@@ -59,7 +59,7 @@ describe('PHP "ob_get_level" builtin function', function () {
         var resultValue;
         output.getDepth.returns(4);
 
-        resultValue = await ob_get_level().toPromise();
+        resultValue = await ob_get_level.call([]).toPromise();
 
         expect(resultValue.getType()).to.equal('int');
         expect(resultValue.getNative()).to.equal(4);

@@ -58,7 +58,7 @@ describe('PHP "preg_quote" basic-level builtin function', function () {
         var result;
         stringVariable.setValue(valueFactory.createString('hello, this is my string'));
 
-        result = await preg_quote(stringVariable).toPromise();
+        result = await preg_quote.call([stringVariable]).toPromise();
 
         expect(result.getType()).to.equal('string');
         expect(result.getNative()).to.equal('hello, this is my string');
@@ -72,7 +72,7 @@ describe('PHP "preg_quote" basic-level builtin function', function () {
             )
         );
 
-        result = await preg_quote(stringVariable).toPromise();
+        result = await preg_quote.call([stringVariable]).toPromise();
 
         expect(result.getType()).to.equal('string');
         expect(result.getNative()).to.equal(
@@ -85,7 +85,7 @@ describe('PHP "preg_quote" basic-level builtin function', function () {
         stringVariable.setValue(valueFactory.createString('hello, here + ? is @ my @ string'));
         delimiterVariable.setValue(valueFactory.createString('@'));
 
-        result = await preg_quote(stringVariable, delimiterVariable).toPromise();
+        result = await preg_quote.call([stringVariable, delimiterVariable]).toPromise();
 
         expect(result.getType()).to.equal('string');
         expect(result.getNative()).to.equal(
@@ -98,7 +98,7 @@ describe('PHP "preg_quote" basic-level builtin function', function () {
         stringVariable.setValue(valueFactory.createString('hello, here + ? is my string'));
         delimiterVariable.setValue(valueFactory.createString('+'));
 
-        result = await preg_quote(stringVariable, delimiterVariable).toPromise();
+        result = await preg_quote.call([stringVariable, delimiterVariable]).toPromise();
 
         expect(result.getType()).to.equal('string');
         expect(result.getNative()).to.equal(
@@ -111,7 +111,7 @@ describe('PHP "preg_quote" basic-level builtin function', function () {
         stringVariable.setValue(valueFactory.createString('hello, here + ? is @ my @ string'));
         delimiterVariable.setValue(valueFactory.createString('@sg'));
 
-        result = await preg_quote(stringVariable, delimiterVariable).toPromise();
+        result = await preg_quote.call([stringVariable, delimiterVariable]).toPromise();
 
         expect(result.getType()).to.equal('string');
         expect(result.getNative()).to.equal(

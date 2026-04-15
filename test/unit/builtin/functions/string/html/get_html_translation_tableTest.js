@@ -77,7 +77,7 @@ describe('PHP "get_html_translation_table" builtin function', function () {
     });
 
     it('should return the htmlspecialchars(...) table by default', async function () {
-        var resultValue = await get_html_translation_table().toPromise();
+        var resultValue = await get_html_translation_table.call([]).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal({
@@ -92,7 +92,7 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         var resultValue;
         tableVariable.setValue(HTML_SPECIALCHARS);
 
-        resultValue = await get_html_translation_table(tableVariable).toPromise();
+        resultValue = await get_html_translation_table.call([tableVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal({
@@ -107,7 +107,7 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         var resultValue;
         tableVariable.setValue(HTML_ENTITIES);
 
-        resultValue = await get_html_translation_table(tableVariable).toPromise();
+        resultValue = await get_html_translation_table.call([tableVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal({
@@ -124,7 +124,7 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         tableVariable.setValue(HTML_SPECIALCHARS);
         flagsVariable.setValue(ENT_COMPAT);
 
-        resultValue = await get_html_translation_table(tableVariable, flagsVariable).toPromise();
+        resultValue = await get_html_translation_table.call([tableVariable, flagsVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal({
@@ -140,7 +140,7 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         tableVariable.setValue(HTML_SPECIALCHARS);
         flagsVariable.setValue(ENT_QUOTES);
 
-        resultValue = await get_html_translation_table(tableVariable, flagsVariable).toPromise();
+        resultValue = await get_html_translation_table.call([tableVariable, flagsVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal({
@@ -157,7 +157,7 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         tableVariable.setValue(HTML_SPECIALCHARS);
         flagsVariable.setValue(ENT_NOQUOTES);
 
-        resultValue = await get_html_translation_table(tableVariable, flagsVariable).toPromise();
+        resultValue = await get_html_translation_table.call([tableVariable, flagsVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal({
@@ -173,7 +173,7 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         flagsVariable.setValue(ENT_NOQUOTES);
         encodingVariable.setValue(valueFactory.createString('UTF-8'));
 
-        resultValue = await get_html_translation_table(tableVariable, flagsVariable, encodingVariable).toPromise();
+        resultValue = await get_html_translation_table.call([tableVariable, flagsVariable, encodingVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal({
@@ -191,13 +191,13 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         });
 
         it('should not raise a warning', async function () {
-            await get_html_translation_table(tableVariable, flagsVariable, encodingVariable).toPromise();
+            await get_html_translation_table.call([tableVariable, flagsVariable, encodingVariable]).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
 
         it('should use UTF-8', async function () {
-            var resultValue = await get_html_translation_table(tableVariable, flagsVariable, encodingVariable).toPromise();
+            var resultValue = await get_html_translation_table.call([tableVariable, flagsVariable, encodingVariable]).toPromise();
 
             expect(resultValue.getType()).to.equal('array');
             expect(resultValue.getNative()).to.deep.equal({
@@ -216,13 +216,13 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         });
 
         it('should not raise a warning', async function () {
-            await get_html_translation_table(tableVariable, flagsVariable, encodingVariable).toPromise();
+            await get_html_translation_table.call([tableVariable, flagsVariable, encodingVariable]).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
 
         it('should use UTF-8', async function () {
-            var resultValue = await get_html_translation_table(tableVariable, flagsVariable, encodingVariable).toPromise();
+            var resultValue = await get_html_translation_table.call([tableVariable, flagsVariable, encodingVariable]).toPromise();
 
             expect(resultValue.getType()).to.equal('array');
             expect(resultValue.getNative()).to.deep.equal({
@@ -242,7 +242,7 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         });
 
         it('should raise a warning', async function () {
-            await get_html_translation_table(tableVariable, flagsVariable, encodingVariable).toPromise();
+            await get_html_translation_table.call([tableVariable, flagsVariable, encodingVariable]).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
@@ -252,7 +252,7 @@ describe('PHP "get_html_translation_table" builtin function', function () {
         });
 
         it('should assume UTF-8', async function () {
-            var resultValue = await get_html_translation_table(tableVariable, flagsVariable, encodingVariable).toPromise();
+            var resultValue = await get_html_translation_table.call([tableVariable, flagsVariable, encodingVariable]).toPromise();
 
             expect(resultValue.getType()).to.equal('array');
             expect(resultValue.getNative()).to.deep.equal({

@@ -129,8 +129,8 @@ module.exports = function (internals) {
          */
         'sprintf': internals.typeFunction(
             'string $format, mixed ...$values : string',
-            function (formatValue) {
-                var values = [].slice.call(arguments, 1);
+            function (formatValue, valuesArray) {
+                var values = valuesArray.getValues();
 
                 try {
                     return valueFactory.createString(

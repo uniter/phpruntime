@@ -82,7 +82,7 @@ describe('PHP "array_unique" builtin function', function () {
         });
 
         it('should not reindex the elements starting from 0', async function () {
-            var resultArray = await array_unique(arrayVariable).toPromise();
+            var resultArray = await array_unique.call([arrayVariable]).toPromise();
 
             expect(resultArray.getNative()).to.deep.equal([
                 'first',    // Key 0.
@@ -95,7 +95,7 @@ describe('PHP "array_unique" builtin function', function () {
         });
 
         it('should not modify the original array', async function () {
-            await array_unique(arrayVariable).toPromise();
+            await array_unique.call([arrayVariable]).toPromise();
 
             expect(arrayValue.getNative()).to.deep.equal([
                 'first',    // Key 0.
@@ -138,7 +138,7 @@ describe('PHP "array_unique" builtin function', function () {
         });
 
         it('should preserve the keys', async function () {
-            var resultArray = await array_unique(arrayVariable).toPromise();
+            var resultArray = await array_unique.call([arrayVariable]).toPromise();
 
             expect(resultArray.getNative()).to.deep.equal({
                 'a': 'first',
@@ -149,7 +149,7 @@ describe('PHP "array_unique" builtin function', function () {
         });
 
         it('should not modify the original array', async function () {
-            await array_unique(arrayVariable).toPromise();
+            await array_unique.call([arrayVariable]).toPromise();
 
             expect(arrayValue.getNative()).to.deep.equal({
                 'a': 'first',
@@ -171,7 +171,7 @@ describe('PHP "array_unique" builtin function', function () {
         });
 
         it('should return an empty array', async function () {
-            var resultArray = await array_unique(arrayVariable).toPromise();
+            var resultArray = await array_unique.call([arrayVariable]).toPromise();
 
             expect(resultArray.getLength()).to.equal(0);
         });
@@ -182,7 +182,7 @@ describe('PHP "array_unique" builtin function', function () {
             arrayVariable.setValue(valueFactory.createArray([]));
             sortFlagsVariable.setValue(SORT_NATURAL);
 
-            await expect(array_unique(arrayVariable, sortFlagsVariable).toPromise())
+            await expect(array_unique.call([arrayVariable, sortFlagsVariable]).toPromise())
                 .to.eventually.be.rejectedWith(
                     Exception,
                     'array_unique() :: Only SORT_STRING (2) is supported, 6 given'

@@ -65,7 +65,7 @@ describe('PHP "explode" builtin function', function () {
         delimiterVariable.setValue(valueFactory.createString(','));
         stringVariable.setValue(valueFactory.createString('first,second,third'));
 
-        resultValue = await explode(delimiterVariable, stringVariable).toPromise();
+        resultValue = await explode.call([delimiterVariable, stringVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal(['first', 'second', 'third']);
@@ -76,7 +76,7 @@ describe('PHP "explode" builtin function', function () {
         delimiterVariable.setValue(valueFactory.createString(','));
         stringVariable.setValue(valueFactory.createString('first,second,,,third,fourth'));
 
-        resultValue = await explode(delimiterVariable, stringVariable).toPromise();
+        resultValue = await explode.call([delimiterVariable, stringVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal(['first', 'second', '', '', 'third', 'fourth']);
@@ -87,7 +87,7 @@ describe('PHP "explode" builtin function', function () {
         delimiterVariable.setValue(valueFactory.createString('.'));
         stringVariable.setValue(valueFactory.createString(''));
 
-        resultValue = await explode(delimiterVariable, stringVariable).toPromise();
+        resultValue = await explode.call([delimiterVariable, stringVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal(['']);
@@ -98,7 +98,7 @@ describe('PHP "explode" builtin function', function () {
         delimiterVariable.setValue(valueFactory.createString('.'));
         stringVariable.setValue(valueFactory.createInteger(212));
 
-        resultValue = await explode(delimiterVariable, stringVariable).toPromise();
+        resultValue = await explode.call([delimiterVariable, stringVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal(['212']);
@@ -109,7 +109,7 @@ describe('PHP "explode" builtin function', function () {
         delimiterVariable.setValue(valueFactory.createString('.'));
         stringVariable.setValue(valueFactory.createInteger(212));
 
-        resultValue = await explode(delimiterVariable, stringVariable).toPromise();
+        resultValue = await explode.call([delimiterVariable, stringVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal(['212']);
@@ -120,7 +120,7 @@ describe('PHP "explode" builtin function', function () {
         delimiterVariable.setValue(valueFactory.createInteger(4));
         stringVariable.setValue(valueFactory.createInteger(22499));
 
-        resultValue = await explode(delimiterVariable, stringVariable).toPromise();
+        resultValue = await explode.call([delimiterVariable, stringVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('array');
         expect(resultValue.getNative()).to.deep.equal(['22', '99']);

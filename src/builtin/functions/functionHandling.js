@@ -10,7 +10,6 @@
 'use strict';
 
 var _ = require('microdash'),
-    slice = [].slice,
     PHPError = require('phpcommon').PHPError;
 
 module.exports = function (internals) {
@@ -27,11 +26,11 @@ module.exports = function (internals) {
          */
         'call_user_func': internals.typeFunction(
             'callable $callback, mixed ...$args : mixed',
-            function (callbackValue) {
+            function (callbackValue, argsArray) {
                 var expectedReferenceArgumentIndex = null,
                     expectedReferenceError = {call_user_func_expectedReferenceError: true},
                     argumentValues = _.map(
-                        slice.call(arguments, 1),
+                        argsArray.getValues(),
                         function (argumentReference, argumentIndex) {
                             return referenceFactory.createAccessor(
                                 function valueCallback() {

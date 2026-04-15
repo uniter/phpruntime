@@ -75,7 +75,7 @@ describe('PHP "array_pop" builtin function', function () {
         });
 
         it('should remove the last element', async function () {
-            await array_pop(arrayVariable).toPromise();
+            await array_pop.call([arrayVariable]).toPromise();
 
             expect(arrayValue.getNative()).to.deep.equal([
                 'my first element',
@@ -85,7 +85,7 @@ describe('PHP "array_pop" builtin function', function () {
         });
 
         it('should return the last element', async function () {
-            var result = await array_pop(arrayVariable).toPromise();
+            var result = await array_pop.call([arrayVariable]).toPromise();
 
             expect(result.getType()).to.equal('string');
             expect(result.getNative()).to.equal('my last element');
@@ -115,7 +115,7 @@ describe('PHP "array_pop" builtin function', function () {
         });
 
         it('should remove the last element, leaving the remaining elements\' keys untouched', async function () {
-            await array_pop(arrayVariable).toPromise();
+            await array_pop.call([arrayVariable]).toPromise();
 
             expect(arrayValue.getNative()).to.deep.equal({
                 'my_first_key': 'my first element',
@@ -125,7 +125,7 @@ describe('PHP "array_pop" builtin function', function () {
         });
 
         it('should return the last element\'s value, discarding the key', async function () {
-            var result = await array_pop(arrayVariable).toPromise();
+            var result = await array_pop.call([arrayVariable]).toPromise();
 
             expect(result.getType()).to.equal('string');
             expect(result.getNative()).to.equal('my last element');
@@ -137,7 +137,7 @@ describe('PHP "array_pop" builtin function', function () {
             var result;
             arrayVariable.setValue(valueFactory.createArray([]));
 
-            result = await array_pop(arrayVariable).toPromise();
+            result = await array_pop.call([arrayVariable]).toPromise();
 
             expect(result.getType()).to.equal('null');
         });

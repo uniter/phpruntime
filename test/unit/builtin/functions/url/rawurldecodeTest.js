@@ -53,42 +53,42 @@ describe('PHP "rawurldecode" builtin function', function () {
     });
 
     it('should return a string with no percent-encoded characters unmodified', async function () {
-        const resultValue = await rawurldecode(stringVariable.setValue(valueFactory.createString('hello world'))).toPromise();
+        const resultValue = await rawurldecode.call([stringVariable.setValue(valueFactory.createString('hello world'))]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello world');
     });
 
     it('should decode percent-encoded characters', async function () {
-        const resultValue = await rawurldecode(stringVariable.setValue(valueFactory.createString('hello%20world%21'))).toPromise();
+        const resultValue = await rawurldecode.call([stringVariable.setValue(valueFactory.createString('hello%20world%21'))]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello world!');
     });
 
     it('should decode multiple percent-encoded characters', async function () {
-        const resultValue = await rawurldecode(stringVariable.setValue(valueFactory.createString('%48%65%6C%6C%6F%20%57%6F%72%6C%64'))).toPromise();
+        const resultValue = await rawurldecode.call([stringVariable.setValue(valueFactory.createString('%48%65%6C%6C%6F%20%57%6F%72%6C%64'))]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('Hello World');
     });
 
     it('should handle mixed encoded and unencoded characters', async function () {
-        const resultValue = await rawurldecode(stringVariable.setValue(valueFactory.createString('hello%20world%21%20%26%20goodbye%20world%21'))).toPromise();
+        const resultValue = await rawurldecode.call([stringVariable.setValue(valueFactory.createString('hello%20world%21%20%26%20goodbye%20world%21'))]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello world! & goodbye world!');
     });
 
     it('should handle invalid percent-encoded sequences by leaving them unchanged', async function () {
-        const resultValue = await rawurldecode(stringVariable.setValue(valueFactory.createString('hello%2world%'))).toPromise();
+        const resultValue = await rawurldecode.call([stringVariable.setValue(valueFactory.createString('hello%2world%'))]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello%2world%');
     });
 
     it('should not decode "+" to a space (unlike urldecode)', async function () {
-        const resultValue = await rawurldecode(stringVariable.setValue(valueFactory.createString('hello+world'))).toPromise();
+        const resultValue = await rawurldecode.call([stringVariable.setValue(valueFactory.createString('hello+world'))]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello+world');

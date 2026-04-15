@@ -22,8 +22,8 @@ module.exports = {
 
     phpVersion: {
         major: 8,
-        minor: 3,
-        release: 8
+        minor: 4,
+        release: 0
     },
 
     zendVersion: {

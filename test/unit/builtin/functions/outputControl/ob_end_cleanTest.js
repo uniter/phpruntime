@@ -49,21 +49,21 @@ describe('PHP "ob_end_clean" builtin function', function () {
     });
 
     it('should discard the current output buffer', async function () {
-        await ob_end_clean().toPromise();
+        await ob_end_clean.call([]).toPromise();
 
         expect(output.popBuffer).to.have.been.calledOnce;
     });
 
     describe('on success', function () {
         it('should return true', async function () {
-            var resultValue = await ob_end_clean().toPromise();
+            var resultValue = await ob_end_clean.call([]).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.true;
         });
 
         it('should not raise any error', async function () {
-            await ob_end_clean().toPromise();
+            await ob_end_clean.call([]).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
@@ -75,7 +75,7 @@ describe('PHP "ob_end_clean" builtin function', function () {
         });
 
         it('should raise a notice', async function () {
-            await ob_end_clean().toPromise();
+            await ob_end_clean.call([]).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
@@ -85,7 +85,7 @@ describe('PHP "ob_end_clean" builtin function', function () {
         });
 
         it('should return bool(false)', async function () {
-            var resultValue = await ob_end_clean().toPromise();
+            var resultValue = await ob_end_clean.call([]).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;

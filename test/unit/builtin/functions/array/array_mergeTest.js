@@ -81,7 +81,7 @@ describe('PHP "array_merge" builtin function', function () {
             valueFactory.createInteger(21)
         ]));
 
-        result = await array_merge(firstArrayVariable, secondArrayVariable).toPromise();
+        result = await array_merge.call([firstArrayVariable, secondArrayVariable]).toPromise();
 
         expect(result.getType()).to.equal('array');
         expect(result.getKeys()).to.have.length(4);
@@ -110,7 +110,7 @@ describe('PHP "array_merge" builtin function', function () {
             createKeyValuePair(valueFactory.createString('first'), valueFactory.createInteger(21))
         ]));
 
-        result = await array_merge(firstArrayVariable, secondArrayVariable).toPromise();
+        result = await array_merge.call([firstArrayVariable, secondArrayVariable]).toPromise();
 
         expect(result.getType()).to.equal('array');
         expect(result.getKeys()).to.have.length(3);
@@ -138,7 +138,7 @@ describe('PHP "array_merge" builtin function', function () {
         });
 
         it('should raise a warning', async function () {
-            await array_merge(firstArrayVariable, secondArgumentVariable).toPromise();
+            await array_merge.call([firstArrayVariable, secondArgumentVariable]).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
@@ -148,7 +148,7 @@ describe('PHP "array_merge" builtin function', function () {
         });
 
         it('should return NULL', async function () {
-            var result = await array_merge(firstArrayVariable, secondArgumentVariable).toPromise();
+            var result = await array_merge.call([firstArrayVariable, secondArgumentVariable]).toPromise();
 
             expect(result.getType()).to.equal('null');
         });

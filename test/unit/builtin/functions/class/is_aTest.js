@@ -81,7 +81,7 @@ describe('PHP "is_a" builtin function', function () {
         });
 
         it('should return true when it or an ancestor class implements the given class', async function () {
-            var resultValue = await is_a(objectOrClassVariable, classNameVariable).toPromise();
+            var resultValue = await is_a.call([objectOrClassVariable, classNameVariable]).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.true;
@@ -91,14 +91,14 @@ describe('PHP "is_a" builtin function', function () {
             var resultValue;
             classObject.is.withArgs('My\\Namespaced\\MyClass').returns(false);
 
-            resultValue = await is_a(objectOrClassVariable, classNameVariable).toPromise();
+            resultValue = await is_a.call([objectOrClassVariable, classNameVariable]).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;
         });
 
         it('should not raise any error/warning/notice', async function () {
-            await is_a(objectOrClassVariable, classNameVariable).toPromise();
+            await is_a.call([objectOrClassVariable, classNameVariable]).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
@@ -124,7 +124,7 @@ describe('PHP "is_a" builtin function', function () {
         });
 
         it('should return true when it or an ancestor class implements the given class', async function () {
-            var resultValue = await is_a(objectOrClassVariable, classNameVariable, allowStringVariable).toPromise();
+            var resultValue = await is_a.call([objectOrClassVariable, classNameVariable, allowStringVariable]).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.true;
@@ -134,14 +134,14 @@ describe('PHP "is_a" builtin function', function () {
             var resultValue;
             classObject.is.withArgs('My\\Namespaced\\MyClass').returns(false);
 
-            resultValue = await is_a(objectOrClassVariable, classNameVariable).toPromise();
+            resultValue = await is_a.call([objectOrClassVariable, classNameVariable]).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;
         });
 
         it('should not raise any error/warning/notice', async function () {
-            await is_a(objectOrClassVariable, classNameVariable, allowStringVariable).toPromise();
+            await is_a.call([objectOrClassVariable, classNameVariable, allowStringVariable]).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
@@ -167,14 +167,14 @@ describe('PHP "is_a" builtin function', function () {
         });
 
         it('should return false, even when it implements the given class exactly', async function () {
-            var resultValue = await is_a(objectOrClassVariable, classNameVariable, allowStringVariable).toPromise();
+            var resultValue = await is_a.call([objectOrClassVariable, classNameVariable, allowStringVariable]).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;
         });
 
         it('should not raise any error/warning/notice', async function () {
-            await is_a(objectOrClassVariable, classNameVariable, allowStringVariable).toPromise();
+            await is_a.call([objectOrClassVariable, classNameVariable, allowStringVariable]).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
@@ -198,14 +198,14 @@ describe('PHP "is_a" builtin function', function () {
         });
 
         it('should return false', async function () {
-            var resultValue = await is_a(objectOrClassVariable, classNameVariable, allowStringVariable).toPromise();
+            var resultValue = await is_a.call([objectOrClassVariable, classNameVariable, allowStringVariable]).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;
         });
 
         it('should not raise any error/warning/notice even though the value is invalid', async function () {
-            await is_a(objectOrClassVariable, classNameVariable, allowStringVariable).toPromise();
+            await is_a.call([objectOrClassVariable, classNameVariable, allowStringVariable]).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });

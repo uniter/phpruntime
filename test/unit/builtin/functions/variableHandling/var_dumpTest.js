@@ -53,7 +53,7 @@ describe('PHP "var_dump" builtin function', function () {
         variableReference = variableFactory.createVariable('myVar');
 
         callVardump = function () {
-            return var_dump(variableReference);
+            return var_dump.call([variableReference]);
         };
     });
 

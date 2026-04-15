@@ -24,7 +24,7 @@ EOS
             module = tools.asyncTranspile('/path/to/my_module.php', php),
             engine = module();
 
-        expect((await engine.execute()).getNative()).to.equal('8.3.8');
+        expect((await engine.execute()).getNative()).to.equal('8.4.0');
     });
 
     it('should return false for now when any extension is specified', async function () {

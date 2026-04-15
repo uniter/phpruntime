@@ -84,7 +84,7 @@ describe('PHP "htmlspecialchars" builtin function', function () {
         var resultValue;
         stringVariable.setValue(valueFactory.createString('hello world'));
 
-        resultValue = await htmlspecialchars(stringVariable).toPromise();
+        resultValue = await htmlspecialchars.call([stringVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello world');
@@ -96,7 +96,7 @@ describe('PHP "htmlspecialchars" builtin function', function () {
             valueFactory.createString('hello <there> \'world\' & "planet", it costs £45 & 7p')
         );
 
-        resultValue = await htmlspecialchars(stringVariable).toPromise();
+        resultValue = await htmlspecialchars.call([stringVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         // Note that single-quotes should be left untouched with the default flags,
@@ -114,7 +114,7 @@ describe('PHP "htmlspecialchars" builtin function', function () {
         );
         flagsVariable.setValue(ENT_COMPAT.bitwiseOr(ENT_HTML401));
 
-        resultValue = await htmlspecialchars(stringVariable, flagsVariable).toPromise();
+        resultValue = await htmlspecialchars.call([stringVariable, flagsVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         // Note that single-quotes should be left untouched with ENT_COMPAT
@@ -130,7 +130,7 @@ describe('PHP "htmlspecialchars" builtin function', function () {
         stringVariable.setValue(valueFactory.createString('hello <there> \'world\' & "planet"'));
         flagsVariable.setValue(ENT_QUOTES);
 
-        resultValue = await htmlspecialchars(stringVariable, flagsVariable).toPromise();
+        resultValue = await htmlspecialchars.call([stringVariable, flagsVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal(
@@ -144,7 +144,7 @@ describe('PHP "htmlspecialchars" builtin function', function () {
         stringVariable.setValue(valueFactory.createString('hello <there> \'world\' & "planet"'));
         flagsVariable.setValue(ENT_NOQUOTES);
 
-        resultValue = await htmlspecialchars(stringVariable, flagsVariable).toPromise();
+        resultValue = await htmlspecialchars.call([stringVariable, flagsVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello &lt;there&gt; \'world\' &amp; "planet"');
@@ -156,7 +156,7 @@ describe('PHP "htmlspecialchars" builtin function', function () {
         stringVariable.setValue(valueFactory.createString('hello <there> \'world\' & "planet"'));
         flagsVariable.setValue(ENT_SUBSTITUTE);
 
-        resultValue = await htmlspecialchars(stringVariable, flagsVariable).toPromise();
+        resultValue = await htmlspecialchars.call([stringVariable, flagsVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello &lt;there&gt; \'world\' &amp; "planet"');
@@ -169,7 +169,7 @@ describe('PHP "htmlspecialchars" builtin function', function () {
         flagsVariable.setValue(ENT_COMPAT.bitwiseOr(ENT_HTML401));
         encodingVariable.setValue(valueFactory.createString('UTF-8'));
 
-        resultValue = await htmlspecialchars(stringVariable, flagsVariable, encodingVariable).toPromise();
+        resultValue = await htmlspecialchars.call([stringVariable, flagsVariable, encodingVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         // Note that single-quotes should be left untouched with ENT_COMPAT
@@ -188,13 +188,13 @@ describe('PHP "htmlspecialchars" builtin function', function () {
         });
 
         it('should not raise a warning', async function () {
-            await htmlspecialchars(stringVariable, flagsVariable, encodingVariable).toPromise();
+            await htmlspecialchars.call([stringVariable, flagsVariable, encodingVariable]).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
 
         it('should use UTF-8', async function () {
-            var resultValue = await htmlspecialchars(stringVariable, flagsVariable, encodingVariable).toPromise();
+            var resultValue = await htmlspecialchars.call([stringVariable, flagsVariable, encodingVariable]).toPromise();
 
             expect(resultValue.getType()).to.equal('string');
             // Note that single-quotes should be left untouched with ENT_COMPAT
@@ -216,7 +216,7 @@ describe('PHP "htmlspecialchars" builtin function', function () {
         });
 
         it('should raise a warning', async function () {
-            await htmlspecialchars(stringVariable, flagsVariable, encodingVariable).toPromise();
+            await htmlspecialchars.call([stringVariable, flagsVariable, encodingVariable]).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
@@ -226,7 +226,7 @@ describe('PHP "htmlspecialchars" builtin function', function () {
         });
 
         it('should assume UTF-8', async function () {
-            var resultValue = await htmlspecialchars(stringVariable, flagsVariable, encodingVariable).toPromise();
+            var resultValue = await htmlspecialchars.call([stringVariable, flagsVariable, encodingVariable]).toPromise();
 
             expect(resultValue.getType()).to.equal('string');
             // Note that single-quotes should be left untouched with ENT_COMPAT
@@ -247,7 +247,7 @@ describe('PHP "htmlspecialchars" builtin function', function () {
         encodingVariable.setValue(valueFactory.createString('UTF-8'));
         doubleEncodeVariable.setValue(valueFactory.createBoolean(false));
 
-        resultValue = await htmlspecialchars(stringVariable, flagsVariable, encodingVariable, doubleEncodeVariable).toPromise();
+        resultValue = await htmlspecialchars.call([stringVariable, flagsVariable, encodingVariable, doubleEncodeVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal(

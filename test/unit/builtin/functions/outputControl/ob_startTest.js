@@ -60,7 +60,7 @@ describe('PHP "ob_start" builtin function', function () {
 
     describe('when no arguments are given', function () {
         it('should push a buffer onto the stack', async function () {
-            await ob_start().toPromise();
+            await ob_start.call([]).toPromise();
 
             expect(output.pushBuffer).to.have.been.calledOnce;
         });
@@ -70,7 +70,7 @@ describe('PHP "ob_start" builtin function', function () {
         it('should throw an exception as there is no support for now', async function () {
             var classObject = sinon.createStubInstance(Class);
 
-            await expect(ob_start(valueFactory.createObject({}, classObject)).toPromise())
+            await expect(ob_start.call([valueFactory.createObject({}, classObject)]).toPromise())
                 .to.eventually.be.rejectedWith(
                     Exception,
                     'ob_start() :: No arguments are supported yet'

@@ -16,8 +16,8 @@ module.exports = function (internals) {
      * @see {@link https://secure.php.net/manual/en/class.invalidargumentexception.php}
      * @constructor
      */
-    function InvalidArgumentException() {
-        internals.callSuperConstructor(this, arguments);
+    function InvalidArgumentException(...args) {
+        internals.callSuperConstructor(this, args);
     }
 
     // Extend the base PHP LogicException class

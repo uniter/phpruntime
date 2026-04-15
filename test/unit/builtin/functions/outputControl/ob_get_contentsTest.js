@@ -54,14 +54,14 @@ describe('PHP "ob_get_contents" builtin function', function () {
             var resultValue;
             output.getCurrentBufferContents.returns('my buffered output');
 
-            resultValue = await ob_get_contents().toPromise();
+            resultValue = await ob_get_contents.call([]).toPromise();
 
             expect(resultValue.getType()).to.equal('string');
             expect(resultValue.getNative()).to.equal('my buffered output');
         });
 
         it('should not raise any error', async function () {
-            await ob_get_contents().toPromise();
+            await ob_get_contents.call([]).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
@@ -73,13 +73,13 @@ describe('PHP "ob_get_contents" builtin function', function () {
         });
 
         it('should STILL not raise a notice (unlike some other ob_* functions)', async function () {
-            await ob_get_contents().toPromise();
+            await ob_get_contents.call([]).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.calledOnce;
         });
 
         it('should return bool(false)', async function () {
-            var resultValue = await ob_get_contents().toPromise();
+            var resultValue = await ob_get_contents.call([]).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;

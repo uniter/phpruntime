@@ -11,7 +11,6 @@
 
 var _ = require('microdash'),
     phpCommon = require('phpcommon'),
-    slice = [].slice,
     Exception = phpCommon.Exception,
     PHPError = phpCommon.PHPError,
 
@@ -236,10 +235,9 @@ module.exports = function (internals) {
          * @see {@link https://secure.php.net/manual/en/fiber.start.php}
          */
         'start': internals.typeInstanceMethod(
-            ': mixed',
-            function () {
+            'mixed ...$args: mixed',
+            function (callbackArgsArray) {
                 var fiberValue = this,
-                    callbackArgs = slice.call(arguments),
                     callbackValue = fiberValue.getInternalProperty('callback');
 
                 if (fiberValue.getInternalProperty('started')) {
@@ -256,7 +254,7 @@ module.exports = function (internals) {
                 return enterFiber(
                     fiberValue,
                     function () {
-                        callbackValue.call(callbackArgs)
+                        callbackValue.call(callbackArgsArray.getValues())
                             .next(
                                 function (returnValue) {
                                     var entryContext = fiberValue.getInternalProperty('entry');

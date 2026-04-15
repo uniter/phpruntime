@@ -79,7 +79,7 @@ describe('PHP "sprintf" builtin function', function () {
             .withArgs('my %s string', [sinon.match.same(argValue)])
             .returns('my formatted string');
 
-        resultValue = await sprintf(templateVariable, argVariable).toPromise();
+        resultValue = await sprintf.call([templateVariable, argVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('my formatted string');
@@ -89,7 +89,7 @@ describe('PHP "sprintf" builtin function', function () {
         it('should raise an ArgumentCountError', async function () {
             formatter.format.throws(new MissingFormatArgumentException(27, 30));
 
-            await expect(sprintf(templateVariable).toPromise())
+            await expect(sprintf.call([templateVariable]).toPromise())
                 .to.eventually.be.rejectedWith(
                     'Fake PHP Fatal error for #core.arguments_missing with {"required":31,"given":28}'
                 );
@@ -100,7 +100,7 @@ describe('PHP "sprintf" builtin function', function () {
         it('should not catch the error', async function () {
             formatter.format.throws(new Error('Bang!'));
 
-            await expect(sprintf(templateVariable).toPromise())
+            await expect(sprintf.call([templateVariable]).toPromise())
                 .to.eventually.be.rejectedWith('Bang!');
         });
     });

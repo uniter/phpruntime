@@ -16,8 +16,8 @@ module.exports = function (internals) {
      * @see {@link https://secure.php.net/manual/en/class.logicexception.php}
      * @constructor
      */
-    function LogicException() {
-        internals.callSuperConstructor(this, arguments);
+    function LogicException(...args) {
+        internals.callSuperConstructor(this, args);
     }
 
     // Extend the base PHP Exception class

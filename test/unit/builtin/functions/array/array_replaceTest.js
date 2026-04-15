@@ -95,7 +95,7 @@ describe('PHP "array_replace" builtin function', function () {
                 )
             ]));
 
-            const result = await array_replace(arrayVariable, replacementArrayVariable1).toPromise();
+            const result = await array_replace.call([arrayVariable, replacementArrayVariable1]).toPromise();
 
             expect(result.getNative()).to.deep.equal([
                 'first',
@@ -123,7 +123,7 @@ describe('PHP "array_replace" builtin function', function () {
                 )
             ]));
 
-            const result = await array_replace(arrayVariable, replacementArrayVariable1, replacementArrayVariable2).toPromise();
+            const result = await array_replace.call([arrayVariable, replacementArrayVariable1, replacementArrayVariable2]).toPromise();
 
             expect(result.getNative()).to.deep.equal([
                 'first',
@@ -164,7 +164,7 @@ describe('PHP "array_replace" builtin function', function () {
                 )
             ]));
 
-            var result = await array_replace(arrayVariable, replacementArrayVariable1).toPromise();
+            var result = await array_replace.call([arrayVariable, replacementArrayVariable1]).toPromise();
 
             expect(result.getNative()).to.deep.equal({
                 'a': 'first',
@@ -192,7 +192,7 @@ describe('PHP "array_replace" builtin function', function () {
                 )
             ]));
 
-            const result = await array_replace(arrayVariable, replacementArrayVariable1, replacementArrayVariable2).toPromise();
+            const result = await array_replace.call([arrayVariable, replacementArrayVariable1, replacementArrayVariable2]).toPromise();
 
             expect(result.getNative()).to.deep.equal({
                 'a': 'first',
@@ -220,7 +220,7 @@ describe('PHP "array_replace" builtin function', function () {
                 )
             ]));
 
-            const result = await array_replace(arrayVariable, replacementArrayVariable1).toPromise();
+            const result = await array_replace.call([arrayVariable, replacementArrayVariable1]).toPromise();
 
             expect(result.getNative()).to.deep.equal({
                 'a': 'first',

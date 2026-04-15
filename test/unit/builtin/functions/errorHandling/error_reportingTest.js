@@ -76,14 +76,14 @@ describe('PHP "error_reporting" builtin function', function () {
         });
 
         it('should set the error reporting level', async function () {
-            await error_reporting(levelVariable).toPromise();
+            await error_reporting.call([levelVariable]).toPromise();
 
             expect(errorConfiguration.setErrorReportingLevel).to.have.been.calledOnce;
             expect(errorConfiguration.setErrorReportingLevel).to.have.been.calledWith(1234);
         });
 
         it('should return the old level', async function () {
-            var result = await error_reporting(levelVariable).toPromise();
+            var result = await error_reporting.call([levelVariable]).toPromise();
 
             expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(9999);
@@ -96,14 +96,14 @@ describe('PHP "error_reporting" builtin function', function () {
         });
 
         it('should set the error reporting level to the given string value', async function () {
-            await error_reporting(levelVariable).toPromise();
+            await error_reporting.call([levelVariable]).toPromise();
 
             expect(errorConfiguration.setErrorReportingLevel).to.have.been.calledOnce;
             expect(errorConfiguration.setErrorReportingLevel).to.have.been.calledWith('4321 & random text');
         });
 
         it('should return the old level', async function () {
-            var result = await error_reporting(levelVariable).toPromise();
+            var result = await error_reporting.call([levelVariable]).toPromise();
 
             expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(9999);
@@ -112,7 +112,7 @@ describe('PHP "error_reporting" builtin function', function () {
 
     describe('when no level is given', function () {
         it('should return the current level', async function () {
-            var result = await error_reporting().toPromise();
+            var result = await error_reporting.call([]).toPromise();
 
             expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(9999);

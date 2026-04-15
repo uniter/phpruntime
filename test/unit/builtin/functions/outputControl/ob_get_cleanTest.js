@@ -57,7 +57,7 @@ describe('PHP "ob_get_clean" builtin function', function () {
                 output.getCurrentBufferContents.returns('');
             });
 
-            resultValue = await ob_get_clean().toPromise();
+            resultValue = await ob_get_clean.call([]).toPromise();
 
             expect(resultValue.getType()).to.equal('string');
             expect(resultValue.getNative()).to.equal('my buffered output');
@@ -65,7 +65,7 @@ describe('PHP "ob_get_clean" builtin function', function () {
         });
 
         it('should not raise any error', async function () {
-            await ob_get_clean().toPromise();
+            await ob_get_clean.call([]).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
@@ -77,13 +77,13 @@ describe('PHP "ob_get_clean" builtin function', function () {
         });
 
         it('should STILL not raise a notice (unlike some other ob_* functions)', async function () {
-            await ob_get_clean().toPromise();
+            await ob_get_clean.call([]).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.calledOnce;
         });
 
         it('should return bool(false)', async function () {
-            var resultValue = await ob_get_clean().toPromise();
+            var resultValue = await ob_get_clean.call([]).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;

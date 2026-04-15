@@ -49,21 +49,21 @@ describe('PHP "ob_flush" builtin function', function () {
     });
 
     it('should flush the current output buffer', async function () {
-        await ob_flush().toPromise();
+        await ob_flush.call([]).toPromise();
 
         expect(output.flushCurrentBuffer).to.have.been.calledOnce;
     });
 
     describe('on success', function () {
         it('should return true', async function () {
-            var resultValue = await ob_flush().toPromise();
+            var resultValue = await ob_flush.call([]).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.true;
         });
 
         it('should not raise any error', async function () {
-            await ob_flush().toPromise();
+            await ob_flush.call([]).toPromise();
 
             expect(callStack.raiseError).not.to.have.been.called;
         });
@@ -75,7 +75,7 @@ describe('PHP "ob_flush" builtin function', function () {
         });
 
         it('should raise a notice', async function () {
-            await ob_flush().toPromise();
+            await ob_flush.call([]).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
@@ -85,7 +85,7 @@ describe('PHP "ob_flush" builtin function', function () {
         });
 
         it('should return bool(false)', async function () {
-            var resultValue = await ob_flush().toPromise();
+            var resultValue = await ob_flush.call([]).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;

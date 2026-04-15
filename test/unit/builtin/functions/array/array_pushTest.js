@@ -89,7 +89,7 @@ describe('PHP "array_push" builtin function', function () {
             newElementVariable1.setValue(valueFactory.createString('first new one'));
             newElementVariable2.setValue(valueFactory.createString('second new one'));
 
-            await array_push(arrayVariable, newElementVariable1, newElementVariable2).toPromise();
+            await array_push.call([arrayVariable, newElementVariable1, newElementVariable2]).toPromise();
 
             expect(arrayValue.getNative()).to.deep.equal([
                 'my first element',
@@ -110,7 +110,7 @@ describe('PHP "array_push" builtin function', function () {
                 result;
             newElementVariable.setValue(valueFactory.createString('my new one'));
 
-            result = await array_push(arrayVariable, newElementVariable).toPromise();
+            result = await array_push.call([arrayVariable, newElementVariable]).toPromise();
 
             expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(4); // Original 3 + the pushed one.
@@ -145,7 +145,7 @@ describe('PHP "array_push" builtin function', function () {
             newElementVariable1.setValue(valueFactory.createString('first new one'));
             newElementVariable2.setValue(valueFactory.createString('second new one'));
 
-            await array_push(arrayVariable, newElementVariable1, newElementVariable2).toPromise();
+            await array_push.call([arrayVariable, newElementVariable1, newElementVariable2]).toPromise();
 
             expect(arrayValue.getNative()).to.deep.equal({
                 'my_first_key': 'my first element',
@@ -163,7 +163,7 @@ describe('PHP "array_push" builtin function', function () {
                 result;
             newElementVariable.setValue(valueFactory.createString('my new one'));
 
-            result = await array_push(arrayVariable, newElementVariable).toPromise();
+            result = await array_push.call([arrayVariable, newElementVariable]).toPromise();
 
             expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(4); // Original 3 + the pushed one.
@@ -186,7 +186,7 @@ describe('PHP "array_push" builtin function', function () {
             newElementVariable1.setValue(valueFactory.createString('first new one'));
             newElementVariable2.setValue(valueFactory.createString('second new one'));
 
-            await array_push(arrayVariable, newElementVariable1, newElementVariable2).toPromise();
+            await array_push.call([arrayVariable, newElementVariable1, newElementVariable2]).toPromise();
 
             expect(arrayValue.getNative()).to.deep.equal([
                 // New elements - should start counting from 0.
@@ -201,7 +201,7 @@ describe('PHP "array_push" builtin function', function () {
                 result;
             newElementVariable.setValue(valueFactory.createString('my new one'));
 
-            result = await array_push(arrayVariable, newElementVariable).toPromise();
+            result = await array_push.call([arrayVariable, newElementVariable]).toPromise();
 
             expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(1); // No original elements, plus the pushed one.

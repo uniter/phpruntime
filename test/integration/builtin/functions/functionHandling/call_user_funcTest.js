@@ -118,7 +118,7 @@ PHP Fatal error:  Uncaught Exception: Bang! in /path/to/my_module.php:9
 Stack trace:
 #0 /path/to/my_module.php(4): myFuncThatThrows()
 #1 /path/to/my_module.php(14): myFuncThatIsCalledDynamically('my string')
-#2 /path/to/my_module.php(14): call_user_func('myFuncThatIsCal...', 'my string')
+#2 /path/to/my_module.php(14): call_user_func('myFuncThatIsCal...', Array)
 #3 {main}
   thrown in /path/to/my_module.php on line 9
 

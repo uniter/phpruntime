@@ -74,7 +74,7 @@ describe('PHP "is_file" builtin function', function () {
         fileSystem.isFile.withArgs('/my/path').returns(true);
         fileSystem.isFile.returns(false);
 
-        result = await is_file(pathVariable).toPromise();
+        result = await is_file.call([pathVariable]).toPromise();
 
         expect(result.getType()).to.equal('boolean');
         expect(result.getNative()).to.be.true;
@@ -87,7 +87,7 @@ describe('PHP "is_file" builtin function', function () {
         fileSystem.isFile.withArgs('/my/path').returns(false);
         fileSystem.isFile.returns(false);
 
-        result = await is_file(pathVariable).toPromise();
+        result = await is_file.call([pathVariable]).toPromise();
 
         expect(result.getType()).to.equal('boolean');
         expect(result.getNative()).to.be.false;
@@ -98,7 +98,7 @@ describe('PHP "is_file" builtin function', function () {
         fileSystem.isDirectory.returns(false);
         fileSystem.isFile.returns(false);
 
-        result = await is_file(pathVariable).toPromise();
+        result = await is_file.call([pathVariable]).toPromise();
 
         expect(result.getType()).to.equal('boolean');
         expect(result.getNative()).to.be.false;
@@ -107,7 +107,7 @@ describe('PHP "is_file" builtin function', function () {
     it('should raise an error when no "fileSystem" option is configured', async function () {
         optionSet.getOption.withArgs('fileSystem').returns(null);
 
-        await expect(is_file(pathVariable).toPromise())
+        await expect(is_file.call([pathVariable]).toPromise())
             .to.eventually.be.rejectedWith(
                 Exception,
                 'filesystem :: No `fileSystem` option is configured'

@@ -65,7 +65,7 @@ describe('PHP "strpos" builtin function', function () {
         haystackVariable.setValue(valueFactory.createString('hello world, out there world!'));
         needleVariable.setValue(valueFactory.createString('world'));
 
-        result = await strpos(haystackVariable, needleVariable).toPromise();
+        result = await strpos.call([haystackVariable, needleVariable]).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(6);
@@ -77,7 +77,7 @@ describe('PHP "strpos" builtin function', function () {
         needleVariable.setValue(valueFactory.createString('you'));
         offsetVariable.setValue(valueFactory.createInteger(10));
 
-        result = await strpos(haystackVariable, needleVariable, offsetVariable).toPromise();
+        result = await strpos.call([haystackVariable, needleVariable, offsetVariable]).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(21);
@@ -88,7 +88,7 @@ describe('PHP "strpos" builtin function', function () {
         haystackVariable.setValue(valueFactory.createString('This is a string.'));
         needleVariable.setValue(valueFactory.createString('random'));
 
-        result = await strpos(haystackVariable, needleVariable).toPromise();
+        result = await strpos.call([haystackVariable, needleVariable]).toPromise();
 
         expect(result.getType()).to.equal('boolean');
         expect(result.getNative()).to.be.false;

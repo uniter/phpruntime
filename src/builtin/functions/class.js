@@ -123,7 +123,7 @@ module.exports = function (internals) {
                 if (objectValue.getType() === 'string') {
                     return globalNamespace.getClass(objectValue.getNative())
                         .next(function (classObject) {
-                            return valueFactory.createBoolean(classObject.getMethodSpec(methodName) !== null);
+                            return valueFactory.createBoolean(classObject.getMethodCallable(methodName) !== null);
                         });
                 }
 

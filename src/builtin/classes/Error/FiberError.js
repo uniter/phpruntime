@@ -16,8 +16,8 @@ module.exports = function (internals) {
      * @see {@link https://secure.php.net/manual/en/class.fibererror.php}
      * @constructor
      */
-    function FiberError() {
-        internals.callSuperConstructor(this, arguments);
+    function FiberError(...args) {
+        internals.callSuperConstructor(this, args);
     }
 
     // Extend the base PHP Error class.

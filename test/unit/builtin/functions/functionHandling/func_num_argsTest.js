@@ -63,7 +63,7 @@ describe('PHP "func_num_args" builtin function', function () {
         });
 
         it('should return the number of args passed to the caller as an integer', async function () {
-            var resultValue = await func_num_args().toPromise();
+            var resultValue = await func_num_args.call([]).toPromise();
 
             expect(resultValue.getType()).to.equal('int');
             expect(resultValue.getNative()).to.equal(2);
@@ -76,7 +76,7 @@ describe('PHP "func_num_args" builtin function', function () {
         });
 
         it('should raise a warning', async function () {
-            await func_num_args().toPromise();
+            await func_num_args.call([]).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
@@ -86,7 +86,7 @@ describe('PHP "func_num_args" builtin function', function () {
         });
 
         it('should return -1', async function () {
-            var resultValue = await func_num_args().toPromise();
+            var resultValue = await func_num_args.call([]).toPromise();
 
             expect(resultValue.getType()).to.equal('int');
             expect(resultValue.getNative()).to.equal(-1);

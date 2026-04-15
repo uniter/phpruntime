@@ -73,7 +73,7 @@ describe('PHP "microtime" builtin function', function () {
         performance.getTimeInMicroseconds.returns(123456789);
         getAsFloatVariable.setValue(valueFactory.createBoolean(true));
 
-        result = await microtime(getAsFloatVariable).toPromise();
+        result = await microtime.call([getAsFloatVariable]).toPromise();
 
         expect(result.getType()).to.equal('float');
         expect(result.getNative()).to.equal(123.456789);
@@ -84,7 +84,7 @@ describe('PHP "microtime" builtin function', function () {
         performance.getTimeInMicroseconds.returns(123456789);
         getAsFloatVariable.setValue(valueFactory.createBoolean(false));
 
-        result = await microtime(getAsFloatVariable).toPromise();
+        result = await microtime.call([getAsFloatVariable]).toPromise();
 
         expect(result.getType()).to.equal('string');
         expect(result.getNative()).to.equal('0.456789 123');
@@ -94,7 +94,7 @@ describe('PHP "microtime" builtin function', function () {
         var result;
         performance.getTimeInMicroseconds.returns(123456789);
 
-        result = await microtime().toPromise();
+        result = await microtime.call([]).toPromise();
 
         expect(result.getType()).to.equal('string');
         expect(result.getNative()).to.equal('0.456789 123');
@@ -104,7 +104,7 @@ describe('PHP "microtime" builtin function', function () {
         it('should throw an error', async function () {
             optionSet.getOption.withArgs('performance').returns(null);
 
-            await expect(microtime().toPromise()).to.eventually.be.rejectedWith(
+            await expect(microtime.call([]).toPromise()).to.eventually.be.rejectedWith(
                 Exception,
                 'performance :: No `performance` option is configured'
             );

@@ -73,11 +73,11 @@ describe('PHP "preg_replace" basic-level builtin function', function () {
             subjectVariable.setValue(valueFactory.createString('well hello!'));
 
             doCall = async function () {
-                resultValue = await preg_replace(
+                resultValue = await preg_replace.call([
                     patternVariable,
                     replacementVariable,
                     subjectVariable
-                ).toPromise();
+                ]).toPromise();
             };
         });
 
@@ -99,13 +99,13 @@ describe('PHP "preg_replace" basic-level builtin function', function () {
                 limitReference = variableFactory.createVariable('myLimit');
             limitReference.setValue(valueFactory.createInteger(-1));
 
-            await preg_replace(
+            await preg_replace.call([
                 patternVariable,
                 replacementVariable,
                 subjectVariable,
                 limitReference,
                 countVariable
-            ).toPromise();
+            ]).toPromise();
 
             expect(countVariable.getValue().getType()).to.equal('int');
             expect(countVariable.getValue().getNative()).to.equal(1);
@@ -128,11 +128,11 @@ describe('PHP "preg_replace" basic-level builtin function', function () {
             subjectVariable.setValue(valueFactory.createString('some subject'));
 
             doCall = async function () {
-                resultValue = await preg_replace(
+                resultValue = await preg_replace.call([
                     patternVariable,
                     replacementVariable,
                     subjectVariable
-                ).toPromise();
+                ]).toPromise();
             };
         });
 
@@ -171,11 +171,11 @@ describe('PHP "preg_replace" basic-level builtin function', function () {
             subjectVariable.setValue(valueFactory.createString('some subject'));
 
             doCall = async function () {
-                resultValue = await preg_replace(
+                resultValue = await preg_replace.call([
                     patternVariable,
                     replacementVariable,
                     subjectVariable
-                ).toPromise();
+                ]).toPromise();
             };
         });
 
@@ -212,11 +212,11 @@ describe('PHP "preg_replace" basic-level builtin function', function () {
             subjectVariable.setValue(valueFactory.createString('some subject'));
 
             doCall = async function () {
-                resultValue = await preg_replace(
+                resultValue = await preg_replace.call([
                     patternVariable,
                     replacementVariable,
                     subjectVariable
-                ).toPromise();
+                ]).toPromise();
             };
         });
 
@@ -253,11 +253,11 @@ describe('PHP "preg_replace" basic-level builtin function', function () {
             subjectVariable.setValue(valueFactory.createString('some subject'));
 
             doCall = async function () {
-                resultValue = await preg_replace(
+                resultValue = await preg_replace.call([
                     patternVariable,
                     replacementVariable,
                     subjectVariable
-                ).toPromise();
+                ]).toPromise();
             };
         });
 

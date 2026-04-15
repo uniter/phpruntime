@@ -59,7 +59,7 @@ describe('PHP "substr_count" builtin function', function () {
         haystackVariable.setValue(valueFactory.createString(''));
         needleVariable.setValue(valueFactory.createString('stuff'));
 
-        result = await substr_count(haystackVariable, needleVariable).toPromise();
+        result = await substr_count.call([haystackVariable, needleVariable]).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(0);
@@ -70,7 +70,7 @@ describe('PHP "substr_count" builtin function', function () {
         haystackVariable.setValue(valueFactory.createString('my strstrstr here'));
         needleVariable.setValue(valueFactory.createString('str'));
 
-        result = await substr_count(haystackVariable, needleVariable).toPromise();
+        result = await substr_count.call([haystackVariable, needleVariable]).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(3);
@@ -81,7 +81,7 @@ describe('PHP "substr_count" builtin function', function () {
         haystackVariable.setValue(valueFactory.createString('stuff stuff stuff stuff'));
         needleVariable.setValue(valueFactory.createString('stuff'));
 
-        result = await substr_count(haystackVariable, needleVariable).toPromise();
+        result = await substr_count.call([haystackVariable, needleVariable]).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(4);
@@ -94,7 +94,7 @@ describe('PHP "substr_count" builtin function', function () {
         offsetVariable.setValue(valueFactory.createInteger(4));
         lengthVariable.setValue(valueFactory.createInteger(14));
 
-        result = await substr_count(haystackVariable, needleVariable, offsetVariable, lengthVariable).toPromise();
+        result = await substr_count.call([haystackVariable, needleVariable, offsetVariable, lengthVariable]).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(2);
@@ -107,7 +107,7 @@ describe('PHP "substr_count" builtin function', function () {
         offsetVariable.setValue(valueFactory.createInteger(2));
         lengthVariable.setValue(valueFactory.createInteger(14));
 
-        result = await substr_count(haystackVariable, needleVariable, offsetVariable, lengthVariable).toPromise();
+        result = await substr_count.call([haystackVariable, needleVariable, offsetVariable, lengthVariable]).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(2);
@@ -119,7 +119,7 @@ describe('PHP "substr_count" builtin function', function () {
         needleVariable.setValue(valueFactory.createString('stuff'));
         offsetVariable.setValue(valueFactory.createInteger(-12));
 
-        result = await substr_count(haystackVariable, needleVariable, offsetVariable).toPromise();
+        result = await substr_count.call([haystackVariable, needleVariable, offsetVariable]).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(1);
@@ -133,7 +133,7 @@ describe('PHP "substr_count" builtin function', function () {
         lengthVariable.setValue(valueFactory.createInteger(-4));
 
         // Should search `rstrst`.
-        result = await substr_count(haystackVariable, needleVariable, offsetVariable, lengthVariable).toPromise();
+        result = await substr_count.call([haystackVariable, needleVariable, offsetVariable, lengthVariable]).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(1);
@@ -144,7 +144,7 @@ describe('PHP "substr_count" builtin function', function () {
         haystackVariable.setValue(valueFactory.createInteger(27773));
         needleVariable.setValue(valueFactory.createInteger(7));
 
-        result = await substr_count(haystackVariable, needleVariable).toPromise();
+        result = await substr_count.call([haystackVariable, needleVariable]).toPromise();
 
         expect(result.getType()).to.equal('int');
         expect(result.getNative()).to.equal(3);
@@ -158,7 +158,7 @@ describe('PHP "substr_count" builtin function', function () {
             haystackVariable.setValue(valueFactory.createString('my haystack'));
 
             doCall = async function () {
-                resultValue = await substr_count(haystackVariable).toPromise();
+                resultValue = await substr_count.call([haystackVariable]).toPromise();
             };
         });
 
@@ -185,7 +185,7 @@ describe('PHP "substr_count" builtin function', function () {
 
         beforeEach(function () {
             doCall = async function () {
-                resultValue = await substr_count().toPromise();
+                resultValue = await substr_count.call([]).toPromise();
             };
         });
 

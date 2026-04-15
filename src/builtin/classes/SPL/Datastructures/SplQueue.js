@@ -21,8 +21,8 @@ module.exports = function (internals) {
      * @see {@link https://secure.php.net/manual/en/class.splqueue.php}
      * @constructor
      */
-    function SplQueue() {
-        internals.callSuperConstructor(this, arguments);
+    function SplQueue(...args) {
+        internals.callSuperConstructor(this, args);
     }
 
     internals.extendClass('SplDoublyLinkedList');

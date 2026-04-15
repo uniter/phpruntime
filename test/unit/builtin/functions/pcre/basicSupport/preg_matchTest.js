@@ -59,10 +59,10 @@ describe('PHP "preg_match" basic-level builtin function', function () {
 
     describe('on a successful match', function () {
         it('should return 1', async function () {
-            var result = await preg_match(
+            var result = await preg_match.call([
                 valueFactory.createString('/hel{2}o/'),
                 valueFactory.createString('hello')
-            ).toPromise();
+            ]).toPromise();
 
             expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(1);
@@ -71,11 +71,11 @@ describe('PHP "preg_match" basic-level builtin function', function () {
         it('should populate the matches variable', async function () {
             var matchesVariable = variableFactory.createVariable('myMatches');
 
-            await preg_match(
+            await preg_match.call([
                 valueFactory.createString('/h(el{2})o/'),
                 valueFactory.createString('hello'),
                 matchesVariable
-            ).toPromise();
+            ]).toPromise();
 
             expect(matchesVariable.getValue().getType()).to.equal('array');
             expect(matchesVariable.getValue().getNative()).to.deep.equal([
@@ -87,12 +87,12 @@ describe('PHP "preg_match" basic-level builtin function', function () {
         it('should capture offsets when PREG_OFFSET_CAPTURE is specified', async function () {
             var matchesVariable = variableFactory.createVariable('myMatches');
 
-            await preg_match(
+            await preg_match.call([
                 valueFactory.createString('/h(el{2})o/'),
                 valueFactory.createString('well hello'),
                 matchesVariable,
                 PREG_OFFSET_CAPTURE
-            ).toPromise();
+            ]).toPromise();
 
             expect(matchesVariable.getValue().getType()).to.equal('array');
             expect(matchesVariable.getValue().getNative()).to.deep.equal([
@@ -103,12 +103,12 @@ describe('PHP "preg_match" basic-level builtin function', function () {
 
         it('should ignore the study modifier "S"', async function () {
             var matchesVariable = variableFactory.createVariable('myMatches'),
-                result = await preg_match(
+                result = await preg_match.call([
                     valueFactory.createString('/h(el{2})o/S'),
                     valueFactory.createString('well hello'),
                     matchesVariable,
                     PREG_OFFSET_CAPTURE
-                ).toPromise();
+                ]).toPromise();
 
             expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(1);
@@ -121,12 +121,12 @@ describe('PHP "preg_match" basic-level builtin function', function () {
 
         it('should support the extended modifier "x"', async function () {
             var matchesVariable = variableFactory.createVariable('myMatches'),
-                result = await preg_match(
+                result = await preg_match.call([
                     valueFactory.createString('/   h  (  e  # A line comment\n  l{2} )  o   \\     there   /x'),
                     valueFactory.createString('well hello there'),
                     matchesVariable,
                     PREG_OFFSET_CAPTURE
-                ).toPromise();
+                ]).toPromise();
 
             expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(1);
@@ -140,10 +140,10 @@ describe('PHP "preg_match" basic-level builtin function', function () {
 
     describe('on a failed match', function () {
         it('should return 0', async function () {
-            var result = await preg_match(
+            var result = await preg_match.call([
                 valueFactory.createString('/regexp?/'),
                 valueFactory.createString('this will not match')
-            ).toPromise();
+            ]).toPromise();
 
             expect(result.getType()).to.equal('int');
             expect(result.getNative()).to.equal(0);
@@ -152,11 +152,11 @@ describe('PHP "preg_match" basic-level builtin function', function () {
         it('should populate the matches variable with an empty array', async function () {
             var matchesVariable = variableFactory.createVariable('myMatches');
 
-            await preg_match(
+            await preg_match.call([
                 valueFactory.createString('/regexp?/'),
                 valueFactory.createString('this will not match'),
                 matchesVariable
-            ).toPromise();
+            ]).toPromise();
 
             expect(matchesVariable.getValue().getType()).to.equal('array');
             expect(matchesVariable.getValue().getNative()).to.deep.equal([]);
@@ -169,10 +169,10 @@ describe('PHP "preg_match" basic-level builtin function', function () {
 
         beforeEach(function () {
             doCall = async function () {
-                resultValue = await preg_match(
+                resultValue = await preg_match.call([
                     valueFactory.createString('/? invalid regex/'),
                     valueFactory.createString('anything')
-                ).toPromise();
+                ]).toPromise();
             };
         });
 
@@ -202,10 +202,10 @@ describe('PHP "preg_match" basic-level builtin function', function () {
 
         beforeEach(function () {
             doCall = async function () {
-                resultValue = await preg_match(
+                resultValue = await preg_match.call([
                     valueFactory.createString('@invalid preg pattern'),
                     valueFactory.createString('anything')
-                ).toPromise();
+                ]).toPromise();
             };
         });
 
@@ -233,10 +233,10 @@ describe('PHP "preg_match" basic-level builtin function', function () {
 
         beforeEach(function () {
             doCall = async function () {
-                resultValue = await preg_match(
+                resultValue = await preg_match.call([
                     valueFactory.createString('/invalid preg modifier/a'),
                     valueFactory.createString('anything')
-                ).toPromise();
+                ]).toPromise();
             };
         });
 
@@ -273,7 +273,7 @@ describe('PHP "preg_match" basic-level builtin function', function () {
             subjectVariable.setValue(valueFactory.createString('some subject'));
 
             doCall = async function () {
-                resultValue = await preg_match(patternVariable, subjectVariable).toPromise();
+                resultValue = await preg_match.call([patternVariable, subjectVariable]).toPromise();
             };
         });
 

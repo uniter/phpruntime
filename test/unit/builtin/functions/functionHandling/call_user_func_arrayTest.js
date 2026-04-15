@@ -71,7 +71,7 @@ describe('PHP "call_user_func_array" builtin function', function () {
     });
 
     it('should call the callback value once', async function () {
-        await call_user_func_array(callbackVariable, argumentArrayVariable).toPromise();
+        await call_user_func_array.call([callbackVariable, argumentArrayVariable]).toPromise();
 
         expect(callbackValue.call).to.have.been.calledOnce;
     });
@@ -81,7 +81,7 @@ describe('PHP "call_user_func_array" builtin function', function () {
             argumentValue2 = valueFactory.createString('my second arg');
         argumentArrayVariable.setValue(valueFactory.createArray([argumentValue1, argumentValue2]));
 
-        await call_user_func_array(callbackVariable, argumentArrayVariable).toPromise();
+        await call_user_func_array.call([callbackVariable, argumentArrayVariable]).toPromise();
 
         expect(callbackValue.call).to.have.been.calledWith([
             argumentValue1,
@@ -90,7 +90,7 @@ describe('PHP "call_user_func_array" builtin function', function () {
     });
 
     it('should call the function with the global namespace', async function () {
-        await call_user_func_array(callbackVariable, argumentArrayVariable).toPromise();
+        await call_user_func_array.call([callbackVariable, argumentArrayVariable]).toPromise();
 
         expect(callbackValue.call).to.have.been.calledOnce;
         expect(callbackValue.call).to.have.been.calledWith(
@@ -103,7 +103,7 @@ describe('PHP "call_user_func_array" builtin function', function () {
         var resultValue = valueFactory.createString('my result');
         callbackValue.call.returns(resultValue);
 
-        expect(await call_user_func_array(callbackVariable, argumentArrayVariable).toPromise())
+        expect(await call_user_func_array.call([callbackVariable, argumentArrayVariable]).toPromise())
             .to.equal(resultValue);
     });
 });

@@ -69,7 +69,7 @@ describe('PHP "call_user_func" builtin function', function () {
     });
 
     it('should call the callback value once', async function () {
-        await call_user_func(callbackVariable).toPromise();
+        await call_user_func.call([callbackVariable]).toPromise();
 
         expect(callbackValue.call).to.have.been.calledOnce;
     });
@@ -82,7 +82,7 @@ describe('PHP "call_user_func" builtin function', function () {
         argumentVariable1.setValue(argumentValue1);
         argumentVariable2.setValue(argumentValue2);
 
-        await call_user_func(callbackVariable, argumentVariable1, argumentVariable2).toPromise();
+        await call_user_func.call([callbackVariable, argumentVariable1, argumentVariable2]).toPromise();
 
         expect(callbackValue.call.args[0][0][0]).to.be.an.instanceof(AccessorReference);
         expect(callbackValue.call.args[0][0][0].getValue()).to.equal(argumentValue1);
@@ -91,7 +91,7 @@ describe('PHP "call_user_func" builtin function', function () {
     });
 
     it('should call the function with the global namespace', async function () {
-        await call_user_func(callbackVariable).toPromise();
+        await call_user_func.call([callbackVariable]).toPromise();
 
         expect(callbackValue.call).to.have.been.calledWith(
             sinon.match.any,
@@ -103,13 +103,13 @@ describe('PHP "call_user_func" builtin function', function () {
         var resultValue = valueFactory.createInteger(21);
         callbackValue.call.returns(resultValue);
 
-        expect(await call_user_func(callbackVariable).toPromise()).to.equal(resultValue);
+        expect(await call_user_func.call([callbackVariable]).toPromise()).to.equal(resultValue);
     });
 
     it('should allow errors from .call(...) to go up the call stack', async function () {
         callbackValue.call.throws(new Error('My custom error'));
 
-        await expect(call_user_func(callbackVariable).toPromise())
+        await expect(call_user_func.call([callbackVariable]).toPromise())
             .to.eventually.be.rejectedWith('My custom error');
     });
 
@@ -135,7 +135,7 @@ describe('PHP "call_user_func" builtin function', function () {
                 });
             });
 
-            await call_user_func(callbackVariable, argumentVariable1, argumentVariable2).toPromise();
+            await call_user_func.call([callbackVariable, argumentVariable1, argumentVariable2]).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
@@ -151,7 +151,7 @@ describe('PHP "call_user_func" builtin function', function () {
                 });
             });
 
-            await call_user_func(callbackVariable, argumentVariable1, argumentVariable2).toPromise();
+            await call_user_func.call([callbackVariable, argumentVariable1, argumentVariable2]).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
@@ -168,7 +168,7 @@ describe('PHP "call_user_func" builtin function', function () {
                 });
             });
 
-            result = await call_user_func(callbackVariable, argumentVariable1, argumentVariable2).toPromise();
+            result = await call_user_func.call([callbackVariable, argumentVariable1, argumentVariable2]).toPromise();
 
             expect(result.getType()).to.equal('null');
         });

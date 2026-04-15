@@ -12,7 +12,6 @@
 var _ = require('microdash'),
     hasOwn = {}.hasOwnProperty,
     phpCommon = require('phpcommon'),
-    slice = [].slice,
     KeyValuePair = require('phpcore/src/KeyValuePair'),
     Exception = phpCommon.Exception,
     PHPError = phpCommon.PHPError;
@@ -36,7 +35,7 @@ module.exports = function (internals) {
          */
         'array_diff': internals.typeFunction(
             'array $array, array ...$arrays : array',
-            function (firstArrayValue) {
+            function (firstArrayValue, remainingArrays) {
                 var remainingElementPairs;
 
                 // Start with the key-value pairs for the elements of the first array,
@@ -47,7 +46,7 @@ module.exports = function (internals) {
                 });
 
                 return flow
-                    .eachAsync(slice.call(arguments, 1), function (arrayValue) {
+                    .eachAsync(remainingArrays.getValues(), function (arrayValue) {
                         return flow.eachAsync(arrayValue.getKeys(), function (keyValue) {
                             var elementValue = arrayValue.getElementByKey(keyValue).getValue(),
                                 filteredElementPairs = [];
@@ -208,8 +207,8 @@ module.exports = function (internals) {
          */
         'array_map': internals.typeFunction(
             '?callable $callback, array $array, array ...$arrays : array',
-            function (callbackValue, firstArrayValue) {
-                if (arguments.length > 2) {
+            function (callbackValue, firstArrayValue, remainingArrays) {
+                if (remainingArrays.getLength() > 0) {
                     return valueFactory.createRejection(
                         new Exception('array_map() :: Multiple input arrays are not yet supported')
                     );
@@ -237,14 +236,14 @@ module.exports = function (internals) {
          *
          * @see {@link https://secure.php.net/manual/en/function.array-merge.php}
          */
-        'array_merge': internals.typeFunction('array ...$arrays : array', function () {
+        'array_merge': internals.typeFunction('array ...$arrays : array', function (arraysValue) {
             var nativeKeyToElementMap = {},
                 mergedElements,
                 nativeKeys = [],
                 nextIndex = 0,
                 returnNull = false;
 
-            return flow.eachAsync(arguments, function (arrayValue, argumentIndex) {
+            return flow.eachAsync(arraysValue.getValues(), function (arrayValue, argumentIndex) {
                 if (arrayValue.getType() !== 'array') {
                     callStack.raiseError(
                         PHPError.E_WARNING,
@@ -312,11 +311,12 @@ module.exports = function (internals) {
          */
         'array_push': internals.typeFunction(
             'array &$array, mixed ...$values : int',
-            function (arraySnapshot) {
-                var arrayValue = arraySnapshot.getValue();
+            function (arraySnapshot, valuesArray) {
+                var arrayValue = arraySnapshot.getValue(),
+                    values = valuesArray.getValues();
 
                 return flow
-                    .eachAsync(slice.call(arguments, 1), function (value) {
+                    .eachAsync(values, function (value) {
                         return arrayValue.push(value);
                     })
                     .next(function () {
@@ -334,12 +334,11 @@ module.exports = function (internals) {
          *
          * @see {@link https://secure.php.net/manual/en/function.array-replace.php}
          */
-        'array_replace': internals.typeFunction('array $array, array ...$replacements : array', function (arrayValue) {
-            var resultArray = arrayValue.getForAssignment(),
-                replacementArrays = slice.call(arguments, 1);
+        'array_replace': internals.typeFunction('array $array, array ...$replacements : array', function (arrayValue, replacementArrays) {
+            var resultArray = arrayValue.getForAssignment();
 
             return flow
-                .eachAsync(replacementArrays, function (replacementArray) {
+                .eachAsync(replacementArrays.getValues(), function (replacementArray) {
                     return flow.eachAsync(replacementArray.getKeys(), function (key) {
                         var elementPair = replacementArray.getElementPairByKey(key);
                         return resultArray.getElementByKey(key).setValue(elementPair.getValue());

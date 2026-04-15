@@ -63,7 +63,7 @@ describe('PHP "func_get_args" builtin function', function () {
         });
 
         it('should return an array of the args passed to the caller', async function () {
-            var resultValue = await func_get_args().toPromise();
+            var resultValue = await func_get_args.call([]).toPromise();
 
             expect(resultValue.getType()).to.equal('array');
         });
@@ -75,7 +75,7 @@ describe('PHP "func_get_args" builtin function', function () {
         });
 
         it('should raise a warning', async function () {
-            await func_get_args().toPromise();
+            await func_get_args.call([]).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
@@ -85,7 +85,7 @@ describe('PHP "func_get_args" builtin function', function () {
         });
 
         it('should return false', async function () {
-            var resultValue = await func_get_args().toPromise();
+            var resultValue = await func_get_args.call([]).toPromise();
 
             expect(resultValue.getType()).to.equal('boolean');
             expect(resultValue.getNative()).to.be.false;

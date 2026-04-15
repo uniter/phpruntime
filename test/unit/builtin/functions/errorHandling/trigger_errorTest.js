@@ -73,14 +73,14 @@ describe('PHP "trigger_error" builtin function', function () {
         });
 
         it('should raise the correct error', async function () {
-            await trigger_error(errorMessageVariable, errorTypeVariable).toPromise();
+            await trigger_error.call([errorMessageVariable, errorTypeVariable]).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith('Warning', 'My error message');
         });
 
         it('should return bool(true)', async function () {
-            var result = await trigger_error(errorMessageVariable, errorTypeVariable).toPromise();
+            var result = await trigger_error.call([errorMessageVariable, errorTypeVariable]).toPromise();
 
             expect(result.getType()).to.equal('boolean');
             expect(result.getNative()).to.be.true;
@@ -97,7 +97,7 @@ describe('PHP "trigger_error" builtin function', function () {
         });
 
         it('should raise a notice, by default', async function () {
-            await trigger_error(errorMessageVariable).toPromise();
+            await trigger_error.call([errorMessageVariable]).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
@@ -107,7 +107,7 @@ describe('PHP "trigger_error" builtin function', function () {
         });
 
         it('should return bool(true)', async function () {
-            var result = await trigger_error(errorMessageVariable).toPromise();
+            var result = await trigger_error.call([errorMessageVariable]).toPromise();
 
             expect(result.getType()).to.equal('boolean');
             expect(result.getNative()).to.be.true;
@@ -127,7 +127,7 @@ describe('PHP "trigger_error" builtin function', function () {
         });
 
         it('should raise a special warning', async function () {
-            await trigger_error(errorMessageVariable, errorTypeVariable).toPromise();
+            await trigger_error.call([errorMessageVariable, errorTypeVariable]).toPromise();
 
             expect(callStack.raiseError).to.have.been.calledOnce;
             expect(callStack.raiseError).to.have.been.calledWith(
@@ -137,7 +137,7 @@ describe('PHP "trigger_error" builtin function', function () {
         });
 
         it('should return bool(false)', async function () {
-            var result = await trigger_error(errorMessageVariable, errorTypeVariable).toPromise();
+            var result = await trigger_error.call([errorMessageVariable, errorTypeVariable]).toPromise();
 
             expect(result.getType()).to.equal('boolean');
             expect(result.getNative()).to.be.false;

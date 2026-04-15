@@ -61,7 +61,7 @@ describe('PHP "spl_object_hash" builtin function', function () {
     });
 
     it('should return a 32-byte 0-padded hash with the object\'s ID when 2 digits long', async function () {
-        var resultValue = await spl_object_hash(objectVariable).toPromise();
+        var resultValue = await spl_object_hash.call([objectVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('00000000000000000000000000000021');
@@ -71,7 +71,7 @@ describe('PHP "spl_object_hash" builtin function', function () {
         var resultValue;
         objectValue.getID.returns(4532);
 
-        resultValue = await spl_object_hash(objectVariable).toPromise();
+        resultValue = await spl_object_hash.call([objectVariable]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('00000000000000000000000000004532');

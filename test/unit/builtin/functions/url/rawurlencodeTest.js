@@ -53,42 +53,42 @@ describe('PHP "rawurlencode" builtin function', function () {
     });
 
     it('should return a string with alphanumeric characters unmodified', async function () {
-        const resultValue = await rawurlencode(stringVariable.setValue(valueFactory.createString('hello123'))).toPromise();
+        const resultValue = await rawurlencode.call([stringVariable.setValue(valueFactory.createString('hello123'))]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello123');
     });
 
     it('should encode special characters', async function () {
-        const resultValue = await rawurlencode(stringVariable.setValue(valueFactory.createString('hello world!'))).toPromise();
+        const resultValue = await rawurlencode.call([stringVariable.setValue(valueFactory.createString('hello world!'))]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello%20world%21');
     });
 
     it('should encode multiple special characters', async function () {
-        const resultValue = await rawurlencode(stringVariable.setValue(valueFactory.createString('Hello World & Goodbye World!'))).toPromise();
+        const resultValue = await rawurlencode.call([stringVariable.setValue(valueFactory.createString('Hello World & Goodbye World!'))]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('Hello%20World%20%26%20Goodbye%20World%21');
     });
 
     it('should not encode hyphen, underscore, dot, or tilde', async function () {
-        const resultValue = await rawurlencode(stringVariable.setValue(valueFactory.createString('hello-world_123.456~'))).toPromise();
+        const resultValue = await rawurlencode.call([stringVariable.setValue(valueFactory.createString('hello-world_123.456~'))]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello-world_123.456~');
     });
 
     it('should encode non-ASCII characters', async function () {
-        const resultValue = await rawurlencode(stringVariable.setValue(valueFactory.createString('héllö wörld'))).toPromise();
+        const resultValue = await rawurlencode.call([stringVariable.setValue(valueFactory.createString('héllö wörld'))]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('h%C3%A9ll%C3%B6%20w%C3%B6rld');
     });
 
     it('should not encode plus symbol to %20 (unlike urlencode)', async function () {
-        const resultValue = await rawurlencode(stringVariable.setValue(valueFactory.createString('hello+world'))).toPromise();
+        const resultValue = await rawurlencode.call([stringVariable.setValue(valueFactory.createString('hello+world'))]).toPromise();
 
         expect(resultValue.getType()).to.equal('string');
         expect(resultValue.getNative()).to.equal('hello%2Bworld');

@@ -74,7 +74,7 @@ describe('PHP "file_exists" builtin function', function () {
         fileSystem.isFile.withArgs('/my/path').returns(true);
         fileSystem.isFile.returns(false);
 
-        result = await file_exists(pathVariable).toPromise();
+        result = await file_exists.call([pathVariable]).toPromise();
 
         expect(result.getType()).to.equal('boolean');
         expect(result.getNative()).to.be.true;
@@ -87,7 +87,7 @@ describe('PHP "file_exists" builtin function', function () {
         fileSystem.isFile.withArgs('/my/path').returns(false);
         fileSystem.isFile.returns(false);
 
-        result = await file_exists(pathVariable).toPromise();
+        result = await file_exists.call([pathVariable]).toPromise();
 
         expect(result.getType()).to.equal('boolean');
         expect(result.getNative()).to.be.true;
@@ -98,7 +98,7 @@ describe('PHP "file_exists" builtin function', function () {
         fileSystem.isDirectory.returns(false);
         fileSystem.isFile.returns(false);
 
-        result = await file_exists(pathVariable).toPromise();
+        result = await file_exists.call([pathVariable]).toPromise();
 
         expect(result.getType()).to.equal('boolean');
         expect(result.getNative()).to.be.false;
@@ -107,7 +107,7 @@ describe('PHP "file_exists" builtin function', function () {
     it('should raise an error when no "fileSystem" option is configured', async function () {
         optionSet.getOption.withArgs('fileSystem').returns(null);
 
-        await expect(file_exists(pathVariable).toPromise())
+        await expect(file_exists.call([pathVariable]).toPromise())
             .to.eventually.be.rejectedWith(
                 Exception,
                 'filesystem :: No `fileSystem` option is configured'
