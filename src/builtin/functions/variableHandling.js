@@ -11,13 +11,16 @@
 
 var hasOwn = {}.hasOwnProperty,
     phpCommon = require('phpcommon'),
+    KeyValuePair = require('phpcore/src/KeyValuePair'),
     MAX_DUMPS = 20000,
     MAX_RECURSION_DEPTH = 5,
     MAX_STRING_LENGTH = 2048,
-    Exception = phpCommon.Exception;
+    Exception = phpCommon.Exception,
+    PHPError = phpCommon.PHPError;
 
 module.exports = function (internals) {
-    var flow = internals.flow,
+    var callStack = internals.callStack,
+        flow = internals.flow,
         futureFactory = internals.futureFactory,
         globalNamespace = internals.globalNamespace,
         output = internals.output,
@@ -166,6 +169,464 @@ module.exports = function (internals) {
          * @see {@link https://secure.php.net/manual/en/function.is-string.php}
          */
         'is_string': createTypeChecker('is_string', 'string'),
+
+        /**
+         * Generates a storable representation of a value.
+         *
+         * Supports null, bool, int, float, string, array and object types.
+         * Object properties of all visibilities (public, protected, private) are included.
+         * Circular object references are encoded as r:N back-references.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.serialize.php}
+         */
+        'serialize': internals.typeFunction(
+            'mixed $value',
+            function (value) {
+                var objectPositions = {},
+                    positionCounter = 0,
+                    referenceSlots = [],
+                    referenceSlotPositions = [];
+
+                function serializeValue(val) {
+                    var allPropertyInfos,
+                        className,
+                        floatStr,
+                        keys,
+                        nativeFloat,
+                        nativeString,
+                        objId,
+                        type = val.getType();
+
+                    switch (type) {
+                    case 'null':
+                        positionCounter++;
+                        return futureFactory.createPresent('N;');
+                    case 'boolean':
+                        positionCounter++;
+                        return futureFactory.createPresent('b:' + (val.getNative() ? '1' : '0') + ';');
+                    case 'int':
+                        positionCounter++;
+                        return futureFactory.createPresent('i:' + val.getNative() + ';');
+                    case 'float':
+                        positionCounter++;
+                        nativeFloat = val.getNative();
+                        if (isNaN(nativeFloat)) {
+                            floatStr = 'NAN';
+                        } else if (nativeFloat === Infinity) {
+                            floatStr = 'INF';
+                        } else if (nativeFloat === -Infinity) {
+                            floatStr = '-INF';
+                        } else {
+                            floatStr = String(nativeFloat);
+                        }
+
+                        return futureFactory.createPresent('d:' + floatStr + ';');
+                    case 'string':
+                        positionCounter++;
+                        nativeString = val.getNative();
+
+                        return futureFactory.createPresent('s:' + nativeString.length + ':"' + nativeString + '";');
+                    case 'array':
+                        positionCounter++;
+                        keys = val.getKeys();
+                        return flow.mapAsync(keys, function (keyValue) {
+                            var element = val.getElementByKey(keyValue),
+                                refSlot,
+                                slotIndex,
+                                slotPos;
+
+                            if (element.isReference()) {
+                                refSlot = element.getReference();
+                                slotIndex = referenceSlots.indexOf(refSlot);
+
+                                if (slotIndex !== -1) {
+                                    // Back-reference to a reference seen before; emit R:N.
+                                    slotPos = referenceSlotPositions[slotIndex];
+
+                                    return serializeValue(keyValue).next(function (serializedKey) {
+                                        return serializedKey + 'R:' + slotPos + ';';
+                                    });
+                                }
+
+                                // First encounter: register the reference slot position.
+                                positionCounter++;
+                                referenceSlots.push(refSlot);
+                                referenceSlotPositions.push(positionCounter);
+                            }
+
+                            return element.getValue().next(function (elementValue) {
+                                return serializeValue(keyValue).next(function (serializedKey) {
+                                    return serializeValue(elementValue).next(function (serializedValue) {
+                                        return serializedKey + serializedValue;
+                                    });
+                                });
+                            });
+                        }).next(function (pairs) {
+                            return 'a:' + keys.length + ':{' + pairs.join('') + '}';
+                        });
+                    case 'object':
+                        objId = val.getID();
+
+                        if (hasOwn.call(objectPositions, objId)) {
+                            // Circular reference: emit back-reference without incrementing counter.
+                            return futureFactory.createPresent('r:' + objectPositions[objId] + ';');
+                        }
+
+                        positionCounter++;
+                        objectPositions[objId] = positionCounter;
+                        className = val.getClassName();
+
+                        // Collect all properties regardless of visibility by accessing
+                        // the object's internal property stores directly.
+                        allPropertyInfos = [];
+
+                        Object.keys(val.nonPrivateProperties).forEach(function (propName) {
+                            var prop = val.nonPrivateProperties[propName];
+
+                            if (prop.isDefined()) {
+                                allPropertyInfos.push({
+                                    prop: prop,
+                                    visibility: prop.getVisibility(),
+                                    name: propName,
+                                    fqcn: null,
+                                    index: prop.getIndex()
+                                });
+                            }
+                        });
+
+                        Object.keys(val.privatePropertiesByFQCN).forEach(function (fqcn) {
+                            Object.keys(val.privatePropertiesByFQCN[fqcn]).forEach(function (propName) {
+                                var prop = val.privatePropertiesByFQCN[fqcn][propName];
+
+                                if (prop.isDefined()) {
+                                    allPropertyInfos.push({
+                                        prop: prop,
+                                        visibility: 'private',
+                                        name: propName,
+                                        fqcn: fqcn,
+                                        index: prop.getIndex()
+                                    });
+                                }
+                            });
+                        });
+
+                        allPropertyInfos.sort(function (a, b) {
+                            // Ensure source (RHS) reference slots are serialised before targets (LHS).
+                            if (a.prop.isReference() && b.prop.isReference() &&
+                                    a.prop.getReference() === b.prop.getReference()) {
+
+                                return b.index - a.index;
+                            }
+
+                            return a.index - b.index;
+                        });
+
+                        return flow.mapAsync(allPropertyInfos, function (propInfo) {
+                            var encodedName,
+                                refSlot,
+                                slotIndex,
+                                slotPos;
+
+                            // Encode visibility into the property name using PHP's null-byte convention:
+                            //   protected -> \0*\0name
+                            //   private   -> \0ClassName\0name
+                            //   public    -> name (no prefix)
+                            if (propInfo.visibility === 'protected') {
+                                encodedName = '\0*\0' + propInfo.name;
+                            } else if (propInfo.visibility === 'private') {
+                                encodedName = '\0' + propInfo.fqcn + '\0' + propInfo.name;
+                            } else {
+                                encodedName = propInfo.name;
+                            }
+
+                            if (propInfo.prop.isReference()) {
+                                refSlot = propInfo.prop.getReference();
+                                slotIndex = referenceSlots.indexOf(refSlot);
+
+                                if (slotIndex !== -1) {
+                                    // Back-reference to a reference seen before; emit `R:N`.
+                                    slotPos = referenceSlotPositions[slotIndex];
+
+                                    return serializeValue(valueFactory.createString(encodedName)).next(function (serializedName) {
+                                        return serializedName + 'R:' + slotPos + ';';
+                                    });
+                                }
+
+                                // First encounter: register the reference slot position.
+                                positionCounter++;
+                                referenceSlots.push(refSlot);
+                                referenceSlotPositions.push(positionCounter);
+                            }
+
+                            return propInfo.prop.getValue().next(function (propValue) {
+                                return serializeValue(valueFactory.createString(encodedName)).next(function (serializedName) {
+                                    return serializeValue(propValue).next(function (serializedValue) {
+                                        return serializedName + serializedValue;
+                                    });
+                                });
+                            });
+                        }).next(function (propPairs) {
+                            return 'O:' + className.length + ':"' + className + '":' + allPropertyInfos.length + ':{' + propPairs.join('') + '}';
+                        });
+                    default:
+                        positionCounter++;
+                        callStack.raiseError(
+                            PHPError.E_NOTICE,
+                            'serialize(): Serialization of \'' + type + '\' is not allowed'
+                        );
+
+                        return futureFactory.createPresent('N;');
+                    }
+                }
+
+                return serializeValue(value).next(function (serialized) {
+                    return valueFactory.createString(serialized);
+                });
+            }
+        ),
+
+        /**
+         * Creates a PHP value from a stored representation.
+         *
+         * Supports N, b, i, d, s, a and O tokens, plus r:N back-references for
+         * circular object structures. Private (\0ClassName\0prop) and protected
+         * (\0*\0prop) null-byte-encoded property names are decoded and applied
+         * directly to the appropriate visibility slot on the restored object.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.unserialize.php}
+         */
+        'unserialize': internals.typeFunction(
+            'string $data',
+            function (dataValue) {
+                /*jshint latedef: false */
+                var data = dataValue.getNative(),
+                    // Tracks every value as it is parsed (1-indexed) for r:N back-references.
+                    positionedValues = [];
+
+                function setDeserializedProperty(objectValue, rawKey, propValue) {
+                    var existingProp,
+                        fqcn,
+                        propName,
+                        secondNull;
+
+                    if (rawKey.charAt(0) === '\0') {
+                        if (rawKey.charAt(1) === '*' && rawKey.charAt(2) === '\0') {
+                            // Protected property: \0*\0propName.
+                            propName = rawKey.substring(3);
+                            existingProp = objectValue.nonPrivateProperties[propName];
+
+                            if (existingProp && existingProp.getVisibility() === 'protected') {
+                                existingProp.setValue(propValue);
+
+                                return;
+                            }
+                        } else {
+                            // Private property: \0ClassName\0propName
+                            secondNull = rawKey.indexOf('\0', 1);
+                            fqcn = rawKey.substring(1, secondNull);
+                            propName = rawKey.substring(secondNull + 1);
+
+                            if (objectValue.privatePropertiesByFQCN[fqcn] &&
+                                    objectValue.privatePropertiesByFQCN[fqcn][propName]) {
+                                objectValue.privatePropertiesByFQCN[fqcn][propName].setValue(propValue);
+
+                                return;
+                            }
+                        }
+                    } else {
+                        propName = rawKey;
+                    }
+
+                    // Public property, or fallback for unmatched private/protected.
+                    objectValue.setProperty(propName, propValue);
+                }
+
+                function parseValue(pos) {
+                    var afterCountColon,
+                        arrayPlaceholderIndex,
+                        bodyStart,
+                        className,
+                        classNameLen,
+                        classNameStart,
+                        colonPos,
+                        count,
+                        firstColon,
+                        floatStr,
+                        len,
+                        nativeFloat,
+                        objPlaceholderIndex,
+                        propCount,
+                        propCountEnd,
+                        propCountStart,
+                        refIndex,
+                        strStart,
+                        tempValue,
+                        type = data[pos];
+
+                    switch (type) {
+                    case 'N':
+                        tempValue = valueFactory.createNull();
+                        positionedValues.push(tempValue);
+                        return futureFactory.createPresent({value: tempValue, pos: pos + 2});
+                    case 'b':
+                        tempValue = valueFactory.createBoolean(data[pos + 2] === '1');
+                        positionedValues.push(tempValue);
+                        return futureFactory.createPresent({value: tempValue, pos: pos + 4});
+                    case 'i':
+                        colonPos = data.indexOf(';', pos + 2);
+                        tempValue = valueFactory.createInteger(parseInt(data.substring(pos + 2, colonPos), 10));
+                        positionedValues.push(tempValue);
+                        return futureFactory.createPresent({value: tempValue, pos: colonPos + 1});
+                    case 'd':
+                        colonPos = data.indexOf(';', pos + 2);
+                        floatStr = data.substring(pos + 2, colonPos);
+                        if (floatStr === 'NAN') {
+                            nativeFloat = NaN;
+                        } else if (floatStr === 'INF') {
+                            nativeFloat = Infinity;
+                        } else if (floatStr === '-INF') {
+                            nativeFloat = -Infinity;
+                        } else {
+                            nativeFloat = parseFloat(floatStr);
+                        }
+                        tempValue = valueFactory.createFloat(nativeFloat);
+                        positionedValues.push(tempValue);
+
+                        return futureFactory.createPresent({value: tempValue, pos: colonPos + 1});
+                        case 's':
+                        firstColon = data.indexOf(':', pos + 2);
+                        len = parseInt(data.substring(pos + 2, firstColon), 10);
+                        strStart = firstColon + 2; // Skip ':"'.
+                        tempValue = valueFactory.createString(data.substring(strStart, strStart + len));
+                        positionedValues.push(tempValue);
+
+                        return futureFactory.createPresent({value: tempValue, pos: strStart + len + 2});
+                    case 'a':
+                        afterCountColon = data.indexOf(':', pos + 2);
+                        count = parseInt(data.substring(pos + 2, afterCountColon), 10);
+                        bodyStart = afterCountColon + 2; // Skip ':{'.
+                        // Reserve a slot before parsing contents so any r:N inside can find it.
+                        arrayPlaceholderIndex = positionedValues.length;
+                        positionedValues.push(null);
+
+                        return parsePairs(count, bodyStart, []).next(function (result) {
+                            tempValue = valueFactory.createArray(result.pairs.map(function (pair) {
+                                return new KeyValuePair(pair.key, pair.value);
+                            }));
+                            positionedValues[arrayPlaceholderIndex] = tempValue;
+
+                            return {
+                                value: tempValue,
+                                pos: result.pos + 1 // Skip '}'.
+                            };
+                        });
+                    case 'O':
+                        // O:namelen:"ClassName":propCount:{...}
+                        colonPos = data.indexOf(':', pos + 2);
+                        classNameLen = parseInt(data.substring(pos + 2, colonPos), 10);
+                        classNameStart = colonPos + 2; // Skip ':"'
+                        className = data.substring(classNameStart, classNameStart + classNameLen);
+                        propCountStart = classNameStart + classNameLen + 2; // skip '":'
+                        propCountEnd = data.indexOf(':', propCountStart);
+                        propCount = parseInt(data.substring(propCountStart, propCountEnd), 10);
+                        bodyStart = propCountEnd + 2; // skip ':{'
+                        // Reserve a slot before instantiation so r:N inside properties can resolve back.
+                        objPlaceholderIndex = positionedValues.length;
+                        positionedValues.push(null);
+
+                        return globalNamespace.getClass(className).next(function (classObject) {
+                            // Use instantiateWithoutConstructor pattern: initialise defaults then
+                            // create the object bare (no PHP __construct call), matching PHP's
+                            // unserialize() behaviour.
+                            return classObject.initialiseInstancePropertyDefaults().next(function () {
+                                var objectValue = classObject.instantiateBare();
+
+                                // Register the live object before parsing properties.
+                                positionedValues[objPlaceholderIndex] = objectValue;
+
+                                return parsePairs(propCount, bodyStart, []).next(function (result) {
+                                    result.pairs.forEach(function (pair) {
+
+                                        var pairValue = pair.value,
+                                            rawKey = pair.key.getNative(),
+                                            referenceSlot,
+                                            sourcePropName,
+                                            targetPropRef;
+
+                                        if (pairValue && pairValue.isPhpReferenceBackRef) {
+                                            // positionedValues[refIndex-1] is the source property's
+                                            // key string (the slot position is invisible in the stream).
+                                            sourcePropName = positionedValues[pairValue.refIndex - 1].getNative();
+                                            referenceSlot = objectValue.nonPrivateProperties[sourcePropName].getReference();
+
+                                            targetPropRef = objectValue.declareProperty(rawKey, classObject, 'public');
+                                            targetPropRef.setReference(referenceSlot);
+                                        } else {
+                                            setDeserializedProperty(objectValue, rawKey, pairValue);
+                                        }
+                                    });
+
+                                    return {
+                                        value: objectValue,
+                                        pos: result.pos + 1 // Skip '}'.
+                                    };
+                                });
+                            });
+                        });
+                    case 'r':
+                        // Object identity back-reference: r:N returns the object at position N.
+                        colonPos = data.indexOf(';', pos + 2);
+                        refIndex = parseInt(data.substring(pos + 2, colonPos), 10);
+
+                        return futureFactory.createPresent({
+                            value: positionedValues[refIndex - 1],
+                            pos: colonPos + 1
+                        });
+                    case 'R':
+                        // Reference-variable back-reference: R:N wires up a shared reference slot.
+                        // The serialiser inserts an invisible position for the slot before the
+                        // source property's key, so positionedValues[refIndex-1] holds that key
+                        // (a string). The object handler resolves the slot from the source property.
+                        colonPos = data.indexOf(';', pos + 2);
+                        refIndex = parseInt(data.substring(pos + 2, colonPos), 10);
+
+                        return futureFactory.createPresent({
+                            value: {isPhpReferenceBackRef: true, refIndex: refIndex},
+                            pos: colonPos + 1
+                        });
+                    default:
+                        callStack.raiseError(
+                            PHPError.E_NOTICE,
+                            'unserialize(): Error at offset ' + pos + ' of ' + data.length + ' bytes'
+                        );
+                        return futureFactory.createPresent({
+                            value: valueFactory.createBoolean(false),
+                            pos: data.length
+                        });
+                    }
+                }
+
+                function parsePairs(remaining, pos, pairs) {
+                    if (remaining === 0) {
+                        return futureFactory.createPresent({pairs: pairs, pos: pos});
+                    }
+
+                    return parseValue(pos).next(function (keyResult) {
+                        return parseValue(keyResult.pos).next(function (valResult) {
+                            return parsePairs(
+                                remaining - 1,
+                                valResult.pos,
+                                pairs.concat([{key: keyResult.value, value: valResult.value}])
+                            );
+                        });
+                    });
+                }
+
+                return parseValue(0).next(function (result) {
+                    return result.value;
+                });
+            }
+        ),
 
         /**
          * Outputs or returns a valid PHP code string that will evaluate to the given value.
