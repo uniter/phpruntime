@@ -38,6 +38,7 @@ module.exports = function (internals) {
             'string $path, int $levels = 1 : string',
             function (pathValue, levelsValue) {
                 var componentIndex,
+                    isAbsolute,
                     path = pathValue.getNative(),
                     levels = levelsValue.getNative();
 
@@ -45,15 +46,22 @@ module.exports = function (internals) {
                     return '';
                 }
 
+                isAbsolute = path.indexOf('/') === 0;
+
                 if (path.indexOf('/') === -1) {
                     path = '.';
                 } else {
                     for (componentIndex = 0; componentIndex < levels; componentIndex++) {
+                        if (path.indexOf('/') === -1) {
+                            path = '';
+                            break;
+                        }
+
                         path = path.replace(/(?:^\/|(?!^)\/+)[^\/]+$/, '');
                     }
 
                     if (path === '') {
-                        path = '/';
+                        path = isAbsolute ? '/' : '.';
                     }
                 }
 

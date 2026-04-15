@@ -27,6 +27,8 @@ $result['complex path, default 1 level'] = dirname('/my/path/to/my_file');
 $result['complex path, explicit 2 levels'] = dirname('/my/path/to/my_file', 2);
 $result['complex path with duplicate slashes, explicit 2 levels'] = dirname('/my//path/to//my_file', 2);
 $result['complex path, levels exceeding depth'] = dirname('/my/path/to/my_file', 10);
+$result['relative path, explicit 2 levels, leaving only topmost'] = dirname('one/two/three', 2);
+$result['relative path, explicit 2 levels, reaching topmost'] = dirname('one/two/three', 3);
 
 return $result;
 EOS
@@ -41,7 +43,9 @@ EOS
             'complex path, default 1 level': '/my/path/to', // Note no trailing slash.
             'complex path, explicit 2 levels': '/my/path',
             'complex path with duplicate slashes, explicit 2 levels': '/my//path',
-            'complex path, levels exceeding depth': '/' // Stops at root dir.
+            'complex path, levels exceeding depth': '/', // Stops at root dir.
+            'relative path, explicit 2 levels, leaving only topmost': 'one',
+            'relative path, explicit 2 levels, reaching topmost': '.'
         });
     });
 });
