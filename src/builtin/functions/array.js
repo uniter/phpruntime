@@ -412,6 +412,26 @@ module.exports = function (internals) {
         }),
 
         /**
+         * Prepends one or more elements to the beginning of an array.
+         *
+         * Numeric keys will be re-indexed starting from zero.
+         * String keys will be left untouched.
+         *
+         * @see {@link https://secure.php.net/manual/en/function.array-unshift.php}
+         *
+         * @returns {IntegerValue} The new length of the array after unshifting.
+         */
+        'array_unshift': internals.typeFunction(
+            'array &$array, mixed ...$values : int',
+            function (arraySnapshot, valuesArray) {
+                var arrayValue = arraySnapshot.getValue(),
+                    newLength = arrayValue.unshift(valuesArray.getValues());
+
+                return valueFactory.createInteger(newLength);
+            }
+        ),
+
+        /**
          * Returns a new array without duplicate values from a source array.
          *
          * @see {@link https://secure.php.net/manual/en/function.array-unique.php}
